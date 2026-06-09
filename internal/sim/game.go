@@ -52,7 +52,7 @@ func New(l *world.Level, opts ...Option) *Game {
 func (g *Game) Tick(in Input, dt float64) {
 	g.tick++
 
-	g.Player.Angle = normalizeAngle(g.Player.Angle + in.Turn*turnSpeed*dt)
+	g.Player.Angle = normalizeAngle(g.Player.Angle + in.Turn*turnSpeed*dt + in.TurnDelta)
 
 	dir := g.Player.Dir()
 	// Strafe axis is the facing direction rotated 90 degrees.
