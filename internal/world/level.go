@@ -14,6 +14,7 @@ type Level struct {
 	Width, Height int
 	Tiles         []TileType // row-major: index = y*Width + x, len == Width*Height
 	Spawn, Exit   Coord
+	Markers       []Marker
 	Seed          int64
 }
 

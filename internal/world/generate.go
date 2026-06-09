@@ -66,6 +66,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	g.connect(root, l)
 
 	placeSpawnAndExit(l, collectRooms(root))
+	annotate(l)
 	return l
 }
 
