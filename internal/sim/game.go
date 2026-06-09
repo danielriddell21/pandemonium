@@ -23,11 +23,15 @@ type Game struct {
 	Player   Player
 	Entities []Entity
 	tick     uint64
+
+	observer Observer
+	tracker  tracker
 }
 
 // New builds a simulation for a generated level, placing the player at the spawn
-// facing roughly toward the exit and scattering demons across the map.
-func New(l *world.Level) *Game {
+// facing roughly toward the exit and scattering demons across the map. Options
+// may attach an observer; by default observations are discarded.
+func New(l *world.Level, opts ...Option) *Game {
 	g := &Game{
 		World: NewWorld(l),
 		Player: Player{
@@ -35,6 +39,11 @@ func New(l *world.Level) *Game {
 			Angle: facing(l.Spawn, l.Exit),
 		},
 		Entities: spawnEntities(l),
+		observer: nopObserver{},
+		tracker:  newTracker(l),
+	}
+	for _, opt := range opts {
+		opt(g)
 	}
 	return g
 }
@@ -52,9 +61,45 @@ func (g *Game) Tick(in Input, dt float64) {
 	dy := (dir.Y*in.Forward + strafeY*in.Strafe) * moveSpeed * dt
 	g.Player.Pos = resolveMove(g.World, g.Player.Pos, dx, dy)
 
+	g.observeMovement()
+
 	if in.Interact {
 		g.interact()
 	}
+
+	if g.ReachedExit() && !g.tracker.exitEmitted {
+		g.tracker.exitEmitted = true
+		g.emit(Observation{Kind: ObsExit, At: g.PlayerCell()})
+	}
+}
+
+// emit stamps the current tick onto an observation and hands it to the observer.
+func (g *Game) emit(o Observation) {
+	o.Tick = g.tick
+	g.observer.Observe(o)
+}
+
+// observeMovement emits an observation whenever the player enters a new tile,
+// plus a richer one when that tile carries a marker.
+func (g *Game) observeMovement() {
+	cell := g.PlayerCell()
+	if g.tracker.started && cell == g.tracker.lastCell {
+		return
+	}
+	g.tracker.started = true
+	g.tracker.lastCell = cell
+
+	g.emit(Observation{Kind: ObsMove, At: cell})
+
+	mk, ok := g.tracker.markerAt(cell)
+	if !ok {
+		return
+	}
+	obs := Observation{Kind: ObsMarker, At: cell, Marker: mk.Kind}
+	if mk.Kind == world.MarkerJunction {
+		obs.Taken, obs.Ignored = splitBranches(mk, g.Player.Dir(), cell)
+	}
+	g.emit(obs)
 }
 
 // Tick count for pacing queries.
@@ -71,12 +116,20 @@ func (g *Game) ReachedExit() bool {
 	return g.World.Level.At(c.X, c.Y) == world.TileExit
 }
 
-// interact opens a door immediately ahead of the player, if any.
+// interact opens a door immediately ahead of the player, if any, and reports it.
 func (g *Game) interact() {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))
 	ty := int(math.Floor(g.Player.Pos.Y + dir.Y*reach))
-	g.World.OpenDoor(tx, ty)
+	if !g.World.OpenDoor(tx, ty) {
+		return
+	}
+	cell := world.Coord{X: tx, Y: ty}
+	wrong := false
+	if mk, ok := g.tracker.markerAt(cell); ok {
+		wrong = mk.Kind == world.MarkerDeadEndDoor
+	}
+	g.emit(Observation{Kind: ObsDoor, At: cell, WrongDoor: wrong})
 }
 
 // facing returns the angle pointing from a toward b, used to orient the player
