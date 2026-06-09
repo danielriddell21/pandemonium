@@ -98,6 +98,7 @@ func (g *Game) observeMovement() {
 	obs := Observation{Kind: ObsMarker, At: cell, Marker: mk.Kind}
 	if mk.Kind == world.MarkerJunction {
 		obs.Taken, obs.Ignored = splitBranches(mk, g.Player.Dir(), cell)
+		obs.Optimal = mk.Optimal
 	}
 	g.emit(obs)
 }

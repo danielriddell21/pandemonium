@@ -46,6 +46,7 @@ type Observation struct {
 	At        world.Coord
 	Marker    world.MarkerKind // MarkerNone unless Kind == ObsMarker
 	Taken     world.Coord      // branch entered (junctions)
+	Optimal   world.Coord      // branch nearest the exit (junctions)
 	Ignored   []world.Coord    // branches not entered (junctions)
 	WrongDoor bool             // door opened led only to a dead end
 }
