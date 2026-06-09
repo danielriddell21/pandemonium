@@ -70,34 +70,27 @@ func generateOnce(width, height int, seed int64) *Level {
 	return l
 }
 
-// placeSpawnAndExit marks the first room's centre as spawn and the centre of the
-// room farthest from it (by Manhattan distance) as exit, maximising the journey.
+// placeSpawnAndExit marks the first room's centre as spawn and the farthest cell
+// reachable from it as exit. Choosing the exit from the spawn's reachability
+// field maximises the journey and guarantees the exit is reachable by
+// construction; the check in Generate remains a backstop after annotation.
 func placeSpawnAndExit(l *Level, rooms []rect) {
 	if len(rooms) == 0 {
 		return
 	}
 	spawn := rooms[0].center()
-	exit := spawn
-	best := -1
-	for _, r := range rooms[1:] {
-		c := r.center()
-		if d := manhattan(spawn, c); d > best {
-			best, exit = d, c
+	dist := distanceField(l, spawn)
+	exit, best := spawn, 0
+	for i, d := range dist {
+		if d > best {
+			best = d
+			exit = Coord{X: i % l.Width, Y: i / l.Width}
 		}
 	}
 	l.Spawn = spawn
-	l.Exit = exit
 	l.set(spawn.X, spawn.Y, TileSpawn)
-	l.set(exit.X, exit.Y, TileExit)
-}
-
-func manhattan(a, b Coord) int {
-	dx, dy := a.X-b.X, a.Y-b.Y
-	if dx < 0 {
-		dx = -dx
+	if exit != spawn {
+		l.Exit = exit
+		l.set(exit.X, exit.Y, TileExit)
 	}
-	if dy < 0 {
-		dy = -dy
-	}
-	return dx + dy
 }

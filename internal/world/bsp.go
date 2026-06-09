@@ -56,7 +56,8 @@ func (g *rng) split(n *bspNode, depth int) {
 		return
 	}
 	// Small enough regions stop splitting most of the time, for size variety.
-	if w <= maxLeaf && h <= maxLeaf && g.chance(0.3) {
+	// The root always splits so even small maps contain more than one room.
+	if depth > 0 && w <= maxLeaf && h <= maxLeaf && g.chance(0.3) {
 		return
 	}
 
