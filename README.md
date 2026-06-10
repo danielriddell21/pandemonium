@@ -12,6 +12,8 @@ deterministic from a seed, so a given seed always produces the same world.
 go run ./cmd/pandemonium --seed 42
 ```
 
+![pandemonium gameplay](docs/demos/hero.gif)
+
 ## Controls
 
 | Input              | Action            |
@@ -48,3 +50,4 @@ just lint     # golangci-lint
 
 - [Architecture](docs/architecture.md) — the three decoupled layers.
 - [How the raycaster works](docs/raycaster.md).
+- [Demos](docs/demos.md) — more gameplay clips.
