@@ -1,0 +1,60 @@
+version: 2
+
+project_name: pandemonium
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pandemonium
+    main: ./cmd/pandemonium
+    binary: pandemonium
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+
+brews:
+  - name: pandemonium
+    repository:
+      owner: danielriddell21
+      name: homebrew-tap
+    homepage: https://github.com/danielriddell21/pandemonium
+    description: A procedurally generated DOOM-style raycaster.
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    test: |
+      system "#{bin}/pandemonium", "--help"
