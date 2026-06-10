@@ -1,7 +1,7 @@
 # Binaries
 /bin/
 /dist/
-pandemonium
+/pandemonium
 *.exe
 
 # Test / coverage artifacts

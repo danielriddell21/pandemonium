@@ -61,3 +61,14 @@ func (g *Game) Layout(_, _ int) (int, int) {
 	cfg := g.renderer.Config()
 	return cfg.Width, cfg.Height
 }
+
+// windowScale enlarges the internal resolution to a comfortable window size.
+const windowScale = 2
+
+// Run opens the window and runs the game loop until the player quits. It blocks.
+func (g *Game) Run() error {
+	cfg := g.renderer.Config()
+	ebiten.SetWindowSize(cfg.Width*windowScale, cfg.Height*windowScale)
+	ebiten.SetWindowTitle("pandemonium")
+	return ebiten.RunGame(g)
+}
