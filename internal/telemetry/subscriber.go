@@ -13,6 +13,11 @@ type Subscriber interface {
 // nothing. It exists so the bus always has a valid sink wired in.
 type NopSubscriber struct{}
 
-func (NopSubscriber) OnEvent(PlayerEvent)       {}
+// OnEvent discards the event.
+func (NopSubscriber) OnEvent(PlayerEvent) {}
+
+// OnPathSummary discards the summary.
 func (NopSubscriber) OnPathSummary(PathSummary) {}
-func (NopSubscriber) OnRunProfile(RunProfile)   {}
+
+// OnRunProfile discards the profile.
+func (NopSubscriber) OnRunProfile(RunProfile) {}

@@ -16,22 +16,22 @@ func (g *Game) readInput() sim.Input {
 	var in sim.Input
 
 	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) {
-		in.Forward += 1
+		in.Forward++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyDown) {
-		in.Forward -= 1
+		in.Forward--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		in.Strafe += 1
+		in.Strafe++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		in.Strafe -= 1
+		in.Strafe--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		in.Turn += 1
+		in.Turn++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		in.Turn -= 1
+		in.Turn--
 	}
 
 	in.TurnDelta = g.mouseTurn()

@@ -103,7 +103,7 @@ func TestBusBeginLevelFinalisesPrevious(t *testing.T) {
 	}
 }
 
-func TestNopSubscriberSatisfiesInterface(t *testing.T) {
+func TestNopSubscriberSatisfiesInterface(_ *testing.T) {
 	var _ Subscriber = NopSubscriber{}
 	b := NewBus(NopSubscriber{})
 	b.BeginLevel(1, 0)

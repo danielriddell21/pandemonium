@@ -103,7 +103,7 @@ func (g *Game) observeMovement() {
 	g.emit(obs)
 }
 
-// Tick count for pacing queries.
+// Tick64 returns the number of ticks simulated so far, for pacing queries.
 func (g *Game) Tick64() uint64 { return g.tick }
 
 // PlayerCell returns the integer tile the player currently occupies.

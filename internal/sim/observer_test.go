@@ -37,17 +37,17 @@ func TestObserverFiresOnMovement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cap := &captureObserver{}
-	g := New(l, WithObserver(cap))
+	capt := &captureObserver{}
+	g := New(l, WithObserver(capt))
 
 	// Drive the player forward enough to cross at least one tile boundary.
 	for range 240 {
 		g.Tick(Input{Forward: 1}, 1.0/60.0)
 	}
-	if cap.count(ObsMove) == 0 {
+	if capt.count(ObsMove) == 0 {
 		t.Fatal("expected at least one move observation")
 	}
-	for _, e := range cap.events {
+	for _, e := range capt.events {
 		if e.Tick == 0 {
 			t.Error("observation missing tick stamp")
 		}
@@ -59,21 +59,21 @@ func TestObserverFiresOnExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cap := &captureObserver{}
-	g := New(l, WithObserver(cap))
+	capt := &captureObserver{}
+	g := New(l, WithObserver(capt))
 
 	// Teleport adjacent to the exit, then step onto it.
 	exit := l.Exit
 	g.Player.Pos = Vec2{X: float64(exit.X) + 0.5, Y: float64(exit.Y) + 0.5}
 	g.Tick(Input{}, 1.0/60.0)
 
-	if cap.count(ObsExit) != 1 {
-		t.Errorf("exit observations = %d, want 1", cap.count(ObsExit))
+	if capt.count(ObsExit) != 1 {
+		t.Errorf("exit observations = %d, want 1", capt.count(ObsExit))
 	}
 	// A second tick on the exit must not re-fire it.
 	g.Tick(Input{}, 1.0/60.0)
-	if cap.count(ObsExit) != 1 {
-		t.Errorf("exit re-fired: count = %d, want 1", cap.count(ObsExit))
+	if capt.count(ObsExit) != 1 {
+		t.Errorf("exit re-fired: count = %d, want 1", capt.count(ObsExit))
 	}
 }
 
@@ -89,8 +89,8 @@ func TestObserverFiresOnMarkerCrossing(t *testing.T) {
 		if !ok {
 			continue
 		}
-		cap := &captureObserver{}
-		g := New(l, WithObserver(cap))
+		capt := &captureObserver{}
+		g := New(l, WithObserver(capt))
 		// Stand just off the junction tile, then step onto it.
 		g.Player.Pos = Vec2{X: float64(mk.At.X) + 0.5, Y: float64(mk.At.Y) + 0.5}
 		g.tracker.lastCell = world.Coord{X: mk.At.X, Y: mk.At.Y + 1}
@@ -98,7 +98,7 @@ func TestObserverFiresOnMarkerCrossing(t *testing.T) {
 		g.observeMovement()
 
 		found := false
-		for _, e := range cap.events {
+		for _, e := range capt.events {
 			if e.Kind == ObsMarker && e.Marker == world.MarkerJunction && e.At == mk.At {
 				found = true
 				if len(e.Ignored)+1 != len(mk.Branches) {
