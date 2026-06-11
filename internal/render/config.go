@@ -27,6 +27,9 @@ var palette = struct {
 	wallY   color.RGBA // walls hit on a north/south face (drawn darker)
 	door    color.RGBA
 	sprite  [2]color.RGBA
+	hudText color.RGBA // player-facing notice text
+	hudDiag color.RGBA // diagnostic/playtest readout text
+	hudDrop color.RGBA // message drop shadow
 }{
 	ceiling: color.RGBA{R: 28, G: 26, B: 30, A: 255},
 	floor:   color.RGBA{R: 44, G: 36, B: 30, A: 255},
@@ -37,4 +40,7 @@ var palette = struct {
 		{R: 168, G: 52, B: 44, A: 255},
 		{R: 120, G: 40, B: 96, A: 255},
 	},
+	hudText: color.RGBA{R: 222, G: 214, B: 188, A: 255},
+	hudDiag: color.RGBA{R: 120, G: 200, B: 120, A: 255},
+	hudDrop: color.RGBA{R: 0, G: 0, B: 0, A: 255},
 }

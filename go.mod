@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.9.9
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/image v0.31.0
 )
 
 require (
