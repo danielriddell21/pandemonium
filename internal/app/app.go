@@ -6,6 +6,7 @@ package app
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/danielriddell21/pandemonium/internal/hud"
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
@@ -19,6 +20,7 @@ type NextFunc func() *sim.Game
 type Game struct {
 	sim      *sim.Game
 	renderer *render.Renderer
+	overlay  *hud.Overlay
 	next     NextFunc
 
 	haveMouse  bool
@@ -27,10 +29,22 @@ type Game struct {
 
 var _ ebiten.Game = (*Game)(nil)
 
+// Option configures a Game.
+type Option func(*Game)
+
+// WithOverlay attaches a HUD overlay that the loop advances each frame.
+func WithOverlay(o *hud.Overlay) Option {
+	return func(g *Game) { g.overlay = o }
+}
+
 // New builds the application around an initial simulation. next advances to a
 // fresh level when the player reaches an exit.
-func New(g *sim.Game, renderer *render.Renderer, next NextFunc) *Game {
-	return &Game{sim: g, renderer: renderer, next: next}
+func New(g *sim.Game, renderer *render.Renderer, next NextFunc, opts ...Option) *Game {
+	game := &Game{sim: g, renderer: renderer, next: next}
+	for _, opt := range opts {
+		opt(game)
+	}
+	return game
 }
 
 // Update advances the simulation by one tick and swaps in the next level once
@@ -42,6 +56,10 @@ func (g *Game) Update() error {
 
 	dt := 1.0 / float64(ebiten.TPS())
 	g.sim.Tick(g.readInput(), dt)
+
+	if g.overlay != nil {
+		g.overlay.Tick()
+	}
 
 	if g.sim.ReachedExit() {
 		if ng := g.next(); ng != nil {
