@@ -10,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/danielriddell21/pandemonium/internal/app"
+	"github.com/danielriddell21/pandemonium/internal/hud"
 	"github.com/danielriddell21/pandemonium/internal/render"
+	"github.com/danielriddell21/pandemonium/internal/status"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
 
@@ -44,18 +46,19 @@ func newRootCmd() *cobra.Command {
 	return cmd
 }
 
-// run sets up the telemetry bus, the level session and the renderer, then opens
-// the window and plays.
+// run sets up the telemetry bus, the level session, the HUD overlay and the
+// renderer, then opens the window and plays.
 func run(seed int64, width, height int) error {
 	if seed == 0 {
 		seed = int64(rand.Uint64() >> 1)
 	}
 	fmt.Printf("pandemonium — seed %d\n", seed)
 
-	bus := telemetry.NewBus(telemetry.NopSubscriber{})
+	overlay := hud.New()
+	bus := telemetry.NewBus(status.New(overlay, status.NewTableSource()))
 	sess := newSession(seed, width, height, bus)
 
-	renderer := render.NewRenderer(render.DefaultConfig())
-	game := app.New(sess.start(), renderer, sess.next)
+	renderer := render.NewRenderer(render.DefaultConfig(), render.WithOverlay(overlay))
+	game := app.New(sess.start(), renderer, sess.next, app.WithOverlay(overlay))
 	return game.Run()
 }
