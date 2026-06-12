@@ -1,6 +1,36 @@
 package hud
 
-import "testing"
+import (
+	"sync"
+	"testing"
+)
+
+// TestOverlayConcurrentAccess exercises Post from many goroutines while the loop
+// Ticks and reads, so `go test -race` can catch unguarded access.
+func TestOverlayConcurrentAccess(_ *testing.T) {
+	o := New()
+	var wg sync.WaitGroup
+
+	for i := range 8 {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			for range 1000 {
+				o.Post("msg", n%5+1, Notice)
+			}
+		}(i)
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range 4000 {
+			o.Tick()
+			_, _, _ = o.Active()
+		}
+	}()
+
+	wg.Wait()
+}
 
 func TestOverlayPostAndExpire(t *testing.T) {
 	o := New()
