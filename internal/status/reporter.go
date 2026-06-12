@@ -5,10 +5,15 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
 
+// rushThreshold is the explore-score below which a run reads as beelining rather
+// than exploring.
+const rushThreshold = 0.5
+
 // Reporter is a telemetry subscriber that posts HUD messages chosen by a Source.
 type Reporter struct {
 	overlay *hud.Overlay
 	src     Source
+	profile telemetry.RunProfile // latest cumulative run profile
 }
 
 // Compile-time check that Reporter consumes telemetry.
@@ -19,14 +24,25 @@ func New(overlay *hud.Overlay, src Source) *Reporter {
 	return &Reporter{overlay: overlay, src: src}
 }
 
-// OnEvent maps a player event to a cue and asks the source for a line, which it
-// delivers to the overlay via emit (now or later).
+// OnEvent maps a player event to a cue, folds in the run so far, and asks the
+// source for a line, which it delivers to the overlay via emit (now or later).
 func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 	cue, ok := cueFor(e)
 	if !ok {
 		return
 	}
+	r.enrich(&cue)
 	r.src.Request(cue, r.emit)
+}
+
+// enrich folds the cumulative run profile into a cue.
+func (r *Reporter) enrich(c *Cue) {
+	p := r.profile
+	c.LevelsCleared = p.LevelsCleared
+	c.Deaths = p.Deaths
+	c.WrongDoorsTotal = p.TotalWrongDoors
+	c.ExploreScore = p.ExploreScore
+	c.Rushing = p.ExploreScore > 0 && p.ExploreScore < rushThreshold
 }
 
 // emit posts a line to the overlay. It is safe to call from any goroutine.
@@ -37,8 +53,8 @@ func (r *Reporter) emit(line Line) {
 // OnPathSummary is unused for now.
 func (r *Reporter) OnPathSummary(telemetry.PathSummary) {}
 
-// OnRunProfile is unused for now.
-func (r *Reporter) OnRunProfile(telemetry.RunProfile) {}
+// OnRunProfile records the latest cumulative profile so later cues can react to it.
+func (r *Reporter) OnRunProfile(p telemetry.RunProfile) { r.profile = p }
 
 // cueFor derives a cue from a player event, or reports false to ignore it.
 func cueFor(e telemetry.PlayerEvent) (Cue, bool) {

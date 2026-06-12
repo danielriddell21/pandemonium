@@ -20,11 +20,19 @@ const (
 	CueFork
 )
 
-// Cue is the context a Source uses to choose a line.
+// Cue is the context a Source uses to choose a line: the immediate trigger plus a
+// snapshot of how the run has gone so far.
 type Cue struct {
 	Kind          CueKind
 	Level         int  // zero-based level index
 	OptimalChoice bool // for forks: the branch nearest the exit was taken
+
+	// Run-so-far context, drawn from the cumulative profile.
+	LevelsCleared   int
+	Deaths          int
+	WrongDoorsTotal int
+	ExploreScore    float64 // 0..1; lower means more retreading
+	Rushing         bool    // tends to beeline rather than explore (low explore score)
 }
 
 // Line is a chosen message with its presentation channel and lifetime in frames.
@@ -56,11 +64,13 @@ func NewTableSource() Source { return tableSource{} }
 func band(level int) int {
 	switch {
 	case level < 2:
-		return 0
+		return 0 // silent
 	case level < 5:
-		return 1
+		return 1 // diagnostic (debug-only)
+	case level < 9:
+		return 2 // notice
 	default:
-		return 2
+		return 3 // notice, more pointed
 	}
 }
 
@@ -72,7 +82,8 @@ func (tableSource) Request(c Cue, emit func(Line)) {
 
 // scriptedLine computes the banded line for a cue, or reports false to stay silent.
 func scriptedLine(c Cue) (Line, bool) {
-	switch band(c.Level) {
+	b := band(c.Level)
+	switch b {
 	case 0:
 		return Line{}, false
 	case 1:
@@ -80,17 +91,21 @@ func scriptedLine(c Cue) (Line, bool) {
 			return Line{Text: text, Channel: hud.Diagnostic, Frames: messageFrames}, true
 		}
 	default:
-		if text, ok := noticeText(c); ok {
+		if text, ok := noticeText(c, b); ok {
 			return Line{Text: text, Channel: hud.Notice, Frames: messageFrames}, true
 		}
 	}
 	return Line{}, false
 }
 
-// diagnosticText is the dev/playtest readout for a cue.
+// diagnosticText is the dev/playtest readout for a cue, including a little run
+// context where it is informative.
 func diagnosticText(c Cue) (string, bool) {
 	switch c.Kind {
 	case CueExit:
+		if c.Rushing {
+			return "telemetry: level complete (rush pattern)", true
+		}
 		return "telemetry: level complete", true
 	case CueWrongDoor:
 		return "telemetry: dead-end door opened", true
@@ -105,15 +120,33 @@ func diagnosticText(c Cue) (string, bool) {
 	return "", false
 }
 
-// noticeText is the player-facing line for a cue. Forks are intentionally silent
-// to avoid chatter.
-func noticeText(c Cue) (string, bool) {
+// noticeText is the player-facing line for a cue. It reacts to the run so far and
+// reads more pointed in the later band. Forks are intentionally silent to avoid
+// chatter.
+func noticeText(c Cue, b int) (string, bool) {
 	switch c.Kind {
 	case CueExit:
-		return "The exit. Naturally.", true
+		switch {
+		case c.Rushing:
+			return "Straight to the exit. Predictable.", true
+		case b >= 3:
+			return "Another exit. You do keep finding them.", true
+		default:
+			return "The exit. Naturally.", true
+		}
 	case CueWrongDoor:
-		return "Nothing behind that one.", true
+		switch {
+		case c.WrongDoorsTotal >= 3:
+			return "You keep opening the wrong ones.", true
+		case b >= 3:
+			return "You knew. You opened it anyway.", true
+		default:
+			return "Nothing behind that one.", true
+		}
 	case CueDecoy:
+		if b >= 3 {
+			return "So close to the way out. But not quite.", true
+		}
 		return "Not every door leads onward.", true
 	}
 	return "", false

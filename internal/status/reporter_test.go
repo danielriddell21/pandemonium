@@ -62,6 +62,45 @@ func TestReporterIgnoresMovement(t *testing.T) {
 	}
 }
 
+func TestReporterReactsToRepeatedWrongDoors(t *testing.T) {
+	o := hud.New()
+	r := New(o, NewTableSource())
+	r.OnRunProfile(telemetry.RunProfile{LevelsCleared: 6, TotalWrongDoors: 4})
+	r.OnEvent(telemetry.PlayerEvent{
+		Type:       "door",
+		LevelIndex: 6,
+		Marker:     &telemetry.MarkerInfo{Kind: "door", WrongDoor: true},
+	})
+	msg, ch, ok := o.Active()
+	if !ok || ch != hud.Notice || msg != "You keep opening the wrong ones." {
+		t.Errorf("got %q ch=%v ok=%v; want the repeated-wrong-door notice", msg, ch, ok)
+	}
+}
+
+func TestReporterReactsToRushing(t *testing.T) {
+	o := hud.New()
+	r := New(o, NewTableSource())
+	r.OnRunProfile(telemetry.RunProfile{LevelsCleared: 6, ExploreScore: 0.2}) // low → rushing
+	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 6})
+	if msg, _, ok := o.Active(); !ok || msg != "Straight to the exit. Predictable." {
+		t.Errorf("got %q ok=%v; want the rushing exit notice", msg, ok)
+	}
+}
+
+func TestReporterLateBandIsMorePointed(t *testing.T) {
+	o := hud.New()
+	r := New(o, NewTableSource())
+	// No profile context; late band (>=9) should still shift the wording.
+	r.OnEvent(telemetry.PlayerEvent{
+		Type:       "door",
+		LevelIndex: 10,
+		Marker:     &telemetry.MarkerInfo{Kind: "door", WrongDoor: true},
+	})
+	if msg, _, ok := o.Active(); !ok || msg != "You knew. You opened it anyway." {
+		t.Errorf("got %q ok=%v; want the late-band wrong-door notice", msg, ok)
+	}
+}
+
 func TestForkOptimalDetection(t *testing.T) {
 	cue, ok := cueFor(telemetry.PlayerEvent{
 		Type:       "marker",
