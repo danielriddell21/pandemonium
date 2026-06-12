@@ -34,9 +34,12 @@ type Line struct {
 	Frames  int
 }
 
-// Source chooses a message for a cue, or returns ok=false to stay silent.
+// Source decides what to say for a cue and delivers it through emit. emit may be
+// called synchronously, or later from another goroutine; it may be called zero or
+// one time. Returning without calling emit stays silent. This async shape lets a
+// future source that fetches lines out of process plug in without changing callers.
 type Source interface {
-	Line(Cue) (Line, bool)
+	Request(cue Cue, emit func(Line))
 }
 
 // messageFrames is how long a posted line stays up (~2.5s at 60 fps).
@@ -61,7 +64,14 @@ func band(level int) int {
 	}
 }
 
-func (tableSource) Line(c Cue) (Line, bool) {
+func (tableSource) Request(c Cue, emit func(Line)) {
+	if line, ok := scriptedLine(c); ok {
+		emit(line)
+	}
+}
+
+// scriptedLine computes the banded line for a cue, or reports false to stay silent.
+func scriptedLine(c Cue) (Line, bool) {
 	switch band(c.Level) {
 	case 0:
 		return Line{}, false

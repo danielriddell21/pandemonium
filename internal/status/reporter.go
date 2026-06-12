@@ -19,15 +19,19 @@ func New(overlay *hud.Overlay, src Source) *Reporter {
 	return &Reporter{overlay: overlay, src: src}
 }
 
-// OnEvent maps a player event to a cue and posts the chosen line, if any.
+// OnEvent maps a player event to a cue and asks the source for a line, which it
+// delivers to the overlay via emit (now or later).
 func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 	cue, ok := cueFor(e)
 	if !ok {
 		return
 	}
-	if line, ok := r.src.Line(cue); ok {
-		r.overlay.Post(line.Text, line.Frames, line.Channel)
-	}
+	r.src.Request(cue, r.emit)
+}
+
+// emit posts a line to the overlay. It is safe to call from any goroutine.
+func (r *Reporter) emit(line Line) {
+	r.overlay.Post(line.Text, line.Frames, line.Channel)
 }
 
 // OnPathSummary is unused for now.
