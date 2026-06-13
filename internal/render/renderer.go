@@ -12,6 +12,7 @@ type Renderer struct {
 	cfg         Config
 	fb          []byte
 	zbuf        []float64
+	tex         *textureSet
 	overlay     *hud.Overlay
 	diagnostics bool
 }
@@ -38,6 +39,7 @@ func NewRenderer(cfg Config, opts ...Option) *Renderer {
 		cfg:         cfg,
 		fb:          make([]byte, cfg.Width*cfg.Height*4),
 		zbuf:        make([]float64, cfg.Width),
+		tex:         loadTextures(assetDir()),
 		diagnostics: diagnosticsFromEnv(),
 	}
 	for _, opt := range opts {
