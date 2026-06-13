@@ -17,12 +17,13 @@ corridors toward the exit.
 A full turn on the spot, showing the per-column raycasting and distance shading
 as the walls sweep past.
 
-## Encounter
+## Combat
 
-![encounter](demos/encounter.gif)
+![combat](demos/combat.gif)
 
-Approaching one of the billboarded demons. The sprite always faces the camera
-and is occluded correctly by nearer walls.
+Closing on a billboarded demon — taking damage as it reaches you (watch the
+health gauge) — then striking it down. Sprites always face the camera and are
+occluded correctly by nearer walls.
 
 ## New level
 
