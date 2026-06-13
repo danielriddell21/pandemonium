@@ -35,8 +35,9 @@ func New(l *world.Level, opts ...Option) *Game {
 	g := &Game{
 		World: NewWorld(l),
 		Player: Player{
-			Pos:   Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
-			Angle: facing(l.Spawn, l.Exit),
+			Pos:    Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
+			Angle:  facing(l.Spawn, l.Exit),
+			Health: MaxHealth,
 		},
 		Entities: spawnEntities(l),
 		observer: nopObserver{},
@@ -60,6 +61,9 @@ func (g *Game) Tick(in Input, dt float64) {
 	dx := (dir.X*in.Forward + strafeX*in.Strafe) * moveSpeed * dt
 	dy := (dir.Y*in.Forward + strafeY*in.Strafe) * moveSpeed * dt
 	g.Player.Pos = resolveMove(g.World, g.Player.Pos, dx, dy)
+
+	g.updateEntities(dt)
+	g.applyContactDamage(dt)
 
 	g.observeMovement()
 
