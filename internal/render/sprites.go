@@ -15,7 +15,7 @@ const spriteScale = 0.9
 // drawSprites projects each demon into the view, sorts them far-to-near, and
 // draws them after the walls, hiding columns that fall behind nearer geometry
 // using the wall depth buffer.
-func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config) {
+func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
 
@@ -49,39 +49,33 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config)
 			continue
 		}
 
-		drawBillboard(fb, zbuf, cfg, screenX, size, depth, palette.sprite[e.Sprite%len(palette.sprite)])
+		tex := tx.sprite[e.Sprite%len(tx.sprite)]
+		drawBillboard(fb, zbuf, cfg, screenX, size, depth, tex)
 	}
 }
 
-// drawBillboard renders one sprite as a shaded blob centred at screenX, occluded
-// per-column by the wall depth buffer.
-func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, size int, depth float64, base color.RGBA) {
+// drawBillboard renders one textured sprite centred at screenX, skipping
+// transparent texels and columns occluded by nearer walls (via the depth buffer).
+func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, size int, depth float64, tex *texture) {
 	w, h := cfg.Width, cfg.Height
-
 	top := h/2 - size/2
-	bottom := top + size
 	left := screenX - size/2
-	right := left + size
 
-	col := shadeRGBA(base, depth)
-	rx, ry := float64(size)/2, float64(size)/2
-	cx, cy := float64(screenX), float64(top)+ry
-
-	for x := left; x < right; x++ {
+	for x := left; x < left+size; x++ {
 		if x < 0 || x >= w {
 			continue
 		}
 		if depth >= zbuf[x] {
 			continue // hidden behind a nearer wall column
 		}
-		for y := max(top, 0); y < min(bottom, h); y++ {
-			// Elliptical body so the demon isn't a hard rectangle.
-			nx := (float64(x) - cx) / rx
-			ny := (float64(y) - cy) / ry
-			if nx*nx+ny*ny > 1 {
-				continue
+		texX := int(float64(x-left) / float64(size) * float64(tex.w))
+		for y := max(top, 0); y < min(top+size, h); y++ {
+			texY := int(float64(y-top) / float64(size) * float64(tex.h))
+			texel := tex.at(texX, texY)
+			if texel.A < 128 {
+				continue // transparent
 			}
-			setPixel(fb, w, x, y, col)
+			setPixel(fb, w, x, y, shadeRGBA(texel, depth))
 		}
 	}
 }

@@ -58,7 +58,7 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	cam := newCamera(g.Player.Angle, r.cfg.FOV)
 	clearBackground(r.fb, r.cfg)
 	drawWalls(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
-	drawSprites(r.fb, r.zbuf, g, cam, r.cfg)
+	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawHealthBar(r.fb, r.cfg, g.Player.Health/sim.MaxHealth)
 	if r.overlay != nil {
 		if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {

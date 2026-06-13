@@ -18,14 +18,14 @@ func DefaultConfig() Config {
 	return Config{Width: 640, Height: 400, FOV: 1.152}
 }
 
-// palette holds the flat colours used when no textures are loaded. They are
-// chosen for the dim, brownish DOOM mood and shaded by distance at draw time.
+// palette holds the base colours: the flat ceiling/floor, the tints the
+// procedural textures are built from, and the HUD message colours. Walls and
+// sprites are textured and distance-shaded at draw time.
 var palette = struct {
 	ceiling color.RGBA
 	floor   color.RGBA
-	wallX   color.RGBA // walls hit on an east/west face
-	wallY   color.RGBA // walls hit on a north/south face (drawn darker)
-	door    color.RGBA
+	wall    color.RGBA // base tint for the wall texture
+	door    color.RGBA // base tint for the door texture
 	sprite  [2]color.RGBA
 	hudText color.RGBA // player-facing notice text
 	hudDiag color.RGBA // diagnostic/playtest readout text
@@ -33,8 +33,7 @@ var palette = struct {
 }{
 	ceiling: color.RGBA{R: 28, G: 26, B: 30, A: 255},
 	floor:   color.RGBA{R: 44, G: 36, B: 30, A: 255},
-	wallX:   color.RGBA{R: 150, G: 110, B: 78, A: 255},
-	wallY:   color.RGBA{R: 110, G: 80, B: 56, A: 255},
+	wall:    color.RGBA{R: 150, G: 110, B: 78, A: 255},
 	door:    color.RGBA{R: 120, G: 70, B: 60, A: 255},
 	sprite: [2]color.RGBA{
 		{R: 168, G: 52, B: 44, A: 255},

@@ -22,7 +22,7 @@ func renderFrame(t *testing.T, seed int64, cfg Config) ([]byte, []float64) {
 	cam := newCamera(g.Player.Angle, cfg.FOV)
 	clearBackground(fb, cfg)
 	drawWalls(fb, zbuf, g, cam, cfg, tex)
-	drawSprites(fb, zbuf, g, cam, cfg)
+	drawSprites(fb, zbuf, g, cam, cfg, tex)
 	return fb, zbuf
 }
 

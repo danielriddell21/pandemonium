@@ -82,7 +82,7 @@ func loadPNG(path string) (*texture, bool) {
 	if err != nil {
 		return nil, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	img, err := png.Decode(f)
 	if err != nil {
 		return nil, false
@@ -102,14 +102,14 @@ func loadPNG(path string) (*texture, bool) {
 	return t, true
 }
 
-// defaultTextures generates the built-in placeholder textures.
+// defaultTextures generates the built-in placeholder textures from the palette.
 func defaultTextures() *textureSet {
 	return &textureSet{
-		wall: genBrick(color.RGBA{R: 150, G: 110, B: 78, A: 255}),
-		door: genDoor(color.RGBA{R: 120, G: 70, B: 60, A: 255}),
+		wall: genBrick(palette.wall),
+		door: genDoor(palette.door),
 		sprite: []*texture{
-			genDemon(color.RGBA{R: 168, G: 52, B: 44, A: 255}),
-			genDemon(color.RGBA{R: 120, G: 40, B: 96, A: 255}),
+			genDemon(palette.sprite[0]),
+			genDemon(palette.sprite[1]),
 		},
 	}
 }
@@ -142,7 +142,7 @@ func genDoor(base color.RGBA) *texture {
 	frame := color.RGBA{R: 70, G: 40, B: 36, A: 255}
 	for y := range texSize {
 		for x := range texSize {
-			c := base
+			var c color.RGBA
 			switch {
 			case x < 3 || x >= texSize-3 || y < 3 || y >= texSize-3:
 				c = frame
