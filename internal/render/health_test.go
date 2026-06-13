@@ -24,7 +24,7 @@ func TestHealthBarScalesWithHealth(t *testing.T) {
 	drawHealthBar(empty, cfg, 0.0)
 
 	cf, ch, ce := countColored(full, cfg), countColored(half, cfg), countColored(empty, cfg)
-	if !(cf > ch && ch > ce) {
+	if cf <= ch || ch <= ce {
 		t.Errorf("expected full > half > empty filled pixels; got %d, %d, %d", cf, ch, ce)
 	}
 	if ce != 0 {

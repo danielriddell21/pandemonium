@@ -12,17 +12,17 @@ func TestDeathFiresObsDeathAndRespawns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cap := &captureObserver{}
-	g := New(l, WithObserver(cap))
+	capt := &captureObserver{}
+	g := New(l, WithObserver(capt))
 
 	// A demon glued to the player drains health to zero within a few seconds.
 	g.Entities = []Entity{{Pos: g.Player.Pos, Alive: true}}
-	for i := 0; i < 1200 && cap.count(ObsDeath) == 0; i++ {
+	for i := 0; i < 1200 && capt.count(ObsDeath) == 0; i++ {
 		g.Tick(Input{}, 1.0/60.0)
 	}
 
-	if cap.count(ObsDeath) != 1 {
-		t.Fatalf("ObsDeath count = %d, want 1", cap.count(ObsDeath))
+	if capt.count(ObsDeath) != 1 {
+		t.Fatalf("ObsDeath count = %d, want 1", capt.count(ObsDeath))
 	}
 	if g.Player.Health != MaxHealth {
 		t.Errorf("not respawned at full health: %v", g.Player.Health)
