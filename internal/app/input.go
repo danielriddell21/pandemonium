@@ -39,6 +39,10 @@ func (g *Game) readInput() sim.Input {
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		in.Interact = true
 	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		inpututil.IsKeyJustPressed(ebiten.KeyControlLeft) || inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		in.Attack = true
+	}
 	return in
 }
 
