@@ -24,6 +24,8 @@ type Game struct {
 	Entities []Entity
 	tick     uint64
 
+	attackCooldown float64
+
 	observer Observer
 	tracker  tracker
 }
@@ -63,7 +65,19 @@ func (g *Game) Tick(in Input, dt float64) {
 	g.Player.Pos = resolveMove(g.World, g.Player.Pos, dx, dy)
 
 	g.updateEntities(dt)
+
+	if g.attackCooldown > 0 {
+		g.attackCooldown -= dt
+	}
+	if in.Attack && g.attackCooldown <= 0 {
+		g.attack()
+		g.attackCooldown = attackCooldownDur
+	}
+
 	g.applyContactDamage(dt)
+	if g.Player.Health <= 0 {
+		g.die()
+	}
 
 	g.observeMovement()
 

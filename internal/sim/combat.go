@@ -12,7 +12,58 @@ const (
 	contactRange = 0.6
 	// contactDamage is health lost per second while a demon is in contact.
 	contactDamage = 30.0
+	// attackRange is how far ahead the player's strike reaches, in tiles.
+	attackRange = 3.0
+	// attackArcCos is the cosine of the half-angle within which a target must lie
+	// (~25°), so the strike only hits what is roughly ahead.
+	attackArcCos = 0.9
+	// attackCooldownDur is the minimum time between strikes, in seconds.
+	attackCooldownDur = 0.4
 )
+
+// attack strikes straight ahead, killing the nearest living demon within range,
+// inside the facing arc, and in clear line of sight.
+func (g *Game) attack() {
+	dir := g.Player.Dir()
+	best := -1
+	bestD := math.Inf(1)
+	for i := range g.Entities {
+		e := g.Entities[i]
+		if !e.Alive {
+			continue
+		}
+		dx, dy := e.Pos.X-g.Player.Pos.X, e.Pos.Y-g.Player.Pos.Y
+		d := math.Hypot(dx, dy)
+		if d == 0 || d > attackRange {
+			continue
+		}
+		if (dx/d)*dir.X+(dy/d)*dir.Y < attackArcCos {
+			continue
+		}
+		if !losClear(g.World, g.Player.Pos, e.Pos) {
+			continue
+		}
+		if d < bestD {
+			bestD, best = d, i
+		}
+	}
+	if best >= 0 {
+		g.Entities[best].Alive = false
+	}
+}
+
+// die emits the death observation and respawns the player at the level spawn with
+// full health, resetting the demons to their deterministic starting layout.
+func (g *Game) die() {
+	g.emit(Observation{Kind: ObsDeath, At: g.PlayerCell()})
+	l := g.World.Level
+	g.Player.Pos = Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5}
+	g.Player.Angle = facing(l.Spawn, l.Exit)
+	g.Player.Health = MaxHealth
+	g.Entities = spawnEntities(l)
+	g.tracker.lastCell = l.Spawn
+	g.tracker.started = true
+}
 
 // updateEntities advances demon behaviour for one step: any living demon within
 // detectRadius and line of sight moves toward the player, stopping at contact.
