@@ -16,11 +16,12 @@ func renderFrame(t *testing.T, seed int64, cfg Config) ([]byte, []float64) {
 		t.Fatal(err)
 	}
 	g := sim.New(l)
+	tex := defaultTextures()
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zbuf := make([]float64, cfg.Width)
 	cam := newCamera(g.Player.Angle, cfg.FOV)
 	clearBackground(fb, cfg)
-	drawWalls(fb, zbuf, g, cam, cfg)
+	drawWalls(fb, zbuf, g, cam, cfg, tex)
 	drawSprites(fb, zbuf, g, cam, cfg)
 	return fb, zbuf
 }

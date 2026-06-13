@@ -19,9 +19,10 @@ func clearBackground(fb []byte, cfg Config) {
 	fillRows(fb, cfg.Width, mid, cfg.Height, palette.floor)
 }
 
-// drawWalls casts one ray per screen column, draws the shaded wall slice, and
-// records each column's perpendicular distance into zbuf for sprite occlusion.
-func drawWalls(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config) {
+// drawWalls casts one ray per screen column, draws the texture-mapped, distance-
+// shaded wall slice, and records each column's perpendicular distance into zbuf
+// for sprite occlusion.
+func drawWalls(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
 
@@ -31,25 +32,41 @@ func drawWalls(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config) {
 		zbuf[x] = ht.perpDist
 
 		lineH := int(float64(h) / ht.perpDist)
+		if lineH < 1 {
+			lineH = 1
+		}
 		y0 := h/2 - lineH/2
 		y1 := h/2 + lineH/2
 
-		base := wallColor(g, ht)
-		col := shade(base, ht.perpDist, ht.side)
-		fillColumn(fb, w, h, x, y0, y1, col)
-	}
-}
+		tex := tx.wall
+		if g.World.Level.At(ht.mapX, ht.mapY) == world.TileDoor {
+			tex = tx.door
+		}
 
-// wallColor picks the flat colour for the struck wall cell: doors get their own
-// tint, other walls are tinted by which face was hit.
-func wallColor(g *sim.Game, ht hit) color.RGBA {
-	if g.World.Level.At(ht.mapX, ht.mapY) == world.TileDoor {
-		return palette.door
+		// Texture column, flipped so the image faces the camera consistently.
+		texX := int(ht.wallX * float64(tex.w))
+		if texX >= tex.w {
+			texX = tex.w - 1
+		}
+		if (ht.side == 0 && dx > 0) || (ht.side == 1 && dy < 0) {
+			texX = tex.w - 1 - texX
+		}
+
+		start, end := y0, y1
+		if start < 0 {
+			start = 0
+		}
+		if end >= h {
+			end = h - 1
+		}
+		step := float64(tex.h) / float64(lineH)
+		texPos := float64(start-y0) * step
+		for y := start; y <= end; y++ {
+			texel := tex.at(texX, int(texPos))
+			texPos += step
+			setPixel(fb, w, x, y, shade(texel, ht.perpDist, ht.side))
+		}
 	}
-	if ht.side == 0 {
-		return palette.wallX
-	}
-	return palette.wallY
 }
 
 // shade darkens a colour with distance (for the dim look) and a little extra for
@@ -74,19 +91,6 @@ func fillRows(fb []byte, w, y0, y1 int, c color.RGBA) {
 		for x := range w {
 			setPixel(fb, w, x, y, c)
 		}
-	}
-}
-
-// fillColumn fills a vertical span [y0, y1] at column x, clipped to the screen.
-func fillColumn(fb []byte, w, h, x, y0, y1 int, c color.RGBA) {
-	if y0 < 0 {
-		y0 = 0
-	}
-	if y1 >= h {
-		y1 = h - 1
-	}
-	for y := y0; y <= y1; y++ {
-		setPixel(fb, w, x, y, c)
 	}
 }
 

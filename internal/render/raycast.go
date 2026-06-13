@@ -9,11 +9,13 @@ type grid interface {
 }
 
 // hit is the result of casting one ray: the wall cell struck, the perpendicular
-// distance to it (corrected to avoid fisheye), and which face was hit.
+// distance to it (corrected to avoid fisheye), which face was hit, and where
+// along the wall it landed (wallX in [0,1), for texture mapping).
 type hit struct {
 	perpDist   float64
 	mapX, mapY int
 	side       int // 0 = vertical (east/west) face, 1 = horizontal (north/south)
+	wallX      float64
 }
 
 // castRay walks a ray from (posX, posY) in direction (dirX, dirY) through the
@@ -78,7 +80,17 @@ func castRay(g grid, posX, posY, dirX, dirY float64) hit {
 	if perp < 1e-6 {
 		perp = 1e-6
 	}
-	return hit{perpDist: perp, mapX: mapX, mapY: mapY, side: side}
+
+	// Where along the struck wall the ray landed, used to pick a texture column.
+	var wallX float64
+	if side == 0 {
+		wallX = posY + perp*dirY
+	} else {
+		wallX = posX + perp*dirX
+	}
+	wallX -= math.Floor(wallX)
+
+	return hit{perpDist: perp, mapX: mapX, mapY: mapY, side: side, wallX: wallX}
 }
 
 // maxDDASteps bounds DDA iterations so a ray that somehow escapes the bounded
