@@ -6,6 +6,8 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+
+	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
 // texSize is the edge length of the procedurally generated textures.
@@ -54,6 +56,15 @@ type textureSet struct {
 	fireball *texture
 	weapon   []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
 	flash    *texture   // muzzle flash
+	item     []*texture // indexed by world.ItemKind
+}
+
+// itemTexture returns the sprite for a collectible kind.
+func (ts *textureSet) itemTexture(k world.ItemKind) *texture {
+	if int(k) < len(ts.item) {
+		return ts.item[k]
+	}
+	return nil
 }
 
 // loadTextures returns the procedural texture set, overriding any individual
@@ -120,7 +131,64 @@ func defaultTextures() *textureSet {
 		fireball: genFireball(),
 		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
 		flash:    genFlash(),
+		item:     defaultItemTextures(),
 	}
+}
+
+// defaultItemTextures builds the collectible sprites indexed by world.ItemKind.
+func defaultItemTextures() []*texture {
+	items := make([]*texture, world.ItemKeyYellow+1)
+	items[world.ItemHealth] = genMedkit()
+	items[world.ItemArmor] = genArmor()
+	items[world.ItemBullets] = genAmmoBox(color.RGBA{R: 196, G: 170, B: 60, A: 255})
+	items[world.ItemShells] = genAmmoBox(color.RGBA{R: 196, G: 70, B: 50, A: 255})
+	items[world.ItemKeyRed] = genKey(color.RGBA{R: 210, G: 50, B: 50, A: 255})
+	items[world.ItemKeyBlue] = genKey(color.RGBA{R: 70, G: 110, B: 220, A: 255})
+	items[world.ItemKeyYellow] = genKey(color.RGBA{R: 220, G: 200, B: 60, A: 255})
+	return items
+}
+
+// genMedkit draws a white box with a red cross on a transparent background.
+func genMedkit() *texture {
+	t := newTexture(texSize, texSize)
+	box := color.RGBA{R: 230, G: 230, B: 224, A: 255}
+	fillRect(t, 18, 22, 46, 50, adjust(box, -40))
+	fillRect(t, 19, 23, 45, 49, box)
+	red := color.RGBA{R: 200, G: 40, B: 40, A: 255}
+	fillRect(t, 29, 28, 35, 44, red) // vertical bar
+	fillRect(t, 24, 33, 40, 39, red) // horizontal bar
+	return t
+}
+
+// genArmor draws a simple green chest-plate on a transparent background.
+func genArmor() *texture {
+	t := newTexture(texSize, texSize)
+	green := color.RGBA{R: 60, G: 170, B: 70, A: 255}
+	for y := 22; y < 50; y++ {
+		// Taper the plate toward the bottom for a vest-like silhouette.
+		inset := (y - 22) / 4
+		fillRect(t, 20+inset, y, 44-inset, y+1, green)
+	}
+	fillRect(t, 20, 22, 44, 25, adjust(green, 40)) // collar highlight
+	return t
+}
+
+// genAmmoBox draws a small ammo container tinted by the round it holds.
+func genAmmoBox(c color.RGBA) *texture {
+	t := newTexture(texSize, texSize)
+	fillRect(t, 20, 30, 44, 46, adjust(c, -50))
+	fillRect(t, 21, 31, 43, 45, c)
+	fillRect(t, 21, 31, 43, 34, adjust(c, 40)) // lid highlight
+	return t
+}
+
+// genKey draws a keycard in the given colour on a transparent background.
+func genKey(c color.RGBA) *texture {
+	t := newTexture(texSize, texSize)
+	fillRect(t, 26, 22, 38, 48, adjust(c, -50))
+	fillRect(t, 27, 23, 37, 47, c)
+	fillRect(t, 29, 25, 35, 30, adjust(c, 60)) // notch detail
+	return t
 }
 
 func fillRect(t *texture, x0, y0, x1, y1 int, c color.RGBA) {

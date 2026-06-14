@@ -62,10 +62,18 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
 	drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()))
 	drawHealthBar(r.fb, r.cfg, g.Player.Health/sim.MaxHealth)
+	drawNotice(r.fb, r.cfg, g.Notice())
 	if r.overlay != nil {
 		if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {
 			drawMessage(r.fb, r.cfg, msg, ch)
 		}
 	}
+	return r.fb
+}
+
+// Intermission renders the between-levels tally screen for stats and returns the
+// RGBA buffer (owned by the Renderer, overwritten on the next call).
+func (r *Renderer) Intermission(stats sim.LevelStats) []byte {
+	drawIntermission(r.fb, r.cfg, stats)
 	return r.fb
 }

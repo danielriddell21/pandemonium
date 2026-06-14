@@ -13,13 +13,15 @@ import (
 const (
 	spriteScale   = 0.9
 	fireballScale = 0.45
+	itemScale     = 0.4
 )
 
-// billboard is a depth-sortable sprite (a demon or a projectile).
+// billboard is a depth-sortable sprite (a demon, a projectile or an item).
 type billboard struct {
-	pos   sim.Vec2
-	tex   *texture
-	scale float64
+	pos    sim.Vec2
+	tex    *texture
+	scale  float64
+	ground bool // anchor the sprite's base to the floor rather than eye level
 }
 
 // drawSprites projects demons and projectiles into the view, sorts them
@@ -36,6 +38,14 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 	for _, p := range g.Projectiles {
 		if p.Alive {
 			items = append(items, billboard{pos: p.Pos, tex: tx.fireball, scale: fireballScale})
+		}
+	}
+	for _, it := range g.Items {
+		if it.Taken {
+			continue
+		}
+		if t := tx.itemTexture(it.Kind); t != nil {
+			items = append(items, billboard{pos: it.Pos, tex: t, scale: itemScale, ground: true})
 		}
 	}
 
@@ -61,7 +71,7 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 		if size <= 0 {
 			continue
 		}
-		drawBillboard(fb, zbuf, cfg, screenX, size, depth, it.tex)
+		drawBillboard(fb, zbuf, cfg, screenX, size, depth, it.tex, it.ground)
 	}
 }
 
@@ -84,9 +94,13 @@ func demonTexture(tx *textureSet, e sim.Entity) *texture {
 
 // drawBillboard renders one textured sprite centred at screenX, skipping
 // transparent texels and columns occluded by nearer walls (via the depth buffer).
-func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, size int, depth float64, tex *texture) {
+func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, size int, depth float64, tex *texture, ground bool) {
 	w, h := cfg.Width, cfg.Height
 	top := h/2 - size/2
+	if ground {
+		// Rest the sprite's base on the floor line of a wall at this depth.
+		top = h/2 + int(float64(h)/depth/2) - size
+	}
 	left := screenX - size/2
 
 	for x := left; x < left+size; x++ {

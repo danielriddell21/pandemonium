@@ -5,10 +5,20 @@ package app
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/danielriddell21/pandemonium/internal/hud"
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
+)
+
+// state is the app's top-level mode: playing a level or showing the tally screen
+// between levels.
+type state int
+
+const (
+	statePlaying state = iota
+	stateIntermission
 )
 
 // NextFunc produces the simulation for the next level. The app calls it when the
@@ -23,6 +33,8 @@ type Game struct {
 	overlay  *hud.Overlay
 	next     NextFunc
 
+	state      state
+	tally      sim.LevelStats // captured stats shown on the intermission screen
 	haveMouse  bool
 	lastMouseX int
 }
@@ -47,11 +59,21 @@ func New(g *sim.Game, renderer *render.Renderer, next NextFunc, opts ...Option) 
 	return game
 }
 
-// Update advances the simulation by one tick and swaps in the next level once
-// the player reaches an exit.
+// Update advances the simulation by one tick. Reaching an exit pauses play on a
+// tally screen; pressing Enter there advances to the next level.
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
+	}
+
+	if g.state == stateIntermission {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			if ng := g.next(); ng != nil {
+				g.sim = ng
+			}
+			g.state = statePlaying
+		}
+		return nil
 	}
 
 	dt := 1.0 / float64(ebiten.TPS())
@@ -62,15 +84,19 @@ func (g *Game) Update() error {
 	}
 
 	if g.sim.ReachedExit() {
-		if ng := g.next(); ng != nil {
-			g.sim = ng
-		}
+		g.tally = g.sim.LevelStats()
+		g.state = stateIntermission
 	}
 	return nil
 }
 
-// Draw renders the current view and uploads it to the screen.
+// Draw renders the current view, or the tally screen between levels, and uploads
+// it to the screen.
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.state == stateIntermission {
+		screen.WritePixels(g.renderer.Intermission(g.tally))
+		return
+	}
 	screen.WritePixels(g.renderer.Frame(g.sim))
 }
 
