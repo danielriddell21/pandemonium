@@ -21,6 +21,8 @@ go run ./cmd/pandemonium --seed 42
 | `W` / `S`          | Move forward/back |
 | `A` / `D`          | Strafe left/right |
 | Mouse / `←` `→`    | Turn              |
+| Left-click / `Ctrl` / `F` | Attack     |
+| `1` `2` `3` / wheel | Switch weapon    |
 | `E`                | Interact (doors)  |
 | `Esc`              | Quit              |
 
