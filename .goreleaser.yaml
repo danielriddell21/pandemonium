@@ -6,18 +6,17 @@ before:
   hooks:
     - go mod tidy
 
+# GUI-only Ebiten FPS: a cgo/Metal darwin build shipped as a Homebrew cask. Built on a
+# macOS runner (a Linux clang cannot cross-build a darwin cgo binary). Linux/Windows users
+# build from source.
 builds:
   - id: pandemonium
     main: ./cmd/pandemonium
     binary: pandemonium
     env:
       - CGO_ENABLED=1
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - arm64
+    goos: [darwin]
+    goarch: [amd64, arm64]
     flags:
       - -trimpath
     ldflags:
@@ -25,10 +24,9 @@ builds:
 
 archives:
   - id: default
-    formats:
-      - tar.gz
-    name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    ids: [pandemonium]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
@@ -44,17 +42,21 @@ changelog:
       - "^test:"
       - "^chore:"
       - "^ci:"
+      - Merge pull request
+      - Merge branch
 
-brews:
+release:
+  name_template: "v{{ .Version }}"
+
+# Homebrew cask: the macOS-only native Ebiten window.
+homebrew_casks:
   - name: pandemonium
     repository:
       owner: danielriddell21
       name: homebrew-tap
+      branch: trunk
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: https://github.com/danielriddell21/pandemonium
-    description: A procedurally generated DOOM-style raycaster.
+    description: A procedurally generated DOOM-style raycaster FPS
     license: MIT
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    test: |
-      system "#{bin}/pandemonium", "--help"
+    caveats: "pandemonium opens an Ebiten window and is macOS-only; on Linux/Windows, build from source."
