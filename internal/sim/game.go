@@ -32,6 +32,8 @@ type Game struct {
 	notice    string  // transient on-screen message (pickups, keys, finds)
 	noticeTTL float64 // remaining display time for notice, in seconds
 
+	secrets map[world.Coord]bool // secret cells not yet discovered
+
 	observer Observer
 	tracker  tracker
 }
@@ -52,6 +54,7 @@ func New(l *world.Level, opts ...Option) *Game {
 		},
 		Entities: spawnEntities(l),
 		Items:    newItems(l),
+		secrets:  newSecrets(l),
 		observer: nopObserver{},
 		tracker:  newTracker(l),
 	}
@@ -132,6 +135,7 @@ func (g *Game) observeMovement() {
 	g.tracker.lastCell = cell
 
 	g.emit(Observation{Kind: ObsMove, At: cell})
+	g.checkSecret(cell)
 
 	mk, ok := g.tracker.markerAt(cell)
 	if !ok {

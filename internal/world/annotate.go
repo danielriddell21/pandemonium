@@ -92,9 +92,28 @@ func deadEndDoorMarkers(l *Level, g *rng) []Marker {
 				Branches: nnb,
 				Optimal:  optimal,
 			})
+			// The cell tucked behind the door is a natural hidden room: half the
+			// time, mark it a secret and stash a reward there.
+			if g.chance(0.5) {
+				l.Secrets = append(l.Secrets, d)
+				l.Items = append(l.Items, Item{Kind: secretReward(g), At: d})
+			}
 		}
 	}
 	return markers
+}
+
+// secretReward picks the prize tucked into a secret room, favouring the more
+// valuable armour and shells over a plain health top-up.
+func secretReward(g *rng) ItemKind {
+	switch g.intn(5) {
+	case 0, 1:
+		return ItemArmor
+	case 2, 3:
+		return ItemShells
+	default:
+		return ItemHealth
+	}
 }
 
 // decoyExitMarker tags a floor cell near the real exit that could be mistaken for
