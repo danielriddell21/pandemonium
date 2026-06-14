@@ -3,7 +3,8 @@ package render
 import "math"
 
 // drawViewmodel blits the current weapon at the bottom-centre of the screen with
-// a gentle bob, plus a muzzle flash above it while firing. tick drives the bob.
+// a gentle bob, plus a muzzle flash at the barrel tip while firing. tick drives
+// the bob.
 func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, tick float64) {
 	if weapon == nil {
 		return
@@ -14,11 +15,14 @@ func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, t
 	x0 := cfg.Width/2 - vw/2
 	y0 := cfg.Height - vh + bob
 
+	// The weapon is drawn first; the flash sits over its muzzle (centred
+	// horizontally, near the top of the sprite where the barrel points).
+	blitTexture(fb, cfg, weapon, x0, y0, vw, vh)
 	if firing && flash != nil {
 		fw := vw / 2
-		blitTexture(fb, cfg, flash, cfg.Width/2-fw/2, y0-fw/3, fw, fw)
+		fy := y0 + int(float64(vh)*0.18)
+		blitTexture(fb, cfg, flash, cfg.Width/2-fw/2, fy, fw, fw)
 	}
-	blitTexture(fb, cfg, weapon, x0, y0, vw, vh)
 }
 
 // blitTexture nearest-samples tex into the screen rect (dx,dy,dw,dh), skipping
