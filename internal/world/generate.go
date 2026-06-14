@@ -47,7 +47,9 @@ func Generate(cfg Config) (*Level, error) {
 		sub := cfg.Seed + int64(attempt)*0x100000001b3
 		l := generateOnce(cfg.Width, cfg.Height, sub)
 		l.Seed = cfg.Seed
-		if Reachable(l, l.Spawn, l.Exit) {
+		// The exit must be reachable once doors are open, and every keycard must
+		// be obtainable without first crossing the door it unlocks.
+		if reachable(l, l.Spawn, l.Exit, blocksWalls(l)) && keysReachable(l) {
 			return l, nil
 		}
 	}
@@ -67,6 +69,7 @@ func generateOnce(width, height int, seed int64) *Level {
 
 	placeSpawnAndExit(l, collectRooms(root))
 	annotate(l)
+	placeKeyGate(l, g)
 	placeItems(l, g)
 	return l
 }

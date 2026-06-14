@@ -164,7 +164,14 @@ func (g *Game) interact() {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))
 	ty := int(math.Floor(g.Player.Pos.Y + dir.Y*reach))
-	if !g.World.OpenDoor(tx, ty) {
+	if !g.World.IsDoor(tx, ty) || g.World.Opened(tx, ty) {
+		return
+	}
+	if key, locked := g.World.Lock(tx, ty); locked && !g.Player.HasKey(key) {
+		g.setNotice("You need the " + key.String())
+		return
+	}
+	if !g.World.OpenDoor(tx, ty, g.Player.HasKey) {
 		return
 	}
 	cell := world.Coord{X: tx, Y: ty}

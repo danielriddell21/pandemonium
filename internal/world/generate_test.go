@@ -27,8 +27,13 @@ func TestGenerateConnectivity(t *testing.T) {
 			if l.At(l.Exit.X, l.Exit.Y) != TileExit {
 				t.Errorf("%dx%d seed=%d: exit tile not marked", s.w, s.h, seed)
 			}
-			if !Reachable(l, l.Spawn, l.Exit) {
+			// The exit must be reachable once doors are open, and every keycard
+			// must be obtainable without first crossing the door it unlocks.
+			if !reachable(l, l.Spawn, l.Exit, blocksWalls(l)) {
 				t.Errorf("%dx%d seed=%d: exit unreachable from spawn\n%s", s.w, s.h, seed, l)
+			}
+			if !keysReachable(l) {
+				t.Errorf("%dx%d seed=%d: a keycard is unreachable without its own door\n%s", s.w, s.h, seed, l)
 			}
 		}
 	}

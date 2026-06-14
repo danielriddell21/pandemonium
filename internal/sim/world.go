@@ -38,14 +38,25 @@ func (w *World) Opened(x, y int) bool {
 	return w.opened[world.Coord{X: x, Y: y}]
 }
 
-// OpenDoor marks the door at (x, y) open. It reports whether this call changed
-// the state (i.e. the cell was a still-closed door).
-func (w *World) OpenDoor(x, y int) bool {
+// Lock returns the keycard required to open the door at (x, y), and whether the
+// door is locked at all.
+func (w *World) Lock(x, y int) (world.ItemKind, bool) {
+	k, ok := w.Level.Locks[world.Coord{X: x, Y: y}]
+	return k, ok
+}
+
+// OpenDoor marks the door at (x, y) open, provided any lock on it is satisfied by
+// hasKey. It reports whether this call changed the state (i.e. the cell was a
+// still-closed, unlocked-or-keyed door).
+func (w *World) OpenDoor(x, y int, hasKey func(world.ItemKind) bool) bool {
 	if w.Level.At(x, y) != world.TileDoor {
 		return false
 	}
 	c := world.Coord{X: x, Y: y}
 	if w.opened[c] {
+		return false
+	}
+	if key, locked := w.Level.Locks[c]; locked && !hasKey(key) {
 		return false
 	}
 	w.opened[c] = true
