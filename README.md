@@ -12,7 +12,9 @@ deterministic from a seed, so a given seed always produces the same world.
 go run ./cmd/pandemonium --seed 42
 ```
 
-![pandemonium gameplay](docs/demos/hero.gif)
+<video src="https://github.com/danielriddell21/pandemonium/raw/trunk/docs/demos/hero.mp4" controls muted loop width="640">
+  <a href="docs/demos/hero.mp4">Watch the gameplay video</a>
+</video>
 
 ## Controls
 

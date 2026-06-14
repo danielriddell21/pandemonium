@@ -26,9 +26,9 @@ health gauge) — then gunning it down with the pistol (note the viewmodel and
 muzzle flash). Demons animate and collapse when killed; sprites always face the
 camera and are occluded correctly by nearer walls.
 
-## New level
+## Tally
 
-![new level](demos/new-level.gif)
+![tally](demos/tally.gif)
 
 Reaching the exit shows a level-complete tally — kills, items and secrets as
 percentages, plus the time taken — then generates a fresh level to continue into.
