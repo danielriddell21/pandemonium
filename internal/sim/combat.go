@@ -17,8 +17,6 @@ const (
 	// attackArcCos is the cosine of the half-angle within which a target must lie
 	// (~25°), so the strike only hits what is roughly ahead.
 	attackArcCos = 0.9
-	// attackCooldownDur is the minimum time between strikes, in seconds.
-	attackCooldownDur = 0.4
 
 	// meleeHealth and rangedHealth are the demons' starting hit points.
 	meleeHealth  = 60.0

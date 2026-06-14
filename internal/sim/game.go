@@ -25,6 +25,7 @@ type Game struct {
 	tick     uint64
 
 	attackCooldown float64
+	flash          int // muzzle-flash frames remaining
 
 	observer Observer
 	tracker  tracker
@@ -37,9 +38,12 @@ func New(l *world.Level, opts ...Option) *Game {
 	g := &Game{
 		World: NewWorld(l),
 		Player: Player{
-			Pos:    Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
-			Angle:  facing(l.Spawn, l.Exit),
-			Health: MaxHealth,
+			Pos:     Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
+			Angle:   facing(l.Spawn, l.Exit),
+			Health:  MaxHealth,
+			Weapon:  Pistol,
+			Bullets: 50,
+			Shells:  20,
 		},
 		Entities: spawnEntities(l),
 		observer: nopObserver{},
@@ -64,14 +68,22 @@ func (g *Game) Tick(in Input, dt float64) {
 	dy := (dir.Y*in.Forward + strafeY*in.Strafe) * moveSpeed * dt
 	g.Player.Pos = resolveMove(g.World, g.Player.Pos, dx, dy)
 
+	if in.SelectWeapon != 0 {
+		g.switchWeapon(in.SelectWeapon)
+	}
+
 	g.updateEntities(dt)
 
 	if g.attackCooldown > 0 {
 		g.attackCooldown -= dt
 	}
+	if g.flash > 0 {
+		g.flash--
+	}
 	if in.Attack && g.attackCooldown <= 0 {
-		g.attack()
-		g.attackCooldown = attackCooldownDur
+		if g.fire() {
+			g.attackCooldown = weapons[g.Player.Weapon].cooldown
+		}
 	}
 
 	g.applyContactDamage(dt)

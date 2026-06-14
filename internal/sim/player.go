@@ -13,11 +13,14 @@ type Vec2 struct {
 // MaxHealth is the player's starting and maximum health.
 const MaxHealth = 100.0
 
-// Player holds the camera-bearing actor's position, facing and health.
+// Player holds the camera-bearing actor's position, facing, health and arsenal.
 type Player struct {
-	Pos    Vec2
-	Angle  float64 // radians; 0 points along +X
-	Health float64
+	Pos     Vec2
+	Angle   float64 // radians; 0 points along +X
+	Health  float64
+	Weapon  WeaponKind
+	Bullets int
+	Shells  int
 }
 
 // Dir returns the unit vector the player is facing.
@@ -33,5 +36,7 @@ type Input struct {
 	Turn      float64 // rate-based turn: +clockwise / -counter-clockwise
 	TurnDelta float64 // direct turn applied this tick, in radians (mouse-look)
 	Interact  bool    // act on an adjacent door this tick
-	Attack    bool    // strike straight ahead this tick
+	Attack    bool    // fire the current weapon this tick
+	// SelectWeapon switches weapon when non-zero: 1=fists, 2=pistol, 3=shotgun.
+	SelectWeapon int
 }
