@@ -157,10 +157,7 @@ func (g *Game) applyContactDamage(dt float64) {
 		}
 	}
 	if touching {
-		g.Player.Health -= contactDamage * dt
-	}
-	if g.Player.Health < 0 {
-		g.Player.Health = 0
+		g.hurtPlayer(contactDamage * dt)
 	}
 }
 

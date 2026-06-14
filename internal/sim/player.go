@@ -3,24 +3,43 @@
 // on the world package and knows nothing about how the game is drawn.
 package sim
 
-import "math"
+import (
+	"math"
+
+	"github.com/danielriddell21/pandemonium/internal/world"
+)
 
 // Vec2 is a 2D vector in world space, measured in tiles.
 type Vec2 struct {
 	X, Y float64
 }
 
-// MaxHealth is the player's starting and maximum health.
-const MaxHealth = 100.0
+const (
+	// MaxHealth is the player's starting and maximum health.
+	MaxHealth = 100.0
+	// MaxArmor is the most armour the player can carry.
+	MaxArmor = 100.0
+	// armorAbsorb is the fraction of incoming damage soaked by armour while the
+	// player has any, matching DOOM's green-armour behaviour.
+	armorAbsorb = 1.0 / 3.0
+)
 
-// Player holds the camera-bearing actor's position, facing, health and arsenal.
+// Player holds the camera-bearing actor's position, facing, health, armour and
+// arsenal, plus the keycards it has collected.
 type Player struct {
 	Pos     Vec2
 	Angle   float64 // radians; 0 points along +X
 	Health  float64
+	Armor   float64
 	Weapon  WeaponKind
 	Bullets int
 	Shells  int
+	Keys    map[world.ItemKind]bool
+}
+
+// HasKey reports whether the player holds the given keycard.
+func (p Player) HasKey(k world.ItemKind) bool {
+	return p.Keys[k]
 }
 
 // Dir returns the unit vector the player is facing.

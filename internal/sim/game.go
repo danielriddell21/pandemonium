@@ -23,10 +23,14 @@ type Game struct {
 	Player      Player
 	Entities    []Entity
 	Projectiles []Projectile
+	Items       []ItemState
 	tick        uint64
 
 	attackCooldown float64
 	flash          int // muzzle-flash frames remaining
+
+	notice    string  // transient on-screen message (pickups, keys, finds)
+	noticeTTL float64 // remaining display time for notice, in seconds
 
 	observer Observer
 	tracker  tracker
@@ -47,6 +51,7 @@ func New(l *world.Level, opts ...Option) *Game {
 			Shells:  20,
 		},
 		Entities: spawnEntities(l),
+		Items:    newItems(l),
 		observer: nopObserver{},
 		tracker:  newTracker(l),
 	}
@@ -91,6 +96,11 @@ func (g *Game) Tick(in Input, dt float64) {
 	g.applyContactDamage(dt)
 	if g.Player.Health <= 0 {
 		g.die()
+	}
+
+	g.pickupItems()
+	if g.noticeTTL > 0 {
+		g.noticeTTL -= dt
 	}
 
 	g.observeMovement()

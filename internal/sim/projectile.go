@@ -50,7 +50,7 @@ func (g *Game) advanceProjectiles(dt float64) {
 			continue // absorbed by a wall
 		}
 		if dist(p.Pos, g.Player.Pos) < projectileHitRadius {
-			g.Player.Health -= p.Damage
+			g.hurtPlayer(p.Damage)
 			continue // struck the player
 		}
 		kept = append(kept, p)

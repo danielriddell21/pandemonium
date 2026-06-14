@@ -17,6 +17,8 @@ const (
 	ObsExit
 	// ObsDeath reports the player dying.
 	ObsDeath
+	// ObsItem reports the player collecting an item.
+	ObsItem
 )
 
 // String returns a stable label for the kind.
@@ -32,6 +34,8 @@ func (k ObservationKind) String() string {
 		return "exit"
 	case ObsDeath:
 		return "death"
+	case ObsItem:
+		return "item"
 	default:
 		return "unknown"
 	}
