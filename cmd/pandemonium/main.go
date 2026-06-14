@@ -16,6 +16,10 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
 
+// version is the build version, overridden at release time via
+// -ldflags "-X main.version=...". It defaults to "dev" for local builds.
+var version = "dev"
+
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
@@ -33,6 +37,7 @@ func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "pandemonium",
 		Short:         "A procedurally generated DOOM-style raycaster.",
+		Version:       version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
