@@ -30,4 +30,5 @@ camera and are occluded correctly by nearer walls.
 
 ![new level](demos/new-level.gif)
 
-Reaching the exit collapses the current level and generates a fresh one.
+Reaching the exit shows a level-complete tally — kills, items and secrets as
+percentages, plus the time taken — then generates a fresh level to continue into.
