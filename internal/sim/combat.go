@@ -90,6 +90,7 @@ func (g *Game) die() {
 	g.Player.Angle = facing(l.Spawn, l.Exit)
 	g.Player.Health = MaxHealth
 	g.Entities = spawnEntities(l)
+	g.Projectiles = nil
 	g.tracker.lastCell = l.Spawn
 	g.tracker.started = true
 }
@@ -113,6 +114,9 @@ func (g *Game) updateEntities(dt float64) {
 		}
 
 		e.anim += dt
+		if e.Kind == Ranged && e.fire > 0 {
+			e.fire -= dt
+		}
 		if e.hurt > 0 {
 			e.hurt -= dt
 			continue
@@ -120,6 +124,10 @@ func (g *Game) updateEntities(dt float64) {
 		d := dist(e.Pos, pp)
 		if d > detectRadius || d == 0 || !losClear(g.World, e.Pos, pp) {
 			continue
+		}
+		if e.Kind == Ranged && e.fire <= 0 && d <= rangedFireRange {
+			g.spawnProjectile(e.Pos, pp)
+			e.fire = rangedFireCooldown
 		}
 		if d > contactRange {
 			ux, uy := (pp.X-e.Pos.X)/d, (pp.Y-e.Pos.Y)/d

@@ -19,10 +19,11 @@ const (
 // Game is the full simulation state for one level: the world, the player and the
 // entities within it. It advances via Tick and owns no rendering.
 type Game struct {
-	World    *World
-	Player   Player
-	Entities []Entity
-	tick     uint64
+	World       *World
+	Player      Player
+	Entities    []Entity
+	Projectiles []Projectile
+	tick        uint64
 
 	attackCooldown float64
 	flash          int // muzzle-flash frames remaining
@@ -86,6 +87,7 @@ func (g *Game) Tick(in Input, dt float64) {
 		}
 	}
 
+	g.advanceProjectiles(dt)
 	g.applyContactDamage(dt)
 	if g.Player.Health <= 0 {
 		g.die()
