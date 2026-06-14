@@ -43,7 +43,30 @@ func (g *Game) readInput() sim.Input {
 		inpututil.IsKeyJustPressed(ebiten.KeyControlLeft) || inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		in.Attack = true
 	}
+
+	in.SelectWeapon = g.weaponSelect()
 	return in
+}
+
+// weaponSelect maps number keys and the mouse wheel to a weapon slot (1=fists,
+// 2=pistol, 3=shotgun), or 0 to keep the current weapon. Number keys win.
+func (g *Game) weaponSelect() int {
+	if _, wy := ebiten.Wheel(); wy != 0 {
+		cur := int(g.sim.Player.Weapon)
+		if wy > 0 {
+			return (cur+1)%3 + 1
+		}
+		return (cur+2)%3 + 1
+	}
+	switch {
+	case inpututil.IsKeyJustPressed(ebiten.Key1):
+		return 1
+	case inpututil.IsKeyJustPressed(ebiten.Key2):
+		return 2
+	case inpututil.IsKeyJustPressed(ebiten.Key3):
+		return 3
+	}
+	return 0
 }
 
 // mouseTurn returns the turn delta from horizontal cursor movement since the
