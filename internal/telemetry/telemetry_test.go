@@ -86,6 +86,32 @@ func TestBusDispatchesAndAggregates(t *testing.T) {
 	}
 }
 
+func TestBusCountsKillsItemsSecrets(t *testing.T) {
+	c := &capture{}
+	b := NewBus(c)
+	b.now = fixedClock()
+
+	b.BeginLevel(7, 0)
+	b.Observe(sim.Observation{Kind: sim.ObsKill, At: world.Coord{X: 1, Y: 1}})
+	b.Observe(sim.Observation{Kind: sim.ObsKill, At: world.Coord{X: 2, Y: 1}})
+	b.Observe(sim.Observation{Kind: sim.ObsItem, At: world.Coord{X: 3, Y: 1}})
+	b.Observe(sim.Observation{Kind: sim.ObsSecret, At: world.Coord{X: 4, Y: 1}})
+	b.Observe(sim.Observation{Kind: sim.ObsExit, At: world.Coord{X: 5, Y: 1}})
+
+	if len(c.paths) != 1 {
+		t.Fatalf("path summaries = %d, want 1", len(c.paths))
+	}
+	p := c.paths[0]
+	if p.Kills != 2 || p.ItemsTaken != 1 || p.SecretsFound != 1 {
+		t.Errorf("kills=%d items=%d secrets=%d, want 2/1/1", p.Kills, p.ItemsTaken, p.SecretsFound)
+	}
+
+	rp := b.Profile()
+	if rp.TotalKills != 2 || rp.TotalItems != 1 || rp.TotalSecrets != 1 {
+		t.Errorf("totals kills=%d items=%d secrets=%d, want 2/1/1", rp.TotalKills, rp.TotalItems, rp.TotalSecrets)
+	}
+}
+
 func TestBusBeginLevelFinalisesPrevious(t *testing.T) {
 	c := &capture{}
 	b := NewBus(c)

@@ -21,6 +21,8 @@ const (
 	ObsItem
 	// ObsSecret reports the player discovering a secret area.
 	ObsSecret
+	// ObsKill reports the player slaying a demon.
+	ObsKill
 )
 
 // String returns a stable label for the kind.
@@ -40,6 +42,8 @@ func (k ObservationKind) String() string {
 		return "item"
 	case ObsSecret:
 		return "secret"
+	case ObsKill:
+		return "kill"
 	default:
 		return "unknown"
 	}

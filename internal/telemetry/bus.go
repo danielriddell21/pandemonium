@@ -94,6 +94,18 @@ func (b *Bus) Observe(o sim.Observation) {
 				b.path.WrongDoors++
 			}
 		}
+	case sim.ObsKill:
+		if b.pathOpen {
+			b.path.Kills++
+		}
+	case sim.ObsItem:
+		if b.pathOpen {
+			b.path.ItemsTaken++
+		}
+	case sim.ObsSecret:
+		if b.pathOpen {
+			b.path.SecretsFound++
+		}
 	case sim.ObsDeath:
 		b.profile.Deaths++
 	case sim.ObsExit:
@@ -122,6 +134,9 @@ func (b *Bus) finishPath() {
 	b.profile.TotalSteps += b.path.Steps
 	b.profile.TotalDoorsOpened += b.path.DoorsOpened
 	b.profile.TotalWrongDoors += b.path.WrongDoors
+	b.profile.TotalKills += b.path.Kills
+	b.profile.TotalItems += b.path.ItemsTaken
+	b.profile.TotalSecrets += b.path.SecretsFound
 	b.profile.ChoicesPerLevel = append(b.profile.ChoicesPerLevel, b.path.JunctionsSeen)
 	b.profile.Paths = append(b.profile.Paths, b.path)
 	b.profile.ExploreScore = exploreScore(b.profile)

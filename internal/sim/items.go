@@ -52,6 +52,7 @@ func (g *Game) pickupItems() {
 		}
 		g.applyPickup(it.Kind)
 		it.Taken = true
+		g.items++
 		g.emit(Observation{Kind: ObsItem, At: pc})
 	}
 }

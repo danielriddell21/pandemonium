@@ -34,6 +34,10 @@ type Game struct {
 
 	secrets map[world.Coord]bool // secret cells not yet discovered
 
+	elapsed                            float64 // seconds simulated this level
+	kills, items, found                int     // tallies for this level
+	killsTotal, itemsTotal, foundTotal int     // their level-wide totals
+
 	observer Observer
 	tracker  tracker
 }
@@ -58,6 +62,9 @@ func New(l *world.Level, opts ...Option) *Game {
 		observer: nopObserver{},
 		tracker:  newTracker(l),
 	}
+	g.killsTotal = len(g.Entities)
+	g.itemsTotal = len(g.Items)
+	g.foundTotal = len(l.Secrets)
 	for _, opt := range opts {
 		opt(g)
 	}
@@ -67,6 +74,7 @@ func New(l *world.Level, opts ...Option) *Game {
 // Tick advances the simulation by dt seconds given the player's input.
 func (g *Game) Tick(in Input, dt float64) {
 	g.tick++
+	g.elapsed += dt
 
 	g.Player.Angle = normalizeAngle(g.Player.Angle + in.Turn*turnSpeed*dt + in.TurnDelta)
 

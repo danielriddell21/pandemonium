@@ -21,6 +21,7 @@ func (g *Game) checkSecret(cell world.Coord) {
 		return
 	}
 	delete(g.secrets, cell)
+	g.found++
 	g.setNotice("You found a secret area!")
 	g.emit(Observation{Kind: ObsSecret, At: cell})
 }

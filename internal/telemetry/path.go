@@ -14,5 +14,8 @@ type PathSummary struct {
 	WrongDoors     int   `json:"wrong_doors"`
 	JunctionsSeen  int   `json:"junctions_seen"`
 	OptimalChoices int   `json:"optimal_choices"`
+	Kills          int   `json:"kills"`
+	ItemsTaken     int   `json:"items_taken"`
+	SecretsFound   int   `json:"secrets_found"`
 	Completed      bool  `json:"completed"`
 }

@@ -79,6 +79,8 @@ func (g *Game) damageEntity(i int, dmg float64) {
 		e.State = Dying
 		e.Alive = false
 		e.anim = 0
+		g.kills++
+		g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
 	} else {
 		e.hurt = painDuration
 	}
@@ -94,6 +96,7 @@ func (g *Game) die() {
 	g.Player.Health = MaxHealth
 	g.Entities = spawnEntities(l)
 	g.Projectiles = nil
+	g.kills = 0 // the demons are back; the kill tally restarts with them
 	g.tracker.lastCell = l.Spawn
 	g.tracker.started = true
 }
