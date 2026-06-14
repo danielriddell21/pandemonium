@@ -38,6 +38,7 @@ type Entity struct {
 	State  EntityState
 	Health float64
 	Alive  bool // true while Active (targetable, can move and harm)
+	Frame  int  // animation frame index for the current state (set by the sim)
 
 	hurt float64 // remaining stagger time after taking a hit, in seconds
 	fire float64 // remaining cooldown before a ranged demon shoots again

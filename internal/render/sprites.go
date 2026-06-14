@@ -8,49 +8,77 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// spriteScale controls how large billboards appear relative to a wall at the
+// spriteScale and fireballScale control billboard size relative to a wall at the
 // same distance (1 ≈ wall height).
-const spriteScale = 0.9
+const (
+	spriteScale   = 0.9
+	fireballScale = 0.45
+)
 
-// drawSprites projects each demon into the view, sorts them far-to-near, and
-// draws them after the walls, hiding columns that fall behind nearer geometry
-// using the wall depth buffer.
+// billboard is a depth-sortable sprite (a demon or a projectile).
+type billboard struct {
+	pos   sim.Vec2
+	tex   *texture
+	scale float64
+}
+
+// drawSprites projects demons and projectiles into the view, sorts them
+// far-to-near, and draws them after the walls, hiding columns that fall behind
+// nearer geometry using the wall depth buffer.
 func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
 
-	// Order by descending distance so nearer sprites overdraw farther ones.
-	order := make([]int, 0, len(g.Entities))
-	for i, e := range g.Entities {
-		if e.Alive {
-			order = append(order, i)
+	items := make([]billboard, 0, len(g.Entities)+len(g.Projectiles))
+	for _, e := range g.Entities {
+		items = append(items, billboard{pos: e.Pos, tex: demonTexture(tx, e), scale: spriteScale})
+	}
+	for _, p := range g.Projectiles {
+		if p.Alive {
+			items = append(items, billboard{pos: p.Pos, tex: tx.fireball, scale: fireballScale})
 		}
 	}
-	sort.Slice(order, func(a, b int) bool {
-		return distSq(g.Entities[order[a]], px, py) > distSq(g.Entities[order[b]], px, py)
+
+	// Order by descending distance so nearer sprites overdraw farther ones.
+	sort.Slice(items, func(a, b int) bool {
+		da := (items[a].pos.X-px)*(items[a].pos.X-px) + (items[a].pos.Y-py)*(items[a].pos.Y-py)
+		db := (items[b].pos.X-px)*(items[b].pos.X-px) + (items[b].pos.Y-py)*(items[b].pos.Y-py)
+		return da > db
 	})
 
 	// Inverse of the [plane | dir] matrix maps world offsets into camera space.
 	invDet := 1.0 / (cam.planeX*cam.dirY - cam.dirX*cam.planeY)
 
-	for _, idx := range order {
-		e := g.Entities[idx]
-		relX, relY := e.Pos.X-px, e.Pos.Y-py
-
+	for _, it := range items {
+		relX, relY := it.pos.X-px, it.pos.Y-py
 		transformX := invDet * (cam.dirY*relX - cam.dirX*relY)
 		depth := invDet * (-cam.planeY*relX + cam.planeX*relY)
 		if depth <= 0.01 {
 			continue // behind the camera
 		}
-
 		screenX := int(float64(w) / 2 * (1 + transformX/depth))
-		size := int(float64(h) / depth * spriteScale)
+		size := int(float64(h) / depth * it.scale)
 		if size <= 0 {
 			continue
 		}
+		drawBillboard(fb, zbuf, cfg, screenX, size, depth, it.tex)
+	}
+}
 
-		tex := tx.sprite[e.Sprite%len(tx.sprite)]
-		drawBillboard(fb, zbuf, cfg, screenX, size, depth, tex)
+// demonTexture picks the frame for a demon's variant and state.
+func demonTexture(tx *textureSet, e sim.Entity) *texture {
+	art := tx.demon[e.Sprite%len(tx.demon)]
+	switch e.State {
+	case sim.Dead:
+		return art.dead[len(art.dead)-1]
+	case sim.Dying:
+		i := e.Frame
+		if i >= len(art.dead) {
+			i = len(art.dead) - 1
+		}
+		return art.dead[i]
+	default:
+		return art.walk[e.Frame%len(art.walk)]
 	}
 }
 
@@ -88,9 +116,4 @@ func shadeRGBA(base color.RGBA, depth float64) color.RGBA {
 		B: uint8(float64(base.B) * f),
 		A: 255,
 	}
-}
-
-func distSq(e sim.Entity, px, py float64) float64 {
-	dx, dy := e.Pos.X-px, e.Pos.Y-py
-	return dx*dx + dy*dy
 }

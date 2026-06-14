@@ -27,6 +27,9 @@ const (
 	painDuration = 0.2
 	// deathDuration is how long the death animation plays before settling.
 	deathDuration = 0.5
+	// walkFPS is the demon walk-cycle rate; deathFrames is the death sequence length.
+	walkFPS     = 6.0
+	deathFrames = 3
 )
 
 // attack strikes straight ahead, wounding the nearest living demon in range.
@@ -104,9 +107,15 @@ func (g *Game) updateEntities(dt float64) {
 		e := &g.Entities[i]
 		switch e.State {
 		case Dead:
+			e.Frame = deathFrames - 1
 			continue
 		case Dying:
 			e.anim += dt
+			if f := int(e.anim / deathDuration * deathFrames); f < deathFrames {
+				e.Frame = f
+			} else {
+				e.Frame = deathFrames - 1
+			}
 			if e.anim >= deathDuration {
 				e.State = Dead
 			}
@@ -114,6 +123,7 @@ func (g *Game) updateEntities(dt float64) {
 		}
 
 		e.anim += dt
+		e.Frame = int(e.anim * walkFPS)
 		if e.Kind == Ranged && e.fire > 0 {
 			e.fire -= dt
 		}

@@ -40,11 +40,18 @@ func (t *texture) at(u, v int) color.RGBA {
 	return t.pix[v*t.w+u]
 }
 
+// demonArt holds a demon variant's animation frames.
+type demonArt struct {
+	walk []*texture // walk cycle
+	dead []*texture // death sequence (last frame is the settled corpse)
+}
+
 // textureSet holds the textures the renderer draws with.
 type textureSet struct {
-	wall   *texture
-	door   *texture
-	sprite []*texture
+	wall     *texture
+	door     *texture
+	demon    []demonArt
+	fireball *texture
 }
 
 // loadTextures returns the procedural texture set, overriding any individual
@@ -61,9 +68,9 @@ func loadTextures(dir string) *textureSet {
 	if t, ok := loadPNG(filepath.Join(dir, "door.png")); ok {
 		ts.door = t
 	}
-	for i := range ts.sprite {
+	for i := range ts.demon {
 		if t, ok := loadPNG(filepath.Join(dir, fmt.Sprintf("demon%d.png", i))); ok {
-			ts.sprite[i] = t
+			ts.demon[i].walk = []*texture{t}
 		}
 	}
 	return ts
@@ -105,12 +112,18 @@ func loadPNG(path string) (*texture, bool) {
 // defaultTextures generates the built-in placeholder textures from the palette.
 func defaultTextures() *textureSet {
 	return &textureSet{
-		wall: genBrick(palette.wall),
-		door: genDoor(palette.door),
-		sprite: []*texture{
-			genDemon(palette.sprite[0]),
-			genDemon(palette.sprite[1]),
-		},
+		wall:     genBrick(palette.wall),
+		door:     genDoor(palette.door),
+		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1])},
+		fireball: genFireball(),
+	}
+}
+
+// buildDemon makes a variant's walk and death frames.
+func buildDemon(c color.RGBA) demonArt {
+	return demonArt{
+		walk: []*texture{genDemonWalk(c, 0), genDemonWalk(c, 1)},
+		dead: []*texture{genDemonDead(c, 0, 3), genDemonDead(c, 1, 3), genDemonDead(c, 2, 3)},
 	}
 }
 
@@ -157,13 +170,10 @@ func genDoor(base color.RGBA) *texture {
 	return t
 }
 
-// genDemon draws a simple demon silhouette with a transparent background.
-func genDemon(body color.RGBA) *texture {
-	t := newTexture(texSize, texSize)
-	cx, cy := 32.0, 38.0
-	rx, ry := 20.0, 24.0
+// drawBody paints an elliptical demon body (transparent outside) with an edge
+// shade and, optionally, two eyes.
+func drawBody(t *texture, body color.RGBA, cx, cy, rx, ry float64, eyes bool) {
 	edge := adjust(body, -50)
-	eye := color.RGBA{R: 240, G: 220, B: 60, A: 255}
 	for y := range texSize {
 		for x := range texSize {
 			nx := (float64(x) - cx) / rx
@@ -179,11 +189,69 @@ func genDemon(body color.RGBA) *texture {
 			t.set(x, y, c)
 		}
 	}
-	// two eyes
-	for _, ex := range []int{25, 39} {
-		for dy := -2; dy <= 2; dy++ {
-			for dx := -2; dx <= 2; dx++ {
-				t.set(ex+dx, 30+dy, eye)
+	if eyes {
+		eye := color.RGBA{R: 240, G: 220, B: 60, A: 255}
+		ey := int(cy - 8)
+		for _, ex := range []int{int(cx - 7), int(cx + 7)} {
+			for dy := -2; dy <= 2; dy++ {
+				for dx := -2; dx <= 2; dx++ {
+					if ex+dx >= 0 && ex+dx < texSize && ey+dy >= 0 && ey+dy < texSize {
+						t.set(ex+dx, ey+dy, eye)
+					}
+				}
+			}
+		}
+	}
+}
+
+// genDemonWalk draws one walk-cycle frame (step 0 or 1) with a slight bob and
+// swapping legs.
+func genDemonWalk(body color.RGBA, step int) *texture {
+	t := newTexture(texSize, texSize)
+	drawBody(t, body, 32, 38+float64(step)*2, 20, 24, true)
+	leg := adjust(body, -40)
+	for _, bx := range []int{22 + step*6, 42 - step*6} {
+		for y := 58; y < 64; y++ {
+			for x := bx; x < bx+4 && x < texSize; x++ {
+				if x >= 0 {
+					t.set(x, y, leg)
+				}
+			}
+		}
+	}
+	return t
+}
+
+// genDemonDead draws death frame k of n: the body squashes toward the floor,
+// darkens, and loses its eyes.
+func genDemonDead(body color.RGBA, k, n int) *texture {
+	t := newTexture(texSize, texSize)
+	prog := float64(k) / float64(n-1)
+	dark := adjust(body, -int(60*prog))
+	ry := 24.0 * (1 - 0.75*prog)
+	drawBody(t, dark, 32, 56-ry, 22, ry, k == 0)
+	return t
+}
+
+// genFireball draws a glowing projectile with a transparent background.
+func genFireball() *texture {
+	t := newTexture(texSize, texSize)
+	cx, cy := 32.0, 32.0
+	for y := range texSize {
+		for x := range texSize {
+			nx := (float64(x) - cx) / 14
+			ny := (float64(y) - cy) / 14
+			d := nx*nx + ny*ny
+			if d > 1 {
+				continue
+			}
+			switch {
+			case d < 0.3:
+				t.set(x, y, color.RGBA{R: 255, G: 240, B: 180, A: 255})
+			case d < 0.7:
+				t.set(x, y, color.RGBA{R: 250, G: 150, B: 40, A: 255})
+			default:
+				t.set(x, y, color.RGBA{R: 200, G: 50, B: 20, A: 255})
 			}
 		}
 	}
