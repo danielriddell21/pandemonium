@@ -65,6 +65,37 @@ func TestAttackKillsNearestDemonInFront(t *testing.T) {
 	}
 }
 
+func TestDemonTakesMultipleHitsToDie(t *testing.T) {
+	g := newTestGame(t, 7)
+	g.Player.Angle = 0
+	p := g.Player.Pos
+	front := Vec2{X: p.X + 1.5, Y: p.Y}
+	if g.World.Solid(int(front.X), int(front.Y)) || !losClear(g.World, p, front) {
+		t.Skip("no clear space ahead")
+	}
+	g.Entities = []Entity{{Pos: front, Kind: Melee, State: Active, Health: meleeHealth, Alive: true}}
+
+	g.attack() // first strike: wounded, not dead (meleeHealth=60, meleeDamage=50)
+	if !g.Entities[0].Alive || g.Entities[0].State != Active {
+		t.Fatalf("demon should survive the first hit: alive=%v state=%v", g.Entities[0].Alive, g.Entities[0].State)
+	}
+	g.attack() // second strike: killed
+	if g.Entities[0].Alive || g.Entities[0].State == Active {
+		t.Errorf("demon should be dying after the second hit: alive=%v state=%v", g.Entities[0].Alive, g.Entities[0].State)
+	}
+}
+
+func TestDyingDemonSettlesToCorpse(t *testing.T) {
+	g := newTestGame(t, 7)
+	g.Entities = []Entity{{Pos: Vec2{X: g.Player.Pos.X + 5, Y: g.Player.Pos.Y}, State: Dying, Alive: false}}
+	for range 60 { // > deathDuration at dt 1/60
+		g.Tick(Input{}, 1.0/60.0)
+	}
+	if g.Entities[0].State != Dead {
+		t.Errorf("dying demon should settle to Dead, got %v", g.Entities[0].State)
+	}
+}
+
 func TestAttackMissesDemonBehind(t *testing.T) {
 	g := newTestGame(t, 7)
 	g.Player.Angle = 0 // facing +X

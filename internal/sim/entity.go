@@ -7,12 +7,41 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
+// EntityKind distinguishes demon behaviours.
+type EntityKind uint8
+
+const (
+	// Melee demons only harm the player on contact.
+	Melee EntityKind = iota
+	// Ranged demons hurl projectiles from a distance.
+	Ranged
+)
+
+// EntityState is a demon's lifecycle phase, used for behaviour and animation.
+type EntityState uint8
+
+const (
+	// Active demons chase and threaten the player.
+	Active EntityState = iota
+	// Dying demons are playing their death animation.
+	Dying
+	// Dead demons are settled corpses.
+	Dead
+)
+
 // Entity is a billboarded actor in the world — a demon, drawn as a flat sprite
 // that always faces the camera.
 type Entity struct {
 	Pos    Vec2
-	Sprite int
-	Alive  bool
+	Sprite int // visual variant
+	Kind   EntityKind
+	State  EntityState
+	Health float64
+	Alive  bool // true while Active (targetable, can move and harm)
+
+	hurt float64 // remaining stagger time after taking a hit, in seconds
+	fire float64 // remaining cooldown before a ranged demon shoots again
+	anim float64 // animation clock, in seconds
 }
 
 // entityCount scales the number of demons with the floor area of the level.
@@ -57,18 +86,26 @@ func spawnEntities(l *world.Level) []Entity {
 	ents := make([]Entity, 0, n)
 	for i := range n {
 		c := floors[i]
-		ents = append(ents, Entity{
-			Pos:    Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5},
-			Sprite: r.IntN(spriteVariants),
-			Alive:  true,
-		})
+		kind := Melee
+		if i%3 == 2 { // roughly a third are ranged
+			kind = Ranged
+		}
+		ents = append(ents, newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind))
 	}
 	return ents
 }
 
-// spriteVariants is how many demon sprite variants exist; placement picks among
-// them so a crowd isn't visually identical.
-const spriteVariants = 2
+// newDemon builds a fresh demon of the given kind. The visual variant tracks the
+// kind so ranged demons read differently from melee ones.
+func newDemon(pos Vec2, kind EntityKind) Entity {
+	hp := meleeHealth
+	sprite := 0
+	if kind == Ranged {
+		hp = rangedHealth
+		sprite = 1
+	}
+	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
+}
 
 func chebyInt(a, b world.Coord) int {
 	dx, dy := a.X-b.X, a.Y-b.Y

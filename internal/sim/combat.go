@@ -19,11 +19,28 @@ const (
 	attackArcCos = 0.9
 	// attackCooldownDur is the minimum time between strikes, in seconds.
 	attackCooldownDur = 0.4
+
+	// meleeHealth and rangedHealth are the demons' starting hit points.
+	meleeHealth  = 60.0
+	rangedHealth = 45.0
+	// meleeDamage is the player's bare strike damage (a melee demon needs two).
+	meleeDamage = 50.0
+	// painDuration is how long a wounded demon staggers before resuming.
+	painDuration = 0.2
+	// deathDuration is how long the death animation plays before settling.
+	deathDuration = 0.5
 )
 
-// attack strikes straight ahead, killing the nearest living demon within range,
-// inside the facing arc, and in clear line of sight.
+// attack strikes straight ahead, wounding the nearest living demon in range.
 func (g *Game) attack() {
+	if i := g.hitscan(attackRange, attackArcCos); i >= 0 {
+		g.damageEntity(i, meleeDamage)
+	}
+}
+
+// hitscan returns the index of the nearest living demon within maxRange, inside
+// the facing arc, and in clear line of sight, or -1 if none.
+func (g *Game) hitscan(maxRange, arcCos float64) int {
 	dir := g.Player.Dir()
 	best := -1
 	bestD := math.Inf(1)
@@ -34,10 +51,10 @@ func (g *Game) attack() {
 		}
 		dx, dy := e.Pos.X-g.Player.Pos.X, e.Pos.Y-g.Player.Pos.Y
 		d := math.Hypot(dx, dy)
-		if d == 0 || d > attackRange {
+		if d == 0 || d > maxRange {
 			continue
 		}
-		if (dx/d)*dir.X+(dy/d)*dir.Y < attackArcCos {
+		if (dx/d)*dir.X+(dy/d)*dir.Y < arcCos {
 			continue
 		}
 		if !losClear(g.World, g.Player.Pos, e.Pos) {
@@ -47,8 +64,22 @@ func (g *Game) attack() {
 			bestD, best = d, i
 		}
 	}
-	if best >= 0 {
-		g.Entities[best].Alive = false
+	return best
+}
+
+// damageEntity applies damage to a demon, staggering it or killing it.
+func (g *Game) damageEntity(i int, dmg float64) {
+	e := &g.Entities[i]
+	if e.State != Active {
+		return
+	}
+	e.Health -= dmg
+	if e.Health <= 0 {
+		e.State = Dying
+		e.Alive = false
+		e.anim = 0
+	} else {
+		e.hurt = painDuration
 	}
 }
 
@@ -65,13 +96,27 @@ func (g *Game) die() {
 	g.tracker.started = true
 }
 
-// updateEntities advances demon behaviour for one step: any living demon within
-// detectRadius and line of sight moves toward the player, stopping at contact.
+// updateEntities advances demon behaviour for one step: corpses settle, dying
+// demons play out their animation, and active demons within detectRadius and line
+// of sight chase the player (staggering briefly when hurt), stopping at contact.
 func (g *Game) updateEntities(dt float64) {
 	pp := g.Player.Pos
 	for i := range g.Entities {
 		e := &g.Entities[i]
-		if !e.Alive {
+		switch e.State {
+		case Dead:
+			continue
+		case Dying:
+			e.anim += dt
+			if e.anim >= deathDuration {
+				e.State = Dead
+			}
+			continue
+		}
+
+		e.anim += dt
+		if e.hurt > 0 {
+			e.hurt -= dt
 			continue
 		}
 		d := dist(e.Pos, pp)
