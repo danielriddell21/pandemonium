@@ -15,6 +15,9 @@ type Level struct {
 	Tiles         []TileType // row-major: index = y*Width + x, len == Width*Height
 	Spawn, Exit   Coord
 	Markers       []Marker
+	Items         []Item             // collectibles scattered across the level
+	Locks         map[Coord]ItemKind // door cell -> keycard required to open it
+	Secrets       []Coord            // cells that count as a hidden find
 	Seed          int64
 }
 
