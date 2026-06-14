@@ -22,8 +22,9 @@ as the walls sweep past.
 ![combat](demos/combat.gif)
 
 Closing on a billboarded demon — taking damage as it reaches you (watch the
-health gauge) — then striking it down. Sprites always face the camera and are
-occluded correctly by nearer walls.
+health gauge) — then gunning it down with the pistol (note the viewmodel and
+muzzle flash). Demons animate and collapse when killed; sprites always face the
+camera and are occluded correctly by nearer walls.
 
 ## New level
 
