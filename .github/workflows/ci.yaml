@@ -26,7 +26,7 @@ jobs:
       - name: Test
         # The app package initialises Ebiten/GLFW on import, which needs a display.
         run: xvfb-run -a go test -coverprofile=coverage.txt ./...
-      - uses: codecov/codecov-action@v6
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
