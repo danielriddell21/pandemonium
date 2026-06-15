@@ -60,8 +60,8 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawWalls(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
-	drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()))
-	drawHealthBar(r.fb, r.cfg, g.Player.Health/sim.MaxHealth)
+	drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-statusBarH)
+	drawStatusBar(r.fb, r.cfg, g, r.tex)
 	drawNotice(r.fb, r.cfg, g.Notice())
 	if r.overlay != nil {
 		if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {

@@ -7,7 +7,7 @@ func TestViewmodelDrawsWeapon(t *testing.T) {
 	tx := defaultTextures()
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 
-	drawViewmodel(fb, cfg, tx.weapon[1], tx.flash, false, 0) // pistol, not firing
+	drawViewmodel(fb, cfg, tx.weapon[1], tx.flash, false, 0, cfg.Height) // pistol, not firing
 	if countColored(fb, cfg) == 0 {
 		t.Error("weapon viewmodel drew nothing")
 	}
@@ -19,8 +19,8 @@ func TestMuzzleFlashAddsPixels(t *testing.T) {
 
 	noFire := make([]byte, cfg.Width*cfg.Height*4)
 	firing := make([]byte, cfg.Width*cfg.Height*4)
-	drawViewmodel(noFire, cfg, tx.weapon[1], tx.flash, false, 0)
-	drawViewmodel(firing, cfg, tx.weapon[1], tx.flash, true, 0)
+	drawViewmodel(noFire, cfg, tx.weapon[1], tx.flash, false, 0, cfg.Height)
+	drawViewmodel(firing, cfg, tx.weapon[1], tx.flash, true, 0, cfg.Height)
 
 	if countColored(firing, cfg) <= countColored(noFire, cfg) {
 		t.Error("muzzle flash should add lit pixels when firing")

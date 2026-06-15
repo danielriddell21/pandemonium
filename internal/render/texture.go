@@ -58,6 +58,7 @@ type textureSet struct {
 	fireball *texture
 	weapon   []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
 	flash    *texture   // muzzle flash
+	face     []*texture // status-bar face, by health band (0 healthy .. 3 dead)
 	item     []*texture // indexed by world.ItemKind
 }
 
@@ -141,6 +142,7 @@ func defaultTextures() *textureSet {
 		fireball: genFireball(),
 		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
 		flash:    genFlash(),
+		face:     []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
 		item:     defaultItemTextures(),
 	}
 }
@@ -347,6 +349,54 @@ func genCeiling() *texture {
 			n := ((x*5 + y*11) % 9) - 4 // deterministic speckle
 			t.set(x, y, adjust(base, n*3))
 		}
+	}
+	return t
+}
+
+// genFace draws the status-bar mugshot for a health band (0 = healthy, 3 = dead):
+// a skin disc with eyes, a brow that lowers and a mouth that turns from a faint
+// smile to a pained grimace as the band rises. The background stays transparent so
+// the bar panel shows through.
+func genFace(band int) *texture {
+	t := newTexture(texSize, texSize)
+	skins := []color.RGBA{
+		{R: 210, G: 162, B: 120, A: 255},
+		{R: 204, G: 150, B: 106, A: 255},
+		{R: 188, G: 134, B: 96, A: 255},
+		{R: 150, G: 124, B: 112, A: 255}, // ashen
+	}
+	skin := skins[band%len(skins)]
+	cx, cy, r := 32.0, 32.0, 22.0
+	for y := range texSize {
+		for x := range texSize {
+			dx, dy := (float64(x)-cx)/r, (float64(y)-cy)/r
+			d := dx*dx + dy*dy
+			if d > 1 {
+				continue
+			}
+			c := skin
+			if d > 0.8 {
+				c = adjust(skin, -35)
+			}
+			t.set(x, y, c)
+		}
+	}
+	eye := color.RGBA{R: 30, G: 20, B: 20, A: 255}
+	fillRect(t, 22, 26, 27, 31, eye)
+	fillRect(t, 37, 26, 42, 31, eye)
+	brow := adjust(skin, -80)
+	by := 22 + band*2 // brow lowers (angrier/pained) as health drops
+	fillRect(t, 20, by, 44, by+2, brow)
+	mouth := color.RGBA{R: 120, G: 40, B: 40, A: 255}
+	switch band {
+	case 0:
+		fillRect(t, 26, 43, 38, 45, mouth)
+	case 1:
+		fillRect(t, 26, 42, 38, 45, mouth)
+	case 2:
+		fillRect(t, 25, 41, 39, 46, mouth)
+	default:
+		fillRect(t, 24, 40, 40, 49, mouth) // open, pained
 	}
 	return t
 }

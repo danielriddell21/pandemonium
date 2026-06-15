@@ -2,10 +2,10 @@ package render
 
 import "math"
 
-// drawViewmodel blits the current weapon at the bottom-centre of the screen with
-// a gentle bob, plus a muzzle flash at the barrel tip while firing. tick drives
-// the bob.
-func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, tick float64) {
+// drawViewmodel blits the current weapon so it rests on the given bottom baseline
+// (the top of the status bar) with a gentle bob, plus a muzzle flash at the barrel
+// tip while firing. tick drives the bob.
+func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, tick float64, bottom int) {
 	if weapon == nil {
 		return
 	}
@@ -13,7 +13,7 @@ func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, t
 	vh := vw
 	bob := int(3 * math.Sin(tick*0.15))
 	x0 := cfg.Width/2 - vw/2
-	y0 := cfg.Height - vh + bob
+	y0 := bottom - vh + bob
 
 	// The weapon is drawn first; the flash sits over its muzzle (centred
 	// horizontally, near the top of the sprite where the barrel points).
