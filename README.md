@@ -26,6 +26,7 @@ go run ./cmd/pandemonium --seed 42
 | Left-click / `Ctrl` / `F` | Attack     |
 | `1` `2` `3` / wheel | Switch weapon    |
 | `E`                | Interact (doors)  |
+| `Tab`              | Toggle automap    |
 | `Esc`              | Quit              |
 
 ## CLI

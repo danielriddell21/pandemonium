@@ -33,6 +33,7 @@ type Game struct {
 	noticeTTL float64 // remaining display time for notice, in seconds
 
 	secrets map[world.Coord]bool // secret cells not yet discovered
+	visited map[world.Coord]bool // tiles the player has stepped on (for the automap)
 
 	elapsed                            float64 // seconds simulated this level
 	kills, items, found                int     // tallies for this level
@@ -59,6 +60,7 @@ func New(l *world.Level, opts ...Option) *Game {
 		Entities: spawnEntities(l),
 		Items:    newItems(l),
 		secrets:  newSecrets(l),
+		visited:  map[world.Coord]bool{l.Spawn: true},
 		observer: nopObserver{},
 		tracker:  newTracker(l),
 	}
@@ -126,6 +128,10 @@ func (g *Game) Tick(in Input, dt float64) {
 	}
 }
 
+// Visited reports the set of tiles the player has stepped on, for the automap.
+// The returned map is owned by the game and must not be mutated by callers.
+func (g *Game) Visited() map[world.Coord]bool { return g.visited }
+
 // emit stamps the current tick onto an observation and hands it to the observer.
 func (g *Game) emit(o Observation) {
 	o.Tick = g.tick
@@ -141,6 +147,7 @@ func (g *Game) observeMovement() {
 	}
 	g.tracker.started = true
 	g.tracker.lastCell = cell
+	g.visited[cell] = true
 
 	g.emit(Observation{Kind: ObsMove, At: cell})
 	g.checkSecret(cell)

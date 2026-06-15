@@ -15,6 +15,7 @@ type Renderer struct {
 	tex         *textureSet
 	overlay     *hud.Overlay
 	diagnostics bool
+	showMap     bool
 }
 
 // Option configures a Renderer.
@@ -51,6 +52,9 @@ func NewRenderer(cfg Config, opts ...Option) *Renderer {
 // Config returns the renderer's presentation settings.
 func (r *Renderer) Config() Config { return r.cfg }
 
+// SetAutomap toggles whether Frame overlays the explored-level minimap.
+func (r *Renderer) SetAutomap(on bool) { r.showMap = on }
+
 // Frame renders the current state of g and returns the RGBA buffer (row-major,
 // 4 bytes per pixel). The slice is owned by the Renderer and overwritten on the
 // next call, so callers should upload or copy it before calling again.
@@ -67,6 +71,9 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 		if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {
 			drawMessage(r.fb, r.cfg, msg, ch)
 		}
+	}
+	if r.showMap {
+		drawAutomap(r.fb, r.cfg, g)
 	}
 	return r.fb
 }

@@ -35,6 +35,7 @@ type Game struct {
 
 	state      state
 	tally      sim.LevelStats // captured stats shown on the intermission screen
+	showMap    bool           // automap overlay toggled with Tab
 	haveMouse  bool
 	lastMouseX int
 }
@@ -64,6 +65,11 @@ func New(g *sim.Game, renderer *render.Renderer, next NextFunc, opts ...Option) 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		g.showMap = !g.showMap
+		g.renderer.SetAutomap(g.showMap)
 	}
 
 	if g.state == stateIntermission {
