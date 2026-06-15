@@ -33,6 +33,9 @@ type Game struct {
 	overlay  *hud.Overlay
 	next     NextFunc
 
+	audio     *Audio
+	wasFiring bool // muzzle-flash state last tick, for one shot-sound per shot
+
 	state      state
 	tally      sim.LevelStats // captured stats shown on the intermission screen
 	showMap    bool           // automap overlay toggled with Tab
@@ -48,6 +51,11 @@ type Option func(*Game)
 // WithOverlay attaches a HUD overlay that the loop advances each frame.
 func WithOverlay(o *hud.Overlay) Option {
 	return func(g *Game) { g.overlay = o }
+}
+
+// WithAudio attaches the sound engine. A nil engine leaves the game silent.
+func WithAudio(a *Audio) Option {
+	return func(g *Game) { g.audio = a }
 }
 
 // New builds the application around an initial simulation. next advances to a
@@ -85,6 +93,13 @@ func (g *Game) Update() error {
 	dt := 1.0 / float64(ebiten.TPS())
 	g.sim.Tick(g.readInput(), dt)
 
+	// Play the weapon sound once per shot, on the muzzle-flash rising edge.
+	firing := g.sim.MuzzleFlash()
+	if firing && !g.wasFiring && g.audio != nil {
+		g.audio.Fire()
+	}
+	g.wasFiring = firing
+
 	if g.overlay != nil {
 		g.overlay.Tick()
 	}
@@ -120,5 +135,6 @@ func (g *Game) Run() error {
 	cfg := g.renderer.Config()
 	ebiten.SetWindowSize(cfg.Width*windowScale, cfg.Height*windowScale)
 	ebiten.SetWindowTitle("pandemonium")
+	g.audio.StartAmbient()
 	return ebiten.RunGame(g)
 }

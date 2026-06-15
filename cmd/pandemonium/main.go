@@ -56,9 +56,22 @@ func run(seed int64, width, height int) error {
 
 	overlay := hud.New()
 	bus := telemetry.NewBus(status.New(overlay, status.NewTableSource()))
-	sess := newSession(seed, width, height, bus)
+
+	// Sound is on by default but optional: set PANDEMONIUM_NO_AUDIO=1 to run silent
+	// (useful on headless machines with no audio device). If the engine fails to
+	// initialise we also fall back to silence.
+	var aud *app.Audio
+	if os.Getenv("PANDEMONIUM_NO_AUDIO") == "" {
+		a, err := app.NewAudio()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "audio disabled:", err)
+		} else {
+			aud = a
+		}
+	}
+	sess := newSession(seed, width, height, bus, aud)
 
 	renderer := render.NewRenderer(render.DefaultConfig(), render.WithOverlay(overlay))
-	game := app.New(sess.start(), renderer, sess.next, app.WithOverlay(overlay))
+	game := app.New(sess.start(), renderer, sess.next, app.WithOverlay(overlay), app.WithAudio(aud))
 	return game.Run()
 }

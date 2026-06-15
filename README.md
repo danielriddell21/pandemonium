@@ -42,6 +42,9 @@ pandemonium [flags]
 The chosen seed and the current level number are printed to stdout on start and
 whenever a new level is generated, so demos are reproducible.
 
+Sound is on by default. Set `PANDEMONIUM_NO_AUDIO=1` to run silently (handy on
+machines without an audio device).
+
 ## Development
 
 ```

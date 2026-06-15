@@ -74,6 +74,23 @@ type nopObserver struct{}
 
 func (nopObserver) Observe(Observation) {}
 
+// Fanout returns an observer that forwards each observation to all of obs,
+// skipping nil entries. It lets a game feed several consumers (e.g. telemetry and
+// audio) through the single observer slot.
+func Fanout(obs ...Observer) Observer {
+	return fanout(obs)
+}
+
+type fanout []Observer
+
+func (f fanout) Observe(o Observation) {
+	for _, ob := range f {
+		if ob != nil {
+			ob.Observe(o)
+		}
+	}
+}
+
 // Option configures a Game at construction.
 type Option func(*Game)
 

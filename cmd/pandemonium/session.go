@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/danielriddell21/pandemonium/internal/app"
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 	"github.com/danielriddell21/pandemonium/internal/world"
@@ -15,12 +16,18 @@ type session struct {
 	baseSeed      int64
 	width, height int
 	bus           *telemetry.Bus
+	audio         sim.Observer // optional sound engine; nil when audio is off
 	level         int
 }
 
-// newSession starts a run at the given base seed and level dimensions.
-func newSession(baseSeed int64, width, height int, bus *telemetry.Bus) *session {
-	return &session{baseSeed: baseSeed, width: width, height: height, bus: bus}
+// newSession starts a run at the given base seed and level dimensions. audio may
+// be nil, in which case the game runs silent.
+func newSession(baseSeed int64, width, height int, bus *telemetry.Bus, audio *app.Audio) *session {
+	s := &session{baseSeed: baseSeed, width: width, height: height, bus: bus}
+	if audio != nil { // keep the observer slot a true nil when there is no engine
+		s.audio = audio
+	}
+	return s
 }
 
 // start builds the first level's simulation.
@@ -51,5 +58,6 @@ func (s *session) build() *sim.Game {
 
 	s.bus.BeginLevel(seed, s.level)
 	fmt.Printf("level %d  seed %d  (%dx%d)\n", s.level+1, seed, s.width, s.height)
-	return sim.New(lvl, sim.WithObserver(s.bus))
+	// Telemetry always observes; the sound engine observes too when present.
+	return sim.New(lvl, sim.WithObserver(sim.Fanout(s.bus, s.audio)))
 }
