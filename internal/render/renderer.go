@@ -56,7 +56,7 @@ func (r *Renderer) Config() Config { return r.cfg }
 // next call, so callers should upload or copy it before calling again.
 func (r *Renderer) Frame(g *sim.Game) []byte {
 	cam := newCamera(g.Player.Angle, r.cfg.FOV)
-	clearBackground(r.fb, r.cfg)
+	drawFloorCeiling(r.fb, g, cam, r.cfg, r.tex)
 	drawWalls(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]

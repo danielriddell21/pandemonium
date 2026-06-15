@@ -52,6 +52,8 @@ type demonArt struct {
 type textureSet struct {
 	wall     *texture
 	door     *texture
+	floor    *texture
+	ceiling  *texture
 	demon    []demonArt
 	fireball *texture
 	weapon   []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
@@ -80,6 +82,12 @@ func loadTextures(dir string) *textureSet {
 	}
 	if t, ok := loadPNG(filepath.Join(dir, "door.png")); ok {
 		ts.door = t
+	}
+	if t, ok := loadPNG(filepath.Join(dir, "floor.png")); ok {
+		ts.floor = t
+	}
+	if t, ok := loadPNG(filepath.Join(dir, "ceiling.png")); ok {
+		ts.ceiling = t
 	}
 	for i := range ts.demon {
 		if t, ok := loadPNG(filepath.Join(dir, fmt.Sprintf("demon%d.png", i))); ok {
@@ -127,6 +135,8 @@ func defaultTextures() *textureSet {
 	return &textureSet{
 		wall:     genBrick(palette.wall),
 		door:     genDoor(palette.door),
+		floor:    genFloor(),
+		ceiling:  genCeiling(),
 		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1])},
 		fireball: genFireball(),
 		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
@@ -300,6 +310,42 @@ func genDoor(base color.RGBA) *texture {
 				c = adjust(base, ((x+y)%7-3)*2)
 			}
 			t.set(x, y, c)
+		}
+	}
+	return t
+}
+
+// genFloor draws a flagstone tile: stone slabs separated by darker grout, with a
+// deterministic speckle so the cast floor reads as textured rather than flat.
+func genFloor() *texture {
+	t := newTexture(texSize, texSize)
+	base := color.RGBA{R: 78, G: 66, B: 52, A: 255}
+	grout := color.RGBA{R: 34, G: 28, B: 22, A: 255}
+	const half = texSize / 2
+	for y := range texSize {
+		for x := range texSize {
+			// Two slabs per axis with a grout border around each.
+			gx, gy := x%half, y%half
+			if gx < 2 || gy < 2 {
+				t.set(x, y, grout)
+				continue
+			}
+			n := ((x*13 + y*7) % 11) - 5 // deterministic speckle
+			t.set(x, y, adjust(base, n*2))
+		}
+	}
+	return t
+}
+
+// genCeiling draws a dim, mottled ceiling distinct from the floor so up and down
+// read differently once they are cast.
+func genCeiling() *texture {
+	t := newTexture(texSize, texSize)
+	base := color.RGBA{R: 44, G: 44, B: 56, A: 255}
+	for y := range texSize {
+		for x := range texSize {
+			n := ((x*5 + y*11) % 9) - 4 // deterministic speckle
+			t.set(x, y, adjust(base, n*3))
 		}
 	}
 	return t
