@@ -25,6 +25,19 @@ func Reachable(l *Level, src, dst Coord) bool {
 	return reachable(l, src, dst, blocksClosed(l))
 }
 
+// MaxStep is the largest floor rise a body can climb in a single move, in wall
+// units. Descents of any size are always allowed (the body simply drops).
+const MaxStep = 0.3
+
+// stepOK reports whether a body standing on `from` can move onto `to` given the
+// sculpted heights: the rise must be climbable and the destination must leave
+// headroom between its floor and ceiling.
+func stepOK(l *Level, from, to Coord) bool {
+	const eps = 1e-9
+	return l.Floor(to.X, to.Y)-l.Floor(from.X, from.Y) <= MaxStep+eps &&
+		l.Ceil(to.X, to.Y)-l.Floor(to.X, to.Y) >= MinHeadroom-eps
+}
+
 // reachable is Reachable parameterised by a solidity test.
 func reachable(l *Level, src, dst Coord, solid solidFn) bool {
 	dist := floodDist(l, src, solid)
@@ -33,7 +46,9 @@ func reachable(l *Level, src, dst Coord, solid solidFn) bool {
 
 // floodDist runs a breadth-first search from src over cells the predicate deems
 // non-solid and returns per-cell step distances (row-major), with -1 for cells
-// that are solid or unreachable.
+// that are solid or unreachable. Movement between cells also honours the height
+// rule (see stepOK), so the search models what a walking body can actually
+// traverse; before heights are sculpted the rule passes trivially.
 func floodDist(l *Level, src Coord, solid solidFn) []int {
 	dist := make([]int, l.Width*l.Height)
 	for i := range dist {
@@ -49,7 +64,7 @@ func floodDist(l *Level, src Coord, solid solidFn) []int {
 		queue = queue[1:]
 		base := dist[c.Y*l.Width+c.X]
 		for _, n := range neighbors4(c) {
-			if !l.InBounds(n.X, n.Y) || solid(n) {
+			if !l.InBounds(n.X, n.Y) || solid(n) || !stepOK(l, c, n) {
 				continue
 			}
 			idx := n.Y*l.Width + n.X
