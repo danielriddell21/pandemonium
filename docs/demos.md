@@ -41,3 +41,10 @@ percentages, plus the time taken — then generates a fresh level to continue in
 Pressing `Tab` overlays an automap that fills in as you explore: walls and floor,
 doors (locked ones tinted by their key colour), items, and the player's position
 and heading.
+
+## Terrain
+
+![terrain](demos/terrain.gif)
+
+Levels are sculpted in quarter-wall steps: climbing a staircase up to a raised
+landing, with the camera easing up each step and the ceiling stepping overhead.

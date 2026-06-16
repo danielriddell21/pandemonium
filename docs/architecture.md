@@ -21,6 +21,15 @@ the simulation can be exercised headlessly, with no graphics in sight.
    state and produces a frame buffer. It owns no game logic. This is where the
    raycaster lives (see [raycaster.md](raycaster.md)).
 
+The world stays a grid, but every tile carries a **floor and ceiling height** in
+wall units, sculpted in quarter-wall steps by the generator (staircases between
+rooms, a raised exit platform, lift tiles serving high ledges). The simulation
+gives every body a height: small rises are climbed, drops fall under gravity, and
+lift platforms carry whoever stands on them. The renderer walks each screen
+column's ray boundary-by-boundary, painting floors, ceilings and textured step
+faces inside a shrinking clip window until a wall closes the column — so the
+vertical feel comes from the same single pass that draws the walls.
+
 The Ebiten front-end lives in `internal/app` — the only package that imports
 Ebiten — which drives the loop, reads input, and uploads each rendered frame.
 `cmd/pandemonium` is the composition root that wires the layers together.
