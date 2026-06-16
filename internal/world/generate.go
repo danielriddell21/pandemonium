@@ -66,6 +66,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	g.split(root, 0)
 	g.carveRooms(root, l)
 	g.connect(root, l)
+	g.carveStubs(l)
 
 	placeSpawnAndExit(l, collectRooms(root))
 	annotate(l)

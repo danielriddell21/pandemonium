@@ -178,6 +178,63 @@ func carveV(l *Level, y1, y2, x int) {
 	}
 }
 
+// carveStubs digs a handful of short blind nooks off the existing floor into the
+// solid mass. The BSP corridors always run room-to-room, so without these the
+// layout has no dead ends at all — and dead ends are what secret rooms and other
+// layout features grow from.
+func (g *rng) carveStubs(l *Level) {
+	const (
+		attempts = 24
+		maxStubs = 4
+	)
+	dirs := [4]Coord{{X: 1}, {X: -1}, {Y: 1}, {Y: -1}}
+	carved := 0
+	for range attempts {
+		if carved >= maxStubs {
+			return
+		}
+		x := g.between(1, l.Width-2)
+		y := g.between(1, l.Height-2)
+		if l.At(x, y) != TileFloor {
+			continue
+		}
+		d := dirs[g.intn(len(dirs))]
+		length := g.between(1, 3)
+		if digStub(l, Coord{X: x, Y: y}, d, length) {
+			carved++
+		}
+	}
+}
+
+// digStub digs up to length cells from f in direction d, keeping the passage one
+// cell wide: each dug cell must touch exactly one walkable cell (the previous
+// one), so the far end is a true dead end. It reports whether anything was dug.
+func digStub(l *Level, f, d Coord, length int) bool {
+	dug := 0
+	c := f
+	for range length {
+		c = Coord{X: c.X + d.X, Y: c.Y + d.Y}
+		if c.X < 1 || c.Y < 1 || c.X >= l.Width-1 || c.Y >= l.Height-1 {
+			break
+		}
+		if l.At(c.X, c.Y) != TileWall {
+			break
+		}
+		open := 0
+		for _, n := range neighbors4(c) {
+			if l.At(n.X, n.Y).Walkable() {
+				open++
+			}
+		}
+		if open != 1 {
+			break
+		}
+		l.set(c.X, c.Y, TileFloor)
+		dug++
+	}
+	return dug > 0
+}
+
 // collectRooms returns every carved room in deterministic in-order, so spawn and
 // exit selection is reproducible.
 func collectRooms(n *bspNode) []rect {
