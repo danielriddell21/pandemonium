@@ -19,9 +19,10 @@ const (
 // billboard is a depth-sortable sprite (a demon, a projectile or an item).
 type billboard struct {
 	pos    sim.Vec2
+	z      float64 // world height: the base for grounded sprites, else the centre
 	tex    *texture
 	scale  float64
-	ground bool // anchor the sprite's base to the floor rather than eye level
+	ground bool // anchor the sprite's base at z rather than centring on it
 }
 
 // drawSprites projects demons and projectiles into the view, sorts them
@@ -33,11 +34,11 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 
 	items := make([]billboard, 0, len(g.Entities)+len(g.Projectiles))
 	for _, e := range g.Entities {
-		items = append(items, billboard{pos: e.Pos, tex: demonTexture(tx, e), scale: spriteScale})
+		items = append(items, billboard{pos: e.Pos, z: e.Z, tex: demonTexture(tx, e), scale: spriteScale, ground: true})
 	}
 	for _, p := range g.Projectiles {
 		if p.Alive {
-			items = append(items, billboard{pos: p.Pos, tex: tx.fireball, scale: fireballScale})
+			items = append(items, billboard{pos: p.Pos, z: p.Z, tex: tx.fireball, scale: fireballScale})
 		}
 	}
 	for _, it := range g.Items {
@@ -45,7 +46,8 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 			continue
 		}
 		if t := tx.itemTexture(it.Kind); t != nil {
-			items = append(items, billboard{pos: it.Pos, tex: t, scale: itemScale, ground: true})
+			z := g.World.FloorAt(int(it.Pos.X), int(it.Pos.Y))
+			items = append(items, billboard{pos: it.Pos, z: z, tex: t, scale: itemScale, ground: true})
 		}
 	}
 
@@ -58,6 +60,7 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 
 	// Inverse of the [plane | dir] matrix maps world offsets into camera space.
 	invDet := 1.0 / (cam.planeX*cam.dirY - cam.dirX*cam.planeY)
+	eyeZ := g.EyeZ()
 
 	for _, it := range items {
 		relX, relY := it.pos.X-px, it.pos.Y-py
@@ -71,7 +74,14 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 		if size <= 0 {
 			continue
 		}
-		drawBillboard(fb, zbuf, cfg, screenX, size, depth, it.tex, it.ground)
+		// Project the sprite's world height: grounded sprites stand on it,
+		// floating ones (projectiles) are centred on it.
+		anchor := int(float64(h)/2 + (eyeZ-it.z)*float64(h)/depth)
+		top := anchor - size
+		if !it.ground {
+			top = anchor - size/2
+		}
+		drawBillboard(fb, zbuf, cfg, screenX, top, size, depth, it.tex)
 	}
 }
 
@@ -92,15 +102,11 @@ func demonTexture(tx *textureSet, e sim.Entity) *texture {
 	}
 }
 
-// drawBillboard renders one textured sprite centred at screenX, skipping
-// transparent texels and columns occluded by nearer walls (via the depth buffer).
-func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, size int, depth float64, tex *texture, ground bool) {
+// drawBillboard renders one textured sprite centred at screenX with its top at
+// the given row, skipping transparent texels and columns occluded by nearer
+// walls (via the depth buffer).
+func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, top, size int, depth float64, tex *texture) {
 	w, h := cfg.Width, cfg.Height
-	top := h/2 - size/2
-	if ground {
-		// Rest the sprite's base on the floor line of a wall at this depth.
-		top = h/2 + int(float64(h)/depth/2) - size
-	}
 	left := screenX - size/2
 
 	for x := left; x < left+size; x++ {

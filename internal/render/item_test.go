@@ -38,11 +38,10 @@ func TestItemBillboardIsDrawn(t *testing.T) {
 	tex := defaultTextures()
 	cam := newCamera(g.Player.Angle, cfg.FOV)
 
-	// Render the walls, then draw sprites onto a copy: the item must change pixels.
+	// Render the scene, then draw sprites onto a copy: the item must change pixels.
 	base := make([]byte, cfg.Width*cfg.Height*4)
-	clearBackground(base, cfg)
 	zb := make([]float64, cfg.Width)
-	drawWalls(base, zb, g, cam, cfg, tex)
+	drawScene(base, zb, g, cam, cfg, tex)
 
 	withItem := make([]byte, len(base))
 	copy(withItem, base)

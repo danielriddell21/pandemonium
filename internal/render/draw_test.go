@@ -20,13 +20,12 @@ func renderFrame(t *testing.T, seed int64, cfg Config) ([]byte, []float64) {
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zbuf := make([]float64, cfg.Width)
 	cam := newCamera(g.Player.Angle, cfg.FOV)
-	clearBackground(fb, cfg)
-	drawWalls(fb, zbuf, g, cam, cfg, tex)
+	drawScene(fb, zbuf, g, cam, cfg, tex)
 	drawSprites(fb, zbuf, g, cam, cfg, tex)
 	return fb, zbuf
 }
 
-func TestDrawWallsProducesGeometry(t *testing.T) {
+func TestDrawSceneProducesGeometry(t *testing.T) {
 	cfg := Config{Width: 160, Height: 100, FOV: 1.152}
 	fb, zbuf := renderFrame(t, 7, cfg)
 
@@ -37,20 +36,11 @@ func TestDrawWallsProducesGeometry(t *testing.T) {
 		}
 	}
 
-	// Some pixels in the vertical middle band must be wall-coloured, i.e. differ
-	// from both the flat ceiling and floor.
-	wallPixels := 0
-	for x := range cfg.Width {
-		y := cfg.Height / 2
-		i := (y*cfg.Width + x) * 4
-		c := [3]byte{fb[i], fb[i+1], fb[i+2]}
-		if c != [3]byte{palette.ceiling.R, palette.ceiling.G, palette.ceiling.B} &&
-			c != [3]byte{palette.floor.R, palette.floor.G, palette.floor.B} {
-			wallPixels++
+	// Every pixel must be painted: floors below, ceilings above, walls between.
+	for i := 3; i < len(fb); i += 4 {
+		if fb[i] != 255 {
+			t.Fatalf("pixel %d left unpainted", i/4)
 		}
-	}
-	if wallPixels == 0 {
-		t.Error("no wall pixels rendered across the middle scanline")
 	}
 }
 
