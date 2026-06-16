@@ -66,7 +66,8 @@ func TestProjectileStopsAtWall(t *testing.T) {
 		t.Skip("no wall-adjacent floor cell found")
 	}
 	g.Player.Pos = Vec2{X: -100, Y: -100} // keep the player clear
-	g.Projectiles = []Projectile{{Pos: from, Vel: vel, Damage: projectileDamage, Alive: true}}
+	z := g.World.FloorAt(int(from.X), int(from.Y)) + demonEye
+	g.Projectiles = []Projectile{{Pos: from, Z: z, Vel: vel, Damage: projectileDamage, Alive: true}}
 
 	for range 40 {
 		g.advanceProjectiles(1.0 / 60.0)
@@ -82,6 +83,7 @@ func TestProjectileDamagesPlayer(t *testing.T) {
 	p := g.Player.Pos
 	g.Projectiles = []Projectile{{
 		Pos:    Vec2{X: p.X + 0.6, Y: p.Y},
+		Z:      g.Player.Z + eyeHeight,
 		Vel:    Vec2{X: -projectileSpeed, Y: 0}, // straight at the player
 		Damage: projectileDamage,
 		Alive:  true,

@@ -27,7 +27,8 @@ type Game struct {
 	tick        uint64
 
 	attackCooldown float64
-	flash          int // muzzle-flash frames remaining
+	flash          int     // muzzle-flash frames remaining
+	viewZ          float64 // camera height easing toward the player's feet
 
 	notice    string  // transient on-screen message (pickups, keys, finds)
 	noticeTTL float64 // remaining display time for notice, in seconds
@@ -51,6 +52,7 @@ func New(l *world.Level, opts ...Option) *Game {
 		World: NewWorld(l),
 		Player: Player{
 			Pos:     Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
+			Z:       l.Floor(l.Spawn.X, l.Spawn.Y),
 			Angle:   facing(l.Spawn, l.Exit),
 			Health:  MaxHealth,
 			Weapon:  Pistol,
@@ -64,6 +66,7 @@ func New(l *world.Level, opts ...Option) *Game {
 		observer: nopObserver{},
 		tracker:  newTracker(l),
 	}
+	g.viewZ = g.Player.Z
 	g.killsTotal = len(g.Entities)
 	g.itemsTotal = len(g.Items)
 	g.foundTotal = len(l.Secrets)
@@ -77,6 +80,7 @@ func New(l *world.Level, opts ...Option) *Game {
 func (g *Game) Tick(in Input, dt float64) {
 	g.tick++
 	g.elapsed += dt
+	g.World.Tick(dt)
 
 	g.Player.Angle = normalizeAngle(g.Player.Angle + in.Turn*turnSpeed*dt + in.TurnDelta)
 
@@ -85,7 +89,8 @@ func (g *Game) Tick(in Input, dt float64) {
 	strafeX, strafeY := -dir.Y, dir.X
 	dx := (dir.X*in.Forward + strafeX*in.Strafe) * moveSpeed * dt
 	dy := (dir.Y*in.Forward + strafeY*in.Strafe) * moveSpeed * dt
-	g.Player.Pos = resolveMove(g.World, g.Player.Pos, dx, dy)
+	g.Player.Pos = resolveMove(g.World, g.Player.Pos, g.Player.Z, dx, dy)
+	g.settleHeight(dt)
 
 	if in.SelectWeapon != 0 {
 		g.switchWeapon(in.SelectWeapon)
@@ -131,6 +136,36 @@ func (g *Game) Tick(in Input, dt float64) {
 // Visited reports the set of tiles the player has stepped on, for the automap.
 // The returned map is owned by the game and must not be mutated by callers.
 func (g *Game) Visited() map[world.Coord]bool { return g.visited }
+
+// settleHeight resolves the player's height against the floor underfoot: small
+// rises are climbed instantly (and lifts push the body up with the platform),
+// while drops fall at a fixed rate. The camera height eases after the body so
+// stairs read as steps rather than jolts.
+func (g *Game) settleHeight(dt float64) {
+	c := g.PlayerCell()
+	floor := g.World.FloorAt(c.X, c.Y)
+	switch {
+	case g.Player.Z < floor:
+		g.Player.Z = floor
+	case g.Player.Z > floor:
+		g.Player.Z = math.Max(floor, g.Player.Z-fallSpeed*dt)
+	}
+
+	diff := g.Player.Z - g.viewZ
+	step := viewRate * dt
+	switch {
+	case math.Abs(diff) <= step:
+		g.viewZ = g.Player.Z
+	case diff > 0:
+		g.viewZ += step
+	default:
+		g.viewZ -= step
+	}
+}
+
+// EyeZ returns the camera height in wall units: the eased body height plus the
+// fixed eye offset. The renderer projects everything relative to this.
+func (g *Game) EyeZ() float64 { return g.viewZ + eyeHeight }
 
 // emit stamps the current tick onto an observation and hands it to the observer.
 func (g *Game) emit(o Observation) {

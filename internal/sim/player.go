@@ -22,12 +22,22 @@ const (
 	// armorAbsorb is the fraction of incoming damage soaked by armour while the
 	// player has any, matching DOOM's green-armour behaviour.
 	armorAbsorb = 1.0 / 3.0
+
+	// eyeHeight is how far the camera sits above the feet, in wall units. At the
+	// base floor this puts the horizon at mid-screen, as before heights existed.
+	eyeHeight = 0.5
+	// fallSpeed is how fast a body drops toward its floor, in wall units/second.
+	fallSpeed = 6.0
+	// viewRate is how quickly the camera height eases toward the body's height,
+	// so stairs read as steps rather than jolts.
+	viewRate = 5.0
 )
 
-// Player holds the camera-bearing actor's position, facing, health, armour and
-// arsenal, plus the keycards it has collected.
+// Player holds the camera-bearing actor's position, facing, height, health,
+// armour and arsenal, plus the keycards it has collected.
 type Player struct {
 	Pos     Vec2
+	Z       float64 // feet height above the base floor, in wall units
 	Angle   float64 // radians; 0 points along +X
 	Health  float64
 	Armor   float64

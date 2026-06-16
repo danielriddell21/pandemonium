@@ -1,18 +1,65 @@
 package sim
 
-import "github.com/danielriddell21/pandemonium/internal/world"
+import (
+	"math"
+
+	"github.com/danielriddell21/pandemonium/internal/world"
+)
 
 // World wraps an immutable generated level with the mutable runtime state the
-// simulation needs on top of it — currently which doors have been opened. The
-// underlying level is never modified.
+// simulation needs on top of it — which doors have been opened and where each
+// lift platform currently sits. The underlying level is never modified.
 type World struct {
 	Level  *world.Level
 	opened map[world.Coord]bool
+	clock  float64 // drives lift platforms; advanced by Tick
 }
 
 // NewWorld wraps a generated level for simulation.
 func NewWorld(l *world.Level) *World {
 	return &World{Level: l, opened: make(map[world.Coord]bool)}
+}
+
+// Tick advances the world's moving parts (lift platforms) by dt seconds.
+func (w *World) Tick(dt float64) {
+	w.clock += dt
+}
+
+// Lift platform timing: rest at each end, then travel between floors.
+const (
+	liftDwell  = 2.0 // seconds parked at the bottom or top
+	liftTravel = 1.5 // seconds spent moving between floors
+)
+
+// FloorAt returns the effective floor height at (x, y): a lift's current
+// platform height, or the level's sculpted floor everywhere else.
+func (w *World) FloorAt(x, y int) float64 {
+	if lf, ok := w.Level.Lifts[world.Coord{X: x, Y: y}]; ok {
+		return liftHeight(lf, w.clock)
+	}
+	return w.Level.Floor(x, y)
+}
+
+// CeilAt returns the ceiling height at (x, y).
+func (w *World) CeilAt(x, y int) float64 {
+	return w.Level.Ceil(x, y)
+}
+
+// liftHeight is a lift platform's height at time t: dwell low, rise, dwell high,
+// sink, repeating. Pure in t, so the cycle is deterministic from the tick count.
+func liftHeight(lf world.Lift, t float64) float64 {
+	period := 2 * (liftDwell + liftTravel)
+	p := math.Mod(t, period)
+	switch {
+	case p < liftDwell:
+		return lf.Low
+	case p < liftDwell+liftTravel:
+		return lf.Low + (lf.High-lf.Low)*(p-liftDwell)/liftTravel
+	case p < 2*liftDwell+liftTravel:
+		return lf.High
+	default:
+		return lf.High - (lf.High-lf.Low)*(p-2*liftDwell-liftTravel)/liftTravel
+	}
 }
 
 // Solid reports whether the cell at integer (x, y) blocks movement. Walls and

@@ -1,6 +1,10 @@
 package sim
 
-import "math"
+import (
+	"math"
+
+	"github.com/danielriddell21/pandemonium/internal/world"
+)
 
 const (
 	// detectRadius is how close (in tiles) a demon must be, with clear line of
@@ -92,6 +96,8 @@ func (g *Game) die() {
 	g.emit(Observation{Kind: ObsDeath, At: g.PlayerCell()})
 	l := g.World.Level
 	g.Player.Pos = Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5}
+	g.Player.Z = l.Floor(l.Spawn.X, l.Spawn.Y)
+	g.viewZ = g.Player.Z
 	g.Player.Angle = facing(l.Spawn, l.Exit)
 	g.Player.Health = MaxHealth
 	g.Entities = spawnEntities(l)
@@ -127,6 +133,7 @@ func (g *Game) updateEntities(dt float64) {
 
 		e.anim += dt
 		e.Frame = int(e.anim * walkFPS)
+		g.settleEntity(e, dt)
 		if e.Kind == Ranged && e.fire > 0 {
 			e.fire -= dt
 		}
@@ -139,22 +146,36 @@ func (g *Game) updateEntities(dt float64) {
 			continue
 		}
 		if e.Kind == Ranged && e.fire <= 0 && d <= rangedFireRange {
-			g.spawnProjectile(e.Pos, pp)
+			g.spawnProjectile(e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight)
 			e.fire = rangedFireCooldown
 		}
 		if d > contactRange {
 			ux, uy := (pp.X-e.Pos.X)/d, (pp.Y-e.Pos.Y)/d
-			e.Pos = resolveMove(g.World, e.Pos, ux*demonSpeed*dt, uy*demonSpeed*dt)
+			e.Pos = resolveMove(g.World, e.Pos, e.Z, ux*demonSpeed*dt, uy*demonSpeed*dt)
 		}
 	}
 }
 
+// settleEntity resolves a demon's height against the floor underfoot, mirroring
+// the player's step-up and fall behaviour (including riding lifts).
+func (g *Game) settleEntity(e *Entity, dt float64) {
+	floor := g.World.FloorAt(int(math.Floor(e.Pos.X)), int(math.Floor(e.Pos.Y)))
+	switch {
+	case e.Z < floor:
+		e.Z = floor
+	case e.Z > floor:
+		e.Z = math.Max(floor, e.Z-fallSpeed*dt)
+	}
+}
+
 // applyContactDamage drains the player's health while any living demon is in
-// contact, clamping at zero.
+// contact, clamping at zero. A demon on a ledge well above (or below) the player
+// cannot claw across the height difference.
 func (g *Game) applyContactDamage(dt float64) {
 	touching := false
 	for _, e := range g.Entities {
-		if e.Alive && dist(e.Pos, g.Player.Pos) < contactRange {
+		if e.Alive && dist(e.Pos, g.Player.Pos) < contactRange &&
+			math.Abs(e.Z-g.Player.Z) < world.MinHeadroom {
 			touching = true
 			break
 		}

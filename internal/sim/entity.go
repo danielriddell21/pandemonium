@@ -33,7 +33,8 @@ const (
 // that always faces the camera.
 type Entity struct {
 	Pos    Vec2
-	Sprite int // visual variant
+	Z      float64 // feet height above the base floor, in wall units
+	Sprite int     // visual variant
 	Kind   EntityKind
 	State  EntityState
 	Health float64
@@ -91,7 +92,9 @@ func spawnEntities(l *world.Level) []Entity {
 		if i%3 == 2 { // roughly a third are ranged
 			kind = Ranged
 		}
-		ents = append(ents, newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind))
+		d := newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind)
+		d.Z = l.Floor(c.X, c.Y)
+		ents = append(ents, d)
 	}
 	return ents
 }
