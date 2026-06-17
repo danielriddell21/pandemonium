@@ -18,7 +18,16 @@ type Audio struct {
 	ctx     *audio.Context
 	players map[iaudio.Cue]*audio.Player
 	ambient *audio.Player
+	depth   int // levels reached; the ambient sinks as this grows
 }
+
+// ambient volume settles from ambientLoud toward ambientQuiet as the run deepens,
+// so the soundscape grows colder the further in you get.
+const (
+	ambientLoud  = 0.35
+	ambientQuiet = 0.12
+	ambientFade  = 0.03 // volume lost per level cleared
+)
 
 // Compile-time check that Audio can drive the simulation's observations.
 var _ sim.Observer = (*Audio)(nil)
@@ -39,7 +48,7 @@ func NewAudio() (*Audio, error) {
 	if err != nil {
 		return nil, fmt.Errorf("audio: ambient player: %w", err)
 	}
-	ap.SetVolume(0.35)
+	ap.SetVolume(ambientLoud)
 	a.ambient = ap
 	return a, nil
 }
@@ -52,15 +61,32 @@ func (a *Audio) StartAmbient() {
 	a.ambient.Play()
 }
 
-// Observe plays the sound mapped to a simulation observation, if any. It lets the
-// engine sit alongside telemetry as a second observer on the game.
+// Observe plays the sound mapped to a simulation observation, if any, and sinks
+// the ambient a little each time a level is cleared. It lets the engine sit
+// alongside telemetry as a second observer on the game.
 func (a *Audio) Observe(o sim.Observation) {
 	if a == nil {
 		return
 	}
+	if o.Kind == sim.ObsExit {
+		a.deepen()
+	}
 	if cue, ok := iaudio.CueFor(o.Kind); ok {
 		a.play(cue)
 	}
+}
+
+// deepen lowers the ambient volume one notch as the run reaches a new level.
+func (a *Audio) deepen() {
+	a.depth++
+	if a.ambient == nil {
+		return
+	}
+	vol := ambientLoud - ambientFade*float64(a.depth)
+	if vol < ambientQuiet {
+		vol = ambientQuiet
+	}
+	a.ambient.SetVolume(vol)
 }
 
 // Fire plays the weapon-discharge sound, which is player-driven rather than an
