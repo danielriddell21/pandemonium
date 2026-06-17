@@ -14,6 +14,10 @@ type Reporter struct {
 	overlay *hud.Overlay
 	src     Source
 	profile telemetry.RunProfile // latest cumulative run profile
+
+	level   int  // level index of the events seen so far
+	sawKill bool // a kill has been remarked on this level
+	sawItem bool // an item pickup has been remarked on this level
 }
 
 // Compile-time check that Reporter consumes telemetry.
@@ -27,7 +31,7 @@ func New(overlay *hud.Overlay, src Source) *Reporter {
 // OnEvent maps a player event to a cue, folds in the run so far, and asks the
 // source for a line, which it delivers to the overlay via emit (now or later).
 func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
-	cue, ok := cueFor(e)
+	cue, ok := r.cueFor(e)
 	if !ok {
 		return
 	}
@@ -56,11 +60,32 @@ func (r *Reporter) OnPathSummary(telemetry.PathSummary) {}
 // OnRunProfile records the latest cumulative profile so later cues can react to it.
 func (r *Reporter) OnRunProfile(p telemetry.RunProfile) { r.profile = p }
 
-// cueFor derives a cue from a player event, or reports false to ignore it.
-func cueFor(e telemetry.PlayerEvent) (Cue, bool) {
+// cueFor derives a cue from a player event, or reports false to ignore it. Kills
+// and item pickups happen constantly, so only the first of each per level is
+// remarked on; deaths and secret finds are rare enough to always surface.
+func (r *Reporter) cueFor(e telemetry.PlayerEvent) (Cue, bool) {
+	if e.LevelIndex != r.level {
+		r.level, r.sawKill, r.sawItem = e.LevelIndex, false, false
+	}
 	switch e.Type {
 	case "exit":
 		return Cue{Kind: CueExit, Level: e.LevelIndex}, true
+	case "death":
+		return Cue{Kind: CueDeath, Level: e.LevelIndex}, true
+	case "secret":
+		return Cue{Kind: CueSecret, Level: e.LevelIndex}, true
+	case "kill":
+		if r.sawKill {
+			break
+		}
+		r.sawKill = true
+		return Cue{Kind: CueKill, Level: e.LevelIndex}, true
+	case "item":
+		if r.sawItem {
+			break
+		}
+		r.sawItem = true
+		return Cue{Kind: CueItem, Level: e.LevelIndex}, true
 	case "door":
 		if e.Marker != nil && e.Marker.WrongDoor {
 			return Cue{Kind: CueWrongDoor, Level: e.LevelIndex}, true

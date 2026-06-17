@@ -102,7 +102,8 @@ func TestReporterLateBandIsMorePointed(t *testing.T) {
 }
 
 func TestForkOptimalDetection(t *testing.T) {
-	cue, ok := cueFor(telemetry.PlayerEvent{
+	r := New(hud.New(), NewTableSource())
+	cue, ok := r.cueFor(telemetry.PlayerEvent{
 		Type:       "marker",
 		LevelIndex: 4,
 		Marker:     &telemetry.MarkerInfo{Kind: "junction", TakenX: 3, TakenY: 5, OptimalX: 3, OptimalY: 5},

@@ -18,6 +18,14 @@ const (
 	CueDecoy
 	// CueFork is crossing a junction.
 	CueFork
+	// CueKill is felling a demon (throttled to the first of each level).
+	CueKill
+	// CueItem is collecting something (throttled to the first of each level).
+	CueItem
+	// CueSecret is uncovering a hidden area.
+	CueSecret
+	// CueDeath is dying and respawning.
+	CueDeath
 )
 
 // Cue is the context a Source uses to choose a line: the immediate trigger plus a
@@ -87,6 +95,11 @@ func scriptedLine(c Cue) (Line, bool) {
 	case 0:
 		return Line{}, false
 	case 1:
+		// The mid band is mostly debug-only readouts, but a couple of impactful
+		// moments leak a quiet player-facing whisper, so the drift is felt early.
+		if text, ok := band1Whisper(c); ok {
+			return Line{Text: text, Channel: hud.Notice, Frames: messageFrames}, true
+		}
 		if text, ok := diagnosticText(c); ok {
 			return Line{Text: text, Channel: hud.Diagnostic, Frames: messageFrames}, true
 		}
@@ -96,6 +109,18 @@ func scriptedLine(c Cue) (Line, bool) {
 		}
 	}
 	return Line{}, false
+}
+
+// band1Whisper is the rare early player-facing line for the most charged moments,
+// surfacing before the notice band proper. Everything else stays diagnostic here.
+func band1Whisper(c Cue) (string, bool) {
+	switch c.Kind {
+	case CueDeath:
+		return "Hm. Again.", true
+	case CueSecret:
+		return "Something tucked away.", true
+	}
+	return "", false
 }
 
 // diagnosticText is the dev/playtest readout for a cue, including a little run
@@ -116,6 +141,14 @@ func diagnosticText(c Cue) (string, bool) {
 			return "telemetry: optimal branch taken", true
 		}
 		return "telemetry: suboptimal branch taken", true
+	case CueKill:
+		return "telemetry: hostile neutralised", true
+	case CueItem:
+		return "telemetry: item acquired", true
+	case CueSecret:
+		return "telemetry: hidden area logged", true
+	case CueDeath:
+		return "telemetry: respawn event recorded", true
 	}
 	return "", false
 }
@@ -148,6 +181,30 @@ func noticeText(c Cue, b int) (string, bool) {
 			return "So close to the way out. But not quite.", true
 		}
 		return "Not every door leads onward.", true
+	case CueKill:
+		if b >= 3 {
+			return "They keep coming. You keep firing.", true
+		}
+		return "Efficient.", true
+	case CueItem:
+		if b >= 3 {
+			return "Gathering things. As if it changes anything.", true
+		}
+		return "You take what you find.", true
+	case CueSecret:
+		if b >= 3 {
+			return "You found the seam in things.", true
+		}
+		return "A hidden place. Noted.", true
+	case CueDeath:
+		switch {
+		case c.Deaths >= 3:
+			return "You've done this so many times now.", true
+		case b >= 3:
+			return "Death isn't a door either.", true
+		default:
+			return "Back again.", true
+		}
 	}
 	return "", false
 }
