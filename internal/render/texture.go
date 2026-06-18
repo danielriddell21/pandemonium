@@ -138,7 +138,7 @@ func defaultTextures() *textureSet {
 		door:     genDoor(palette.door),
 		floor:    genFloor(),
 		ceiling:  genCeiling(),
-		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1])},
+		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
 		fireball: genFireball(),
 		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
 		flash:    genFlash(),

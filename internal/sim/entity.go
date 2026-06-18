@@ -15,6 +15,9 @@ const (
 	Melee EntityKind = iota
 	// Ranged demons hurl projectiles from a distance.
 	Ranged
+	// Gunner demons fire instantly (hitscan) on a cooldown, the way DOOM's
+	// zombiemen and shotgun guys do — no projectile to dodge.
+	Gunner
 )
 
 // EntityState is a demon's lifecycle phase, used for behaviour and animation.
@@ -88,9 +91,12 @@ func spawnEntities(l *world.Level) []Entity {
 	ents := make([]Entity, 0, n)
 	for i := range n {
 		c := floors[i]
-		kind := Melee
-		if i%3 == 2 { // roughly a third are ranged
+		kind := Melee // ~half melee, a quarter ranged, a quarter hitscan gunners
+		switch i % 4 {
+		case 2:
 			kind = Ranged
+		case 3:
+			kind = Gunner
 		}
 		d := newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind)
 		d.Z = l.Floor(c.X, c.Y)
@@ -100,13 +106,14 @@ func spawnEntities(l *world.Level) []Entity {
 }
 
 // newDemon builds a fresh demon of the given kind. The visual variant tracks the
-// kind so ranged demons read differently from melee ones.
+// kind so each behaviour reads as a distinct silhouette.
 func newDemon(pos Vec2, kind EntityKind) Entity {
-	hp := meleeHealth
-	sprite := 0
-	if kind == Ranged {
-		hp = rangedHealth
-		sprite = 1
+	hp, sprite := meleeHealth, 0
+	switch kind {
+	case Ranged:
+		hp, sprite = rangedHealth, 1
+	case Gunner:
+		hp, sprite = gunnerHealth, 2
 	}
 	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
 }

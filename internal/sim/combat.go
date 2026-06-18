@@ -22,9 +22,14 @@ const (
 	// (~25°), so the strike only hits what is roughly ahead.
 	attackArcCos = 0.9
 
-	// meleeHealth and rangedHealth are the demons' starting hit points.
+	// meleeHealth, rangedHealth and gunnerHealth are the demons' starting hit points.
 	meleeHealth  = 60.0
 	rangedHealth = 45.0
+	gunnerHealth = 40.0
+	// gunnerCooldown is the time between a gunner's instant shots; gunnerDamage is
+	// what each lands. Hitscan: no projectile, but it must have line of sight.
+	gunnerCooldown = 1.4
+	gunnerDamage   = 9.0
 	// meleeDamage is the player's bare strike damage (a melee demon needs two).
 	meleeDamage = 50.0
 	// painDuration is how long a wounded demon staggers before resuming.
@@ -134,7 +139,7 @@ func (g *Game) updateEntities(dt float64) {
 		e.anim += dt
 		e.Frame = int(e.anim * walkFPS)
 		g.settleEntity(e, dt)
-		if e.Kind == Ranged && e.fire > 0 {
+		if e.fire > 0 { // shooters cool down between attacks
 			e.fire -= dt
 		}
 		if e.hurt > 0 {
@@ -148,6 +153,10 @@ func (g *Game) updateEntities(dt float64) {
 		if e.Kind == Ranged && e.fire <= 0 && d <= rangedFireRange {
 			g.spawnProjectile(e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight)
 			e.fire = rangedFireCooldown
+		}
+		if e.Kind == Gunner && e.fire <= 0 {
+			g.hurtPlayer(gunnerDamage) // instant hitscan — already has line of sight
+			e.fire = gunnerCooldown
 		}
 		if d > contactRange {
 			ux, uy := (pp.X-e.Pos.X)/d, (pp.Y-e.Pos.Y)/d
