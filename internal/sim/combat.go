@@ -77,8 +77,14 @@ func (g *Game) hitscan(maxRange, arcCos float64) int {
 	return best
 }
 
-// damageEntity applies damage to a demon, staggering it or killing it.
-func (g *Game) damageEntity(i int, dmg float64) {
+// damageEntity applies player-dealt damage to a demon, staggering or killing it
+// and crediting the kill to the player.
+func (g *Game) damageEntity(i int, dmg float64) { g.wound(i, dmg, true) }
+
+// wound applies damage to a demon. credit marks a kill as the player's (counted
+// and observed); infighting damage between demons passes false so a demon felling
+// another never inflates the player's tally.
+func (g *Game) wound(i int, dmg float64, credit bool) {
 	e := &g.Entities[i]
 	if e.State != Active {
 		return
@@ -88,8 +94,10 @@ func (g *Game) damageEntity(i int, dmg float64) {
 		e.State = Dying
 		e.Alive = false
 		e.anim = 0
-		g.kills++
-		g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
+		if credit {
+			g.kills++
+			g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
+		}
 	} else {
 		e.hurt = painDuration
 	}
@@ -151,7 +159,7 @@ func (g *Game) updateEntities(dt float64) {
 			continue
 		}
 		if e.Kind == Ranged && e.fire <= 0 && d <= rangedFireRange {
-			g.spawnProjectile(e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight)
+			g.spawnProjectile(i, e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight)
 			e.fire = rangedFireCooldown
 		}
 		if e.Kind == Gunner && e.fire <= 0 {
