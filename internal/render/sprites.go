@@ -34,6 +34,17 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 
 	items := make([]billboard, 0, len(g.Entities)+len(g.Projectiles))
 	for _, e := range g.Entities {
+		if e.Kind == sim.Barrel {
+			switch e.State {
+			case sim.Dead:
+				continue // burst and gone
+			case sim.Dying:
+				items = append(items, billboard{pos: e.Pos, z: e.Z, tex: tx.fireball, scale: spriteScale, ground: true})
+			default:
+				items = append(items, billboard{pos: e.Pos, z: e.Z, tex: tx.barrel, scale: spriteScale * 0.7, ground: true})
+			}
+			continue
+		}
 		items = append(items, billboard{pos: e.Pos, z: e.Z, tex: demonTexture(tx, e), scale: spriteScale, ground: true})
 	}
 	for _, p := range g.Projectiles {

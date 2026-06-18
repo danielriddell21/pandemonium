@@ -67,7 +67,7 @@ func New(l *world.Level, opts ...Option) *Game {
 		tracker:  newTracker(l),
 	}
 	g.viewZ = g.Player.Z
-	g.killsTotal = len(g.Entities)
+	g.killsTotal = countDemons(g.Entities)
 	g.itemsTotal = len(g.Items)
 	g.foundTotal = len(l.Secrets)
 	for _, opt := range opts {

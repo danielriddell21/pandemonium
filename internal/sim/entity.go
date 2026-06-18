@@ -18,6 +18,9 @@ const (
 	// Gunner demons fire instantly (hitscan) on a cooldown, the way DOOM's
 	// zombiemen and shotgun guys do — no projectile to dodge.
 	Gunner
+	// Barrel is a static explosive: it doesn't move or attack, but bursts when
+	// destroyed, splashing damage onto whatever is near (chaining other barrels).
+	Barrel
 )
 
 // EntityState is a demon's lifecycle phase, used for behaviour and animation.
@@ -102,7 +105,17 @@ func spawnEntities(l *world.Level) []Entity {
 		d.Z = l.Floor(c.X, c.Y)
 		ents = append(ents, d)
 	}
+	for _, c := range l.Barrels {
+		b := newBarrel(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5})
+		b.Z = l.Floor(c.X, c.Y)
+		ents = append(ents, b)
+	}
 	return ents
+}
+
+// newBarrel builds a static explosive barrel.
+func newBarrel(pos Vec2) Entity {
+	return Entity{Pos: pos, Sprite: 0, Kind: Barrel, State: Active, Health: barrelHealth, Alive: true}
 }
 
 // newDemon builds a fresh demon of the given kind. The visual variant tracks the
@@ -116,6 +129,18 @@ func newDemon(pos Vec2, kind EntityKind) Entity {
 		hp, sprite = gunnerHealth, 2
 	}
 	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
+}
+
+// countDemons counts the entities that are actual demons (excluding barrels), so
+// the kill tally's denominator isn't inflated by explosive props.
+func countDemons(ents []Entity) int {
+	n := 0
+	for _, e := range ents {
+		if e.Kind != Barrel {
+			n++
+		}
+	}
+	return n
 }
 
 func chebyInt(a, b world.Coord) int {

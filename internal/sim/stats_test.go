@@ -9,8 +9,8 @@ import (
 func TestLevelStatsTotalsFromLayout(t *testing.T) {
 	g := newTestGame(t, 7)
 	s := g.LevelStats()
-	if s.KillsTotal != len(g.Entities) {
-		t.Errorf("KillsTotal = %d, want %d", s.KillsTotal, len(g.Entities))
+	if s.KillsTotal != countDemons(g.Entities) {
+		t.Errorf("KillsTotal = %d, want %d (demons only, barrels excluded)", s.KillsTotal, countDemons(g.Entities))
 	}
 	if s.ItemsTotal != len(g.Items) {
 		t.Errorf("ItemsTotal = %d, want %d", s.ItemsTotal, len(g.Items))

@@ -56,6 +56,7 @@ type textureSet struct {
 	ceiling  *texture
 	demon    []demonArt
 	fireball *texture
+	barrel   *texture
 	weapon   []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
 	flash    *texture   // muzzle flash
 	face     []*texture // status-bar face, by health band (0 healthy .. 3 dead)
@@ -140,6 +141,7 @@ func defaultTextures() *textureSet {
 		ceiling:  genCeiling(),
 		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
 		fireball: genFireball(),
+		barrel:   genBarrel(),
 		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
 		flash:    genFlash(),
 		face:     []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
@@ -461,6 +463,30 @@ func genDemonDead(body color.RGBA, k, n int) *texture {
 	dark := adjust(body, -int(60*prog))
 	ry := 24.0 * (1 - 0.75*prog)
 	drawBody(t, dark, 32, 56-ry, 22, ry, k == 0)
+	return t
+}
+
+// genBarrel draws a stout metal barrel with banding, on a transparent
+// background, sitting in the lower-centre so it reads as a short floor prop.
+func genBarrel() *texture {
+	t := newTexture(texSize, texSize)
+	metal := color.RGBA{R: 120, G: 96, B: 48, A: 255}
+	band := color.RGBA{R: 70, G: 56, B: 28, A: 255}
+	const x0, x1, y0, y1 = 20, 44, 18, 60
+	for y := y0; y < y1; y++ {
+		for x := x0; x < x1; x++ {
+			var c color.RGBA
+			switch {
+			case x < x0+2 || x >= x1-2: // edge shading for a rounded look
+				c = adjust(metal, -40)
+			case y%14 < 2: // hoops around the barrel
+				c = band
+			default:
+				c = adjust(metal, ((x+y)%5-2)*4)
+			}
+			t.set(x, y, c)
+		}
+	}
 	return t
 }
 

@@ -30,6 +30,12 @@ const (
 	// what each lands. Hitscan: no projectile, but it must have line of sight.
 	gunnerCooldown = 1.4
 	gunnerDamage   = 9.0
+
+	// barrelHealth is how much punishment a barrel takes before bursting;
+	// barrelDamage and barrelRadius size the blast that hits everything near it.
+	barrelHealth = 20.0
+	barrelDamage = 60.0
+	barrelRadius = 2.2
 	// meleeDamage is the player's bare strike damage (a melee demon needs two).
 	meleeDamage = 50.0
 	// painDuration is how long a wounded demon staggers before resuming.
@@ -94,12 +100,34 @@ func (g *Game) wound(i int, dmg float64, credit bool) {
 		e.State = Dying
 		e.Alive = false
 		e.anim = 0
+		if e.Kind == Barrel {
+			g.explode(e.Pos, e.Z) // burst, catching everything nearby
+			return
+		}
 		if credit {
 			g.kills++
 			g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
 		}
 	} else {
 		e.hurt = painDuration
+	}
+}
+
+// explode applies a barrel's blast: radius damage to the player and to every
+// other entity near the centre. Barrels caught in the blast burst in turn, and
+// because a bursting barrel is no longer Active the chain terminates on its own.
+func (g *Game) explode(center Vec2, z float64) {
+	if dist(center, g.Player.Pos) <= barrelRadius && math.Abs(z-g.Player.Z) < world.MinHeadroom {
+		g.hurtPlayer(barrelDamage)
+	}
+	for i := range g.Entities {
+		e := &g.Entities[i]
+		if e.State != Active { // the bursting barrel is already Dying, so it's skipped
+			continue
+		}
+		if dist(e.Pos, center) <= barrelRadius {
+			g.wound(i, barrelDamage, true) // blast kills count for the player
+		}
 	}
 }
 
@@ -141,6 +169,11 @@ func (g *Game) updateEntities(dt float64) {
 			if e.anim >= deathDuration {
 				e.State = Dead
 			}
+			continue
+		}
+
+		if e.Kind == Barrel {
+			g.settleEntity(e, dt) // barrels just sit on the floor; no AI
 			continue
 		}
 
@@ -191,6 +224,9 @@ func (g *Game) settleEntity(e *Entity, dt float64) {
 func (g *Game) applyContactDamage(dt float64) {
 	touching := false
 	for _, e := range g.Entities {
+		if e.Kind == Barrel {
+			continue // a barrel you brush past doesn't claw you
+		}
 		if e.Alive && dist(e.Pos, g.Player.Pos) < contactRange &&
 			math.Abs(e.Z-g.Player.Z) < world.MinHeadroom {
 			touching = true

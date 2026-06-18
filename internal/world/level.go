@@ -21,6 +21,7 @@ type Level struct {
 	Locks         map[Coord]ItemKind // door cell -> keycard required to open it
 	Secrets       []Coord            // cells that count as a hidden find
 	Lifts         map[Coord]Lift     // platform tiles that travel between two floors
+	Barrels       []Coord            // explosive barrels scattered across the floor
 	Seed          int64
 }
 

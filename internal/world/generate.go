@@ -73,6 +73,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	annotate(l)
 	placeKeyGate(l, g)
 	placeItems(l, g)
+	placeBarrels(l, g)
 	assignHeights(l, g, rooms)
 	return l
 }
