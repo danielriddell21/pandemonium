@@ -69,6 +69,7 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 	}
 
 	yTop, yBot := 0, h-1
+	aX, aY := mapX, mapY // the tile currently being left (for its floor texture)
 	aFloor := g.World.FloorAt(mapX, mapY)
 	aCeil := g.World.CeilAt(mapX, mapY)
 
@@ -93,7 +94,11 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		// spans self-clamp to empty when a surface is out of view (e.g. a floor
 		// above eye level, whose step face was drawn at the previous boundary).
 		floorEdge := row(aFloor, d)
-		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, tx.floor)
+		ftex := tx.floor
+		if g.World.HazardAt(aX, aY) > 0 {
+			ftex = tx.nukage
+		}
+		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex)
 		ceilEdge := row(aCeil, d)
 		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling)
 
@@ -120,6 +125,7 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 			return d
 		}
 		aFloor, aCeil = bFloor, bCeil
+		aX, aY = mapX, mapY
 	}
 	return math.MaxFloat64
 }

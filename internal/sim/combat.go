@@ -238,6 +238,20 @@ func (g *Game) applyContactDamage(dt float64) {
 	}
 }
 
+// applyHazard drains the player's health while they stand on a damaging floor
+// tile (and are actually on the ground, not stepping over it).
+func (g *Game) applyHazard(dt float64) {
+	c := g.PlayerCell()
+	rate := g.World.HazardAt(c.X, c.Y)
+	if rate <= 0 {
+		return
+	}
+	if g.Player.Z-g.World.FloorAt(c.X, c.Y) > world.MinHeadroom {
+		return // up on something above the hazard, not wading in it
+	}
+	g.hurtPlayer(rate * dt)
+}
+
 // losClear reports whether the straight segment a→b crosses no solid tile.
 func losClear(w *World, a, b Vec2) bool {
 	steps := int(dist(a, b)/0.1) + 1

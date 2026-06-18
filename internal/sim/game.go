@@ -112,6 +112,7 @@ func (g *Game) Tick(in Input, dt float64) {
 
 	g.advanceProjectiles(dt)
 	g.applyContactDamage(dt)
+	g.applyHazard(dt)
 	if g.Player.Health <= 0 {
 		g.die()
 	}

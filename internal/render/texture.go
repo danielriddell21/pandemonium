@@ -54,6 +54,7 @@ type textureSet struct {
 	door     *texture
 	floor    *texture
 	ceiling  *texture
+	nukage   *texture
 	demon    []demonArt
 	fireball *texture
 	barrel   *texture
@@ -139,6 +140,7 @@ func defaultTextures() *textureSet {
 		door:     genDoor(palette.door),
 		floor:    genFloor(),
 		ceiling:  genCeiling(),
+		nukage:   genNukage(),
 		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
 		fireball: genFireball(),
 		barrel:   genBarrel(),
@@ -336,6 +338,20 @@ func genFloor() *texture {
 			}
 			n := ((x*13 + y*7) % 11) - 5 // deterministic speckle
 			t.set(x, y, adjust(base, n*2))
+		}
+	}
+	return t
+}
+
+// genNukage draws a sickly green, mottled floor for damaging tiles, so the player
+// reads the hazard before stepping in.
+func genNukage() *texture {
+	t := newTexture(texSize, texSize)
+	base := color.RGBA{R: 60, G: 120, B: 40, A: 255}
+	for y := range texSize {
+		for x := range texSize {
+			n := ((x*9 + y*5) % 13) - 6 // coarse, blotchy variation
+			t.set(x, y, adjust(base, n*4))
 		}
 	}
 	return t

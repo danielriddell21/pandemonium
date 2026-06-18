@@ -22,6 +22,7 @@ type Level struct {
 	Secrets       []Coord            // cells that count as a hidden find
 	Lifts         map[Coord]Lift     // platform tiles that travel between two floors
 	Barrels       []Coord            // explosive barrels scattered across the floor
+	Hazard        map[Coord]float64  // damaging floor tiles -> health lost per second
 	Seed          int64
 }
 
@@ -83,6 +84,11 @@ func (l *Level) Ceil(x, y int) float64 {
 		return 0
 	}
 	return l.CeilH[y*l.Width+x]
+}
+
+// HazardAt returns the health-per-second a tile drains, or 0 if it is safe.
+func (l *Level) HazardAt(x, y int) float64 {
+	return l.Hazard[Coord{X: x, Y: y}]
 }
 
 // setFloor / setCeil write heights at (x, y) if in bounds.

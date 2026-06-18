@@ -45,6 +45,11 @@ func (w *World) CeilAt(x, y int) float64 {
 	return w.Level.Ceil(x, y)
 }
 
+// HazardAt returns the health-per-second the floor at (x, y) drains, or 0.
+func (w *World) HazardAt(x, y int) float64 {
+	return w.Level.HazardAt(x, y)
+}
+
 // liftHeight is a lift platform's height at time t: dwell low, rise, dwell high,
 // sink, repeating. Pure in t, so the cycle is deterministic from the tick count.
 func liftHeight(lf world.Lift, t float64) float64 {

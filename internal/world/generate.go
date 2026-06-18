@@ -75,6 +75,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	placeItems(l, g)
 	placeBarrels(l, g)
 	assignHeights(l, g, rooms)
+	placeHazards(l, g)
 	return l
 }
 
