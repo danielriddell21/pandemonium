@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"math"
 	"testing"
 
 	"github.com/danielriddell21/pandemonium/internal/world"
@@ -62,15 +63,23 @@ func TestObserverFiresOnExit(t *testing.T) {
 	capt := &captureObserver{}
 	g := New(l, WithObserver(capt))
 
-	// Teleport adjacent to the exit, then step onto it.
+	// Stand on the exit tile and throw the exit switch (or, on the rare level with
+	// no switch, simply stand on the exit pad).
 	exit := l.Exit
 	g.Player.Pos = Vec2{X: float64(exit.X) + 0.5, Y: float64(exit.Y) + 0.5}
-	g.Tick(Input{}, 1.0/60.0)
+	in := Input{}
+	for c, s := range l.Switches {
+		if s.Action == world.SwitchExit {
+			g.Player.Angle = math.Atan2(float64(c.Y-exit.Y), float64(c.X-exit.X))
+			in.Interact = true
+		}
+	}
+	g.Tick(in, 1.0/60.0)
 
 	if capt.count(ObsExit) != 1 {
 		t.Errorf("exit observations = %d, want 1", capt.count(ObsExit))
 	}
-	// A second tick on the exit must not re-fire it.
+	// A second tick must not re-fire it.
 	g.Tick(Input{}, 1.0/60.0)
 	if capt.count(ObsExit) != 1 {
 		t.Errorf("exit re-fired: count = %d, want 1", capt.count(ObsExit))

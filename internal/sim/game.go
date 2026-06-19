@@ -32,6 +32,7 @@ type Game struct {
 
 	notice    string  // transient on-screen message (pickups, keys, finds)
 	noticeTTL float64 // remaining display time for notice, in seconds
+	exitDone  bool    // the exit switch has been thrown
 
 	secrets map[world.Coord]bool // secret cells not yet discovered
 	visited map[world.Coord]bool // tiles the player has stepped on (for the automap)
@@ -128,7 +129,7 @@ func (g *Game) Tick(in Input, dt float64) {
 		g.interact()
 	}
 
-	if g.ReachedExit() && !g.tracker.exitEmitted {
+	if g.LevelComplete() && !g.tracker.exitEmitted {
 		g.tracker.exitEmitted = true
 		g.emit(Observation{Kind: ObsExit, At: g.PlayerCell()})
 	}
@@ -214,11 +215,38 @@ func (g *Game) ReachedExit() bool {
 	return g.World.Level.At(c.X, c.Y) == world.TileExit
 }
 
-// interact opens a door immediately ahead of the player, if any, and reports it.
+// LevelComplete reports whether the player has finished the level — by throwing
+// the exit switch, or (on the rare level with no exit switch) by reaching the
+// exit tile.
+func (g *Game) LevelComplete() bool {
+	if g.World.Level.HasExitSwitch() {
+		return g.exitDone
+	}
+	return g.ReachedExit()
+}
+
+// pressSwitch carries out a wall switch's action.
+func (g *Game) pressSwitch(sw world.Switch) {
+	switch sw.Action {
+	case world.SwitchExit:
+		g.exitDone = true
+	case world.SwitchDoor:
+		g.World.ForceOpenDoor(sw.Target.X, sw.Target.Y)
+	}
+}
+
+// interact acts on whatever is immediately ahead of the player: a wall switch
+// (ending the level or opening a remote door) or a closed door.
 func (g *Game) interact() {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))
 	ty := int(math.Floor(g.Player.Pos.Y + dir.Y*reach))
+
+	if sw, ok := g.World.Level.SwitchAt(tx, ty); ok {
+		g.pressSwitch(sw)
+		return
+	}
+
 	if !g.World.IsDoor(tx, ty) || g.World.Opened(tx, ty) {
 		return
 	}

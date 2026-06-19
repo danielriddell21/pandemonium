@@ -11,10 +11,10 @@ func blocksClosed(l *Level) solidFn {
 	return func(c Coord) bool { return l.Solid(c.X, c.Y) }
 }
 
-// blocksWalls treats only walls (and the world edge) as solid, so every door is
-// passable: the question "is the exit reachable once doors are open?".
+// blocksWalls treats every non-walkable cell (walls, switch faces) as solid while
+// letting doors pass: the question "is the exit reachable once doors are open?".
 func blocksWalls(l *Level) solidFn {
-	return func(c Coord) bool { return l.At(c.X, c.Y) == TileWall }
+	return func(c Coord) bool { return !l.At(c.X, c.Y).Walkable() }
 }
 
 // Reachable reports whether dst can be reached from src through non-solid tiles

@@ -16,8 +16,11 @@ const (
 	TileDoor
 	// TileSpawn marks where the player starts. It is walkable.
 	TileSpawn
-	// TileExit marks the level exit. Reaching it ends the level.
+	// TileExit marks the floor in front of the exit switch. It is walkable.
 	TileExit
+	// TileSwitch is a wall-mounted switch the player presses with use. It is solid
+	// like a wall; what it does is recorded in Level.Switches.
+	TileSwitch
 )
 
 // Walkable reports whether an actor can stand on this tile type. Doors are
@@ -43,6 +46,8 @@ func (t TileType) Rune() rune {
 		return 'S'
 	case TileExit:
 		return 'E'
+	case TileSwitch:
+		return '/'
 	default:
 		return '.'
 	}

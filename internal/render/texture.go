@@ -50,18 +50,19 @@ type demonArt struct {
 
 // textureSet holds the textures the renderer draws with.
 type textureSet struct {
-	wall     *texture
-	door     *texture
-	floor    *texture
-	ceiling  *texture
-	nukage   *texture
-	demon    []demonArt
-	fireball *texture
-	barrel   *texture
-	weapon   []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
-	flash    *texture   // muzzle flash
-	face     []*texture // status-bar face, by health band (0 healthy .. 3 dead)
-	item     []*texture // indexed by world.ItemKind
+	wall      *texture
+	door      *texture
+	floor     *texture
+	ceiling   *texture
+	nukage    *texture
+	switchTex *texture
+	demon     []demonArt
+	fireball  *texture
+	barrel    *texture
+	weapon    []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
+	flash     *texture   // muzzle flash
+	face      []*texture // status-bar face, by health band (0 healthy .. 3 dead)
+	item      []*texture // indexed by world.ItemKind
 }
 
 // itemTexture returns the sprite for a collectible kind.
@@ -136,18 +137,19 @@ func loadPNG(path string) (*texture, bool) {
 // defaultTextures generates the built-in placeholder textures from the palette.
 func defaultTextures() *textureSet {
 	return &textureSet{
-		wall:     genBrick(palette.wall),
-		door:     genDoor(palette.door),
-		floor:    genFloor(),
-		ceiling:  genCeiling(),
-		nukage:   genNukage(),
-		demon:    []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
-		fireball: genFireball(),
-		barrel:   genBarrel(),
-		weapon:   []*texture{genFists(), genPistol(), genShotgun()},
-		flash:    genFlash(),
-		face:     []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
-		item:     defaultItemTextures(),
+		wall:      genBrick(palette.wall),
+		door:      genDoor(palette.door),
+		floor:     genFloor(),
+		ceiling:   genCeiling(),
+		nukage:    genNukage(),
+		switchTex: genSwitch(),
+		demon:     []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
+		fireball:  genFireball(),
+		barrel:    genBarrel(),
+		weapon:    []*texture{genFists(), genPistol(), genShotgun()},
+		flash:     genFlash(),
+		face:      []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
+		item:      defaultItemTextures(),
 	}
 }
 
@@ -340,6 +342,18 @@ func genFloor() *texture {
 			t.set(x, y, adjust(base, n*2))
 		}
 	}
+	return t
+}
+
+// genSwitch draws a wall with a lit lever panel, so an exit/door switch reads as
+// interactive among plain walls.
+func genSwitch() *texture {
+	t := genBrick(palette.wall)
+	panel := color.RGBA{R: 40, G: 44, B: 52, A: 255}
+	lever := color.RGBA{R: 90, G: 220, B: 120, A: 255}
+	fillRect(t, 24, 18, 40, 46, panel)
+	fillRect(t, 26, 20, 38, 44, adjust(panel, 20))
+	fillRect(t, 30, 22, 34, 40, lever) // the lit lever
 	return t
 }
 

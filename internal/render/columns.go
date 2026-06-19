@@ -143,8 +143,11 @@ func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, p
 	wallX -= math.Floor(wallX)
 
 	tex := tx.wall
-	if g.World.Level.At(mapX, mapY) == world.TileDoor {
+	switch g.World.Level.At(mapX, mapY) {
+	case world.TileDoor:
 		tex = tx.door
+	case world.TileSwitch:
+		tex = tx.switchTex
 	}
 	texX := int(wallX * float64(tex.w))
 	if texX >= tex.w {

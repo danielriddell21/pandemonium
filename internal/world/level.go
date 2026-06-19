@@ -23,6 +23,7 @@ type Level struct {
 	Lifts         map[Coord]Lift     // platform tiles that travel between two floors
 	Barrels       []Coord            // explosive barrels scattered across the floor
 	Hazard        map[Coord]float64  // damaging floor tiles -> health lost per second
+	Switches      map[Coord]Switch   // wall switches the player presses with use
 	Seed          int64
 }
 
@@ -116,7 +117,7 @@ func (l *Level) set(x, y int, t TileType) {
 // specific door has been opened).
 func (l *Level) Solid(x, y int) bool {
 	switch l.At(x, y) {
-	case TileWall, TileDoor:
+	case TileWall, TileDoor, TileSwitch:
 		return true
 	default:
 		return false

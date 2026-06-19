@@ -71,7 +71,7 @@ func liftHeight(lf world.Lift, t float64) float64 {
 // the world edge are always solid; a door is solid until it has been opened.
 func (w *World) Solid(x, y int) bool {
 	switch w.Level.At(x, y) {
-	case world.TileWall:
+	case world.TileWall, world.TileSwitch:
 		return true
 	case world.TileDoor:
 		return !w.opened[world.Coord{X: x, Y: y}]
@@ -109,6 +109,20 @@ func (w *World) OpenDoor(x, y int, hasKey func(world.ItemKind) bool) bool {
 		return false
 	}
 	if key, locked := w.Level.Locks[c]; locked && !hasKey(key) {
+		return false
+	}
+	w.opened[c] = true
+	return true
+}
+
+// ForceOpenDoor opens the door at (x, y) regardless of any lock — used by remote
+// switches. It reports whether the state changed.
+func (w *World) ForceOpenDoor(x, y int) bool {
+	if w.Level.At(x, y) != world.TileDoor {
+		return false
+	}
+	c := world.Coord{X: x, Y: y}
+	if w.opened[c] {
 		return false
 	}
 	w.opened[c] = true

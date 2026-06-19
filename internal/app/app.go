@@ -104,7 +104,7 @@ func (g *Game) Update() error {
 		g.overlay.Tick()
 	}
 
-	if g.sim.ReachedExit() {
+	if g.sim.LevelComplete() {
 		g.tally = g.sim.LevelStats()
 		g.state = stateIntermission
 	}
