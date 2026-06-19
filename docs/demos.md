@@ -22,10 +22,10 @@ as the walls sweep past.
 
 ![combat](demos/combat.gif)
 
-Closing on a billboarded demon — taking damage as it reaches you (watch the
-status bar) — then gunning it down with the pistol (note the viewmodel and muzzle
-flash). Demons animate and collapse when killed; sprites always face the camera
-and are occluded correctly by nearer walls.
+Fighting through billboarded demons — melee chargers, fireball-lobbing imps and
+hitscan gunners — while explosive barrels and stray shots catch other demons in
+the crossfire. Demons animate and collapse when killed; sprites always face the
+camera and are occluded correctly by nearer walls.
 
 ## Tally
 
