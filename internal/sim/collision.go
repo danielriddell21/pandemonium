@@ -42,8 +42,8 @@ func blocked(w *World, x, y, z, radius float64) bool {
 			if f-z > world.MaxStep {
 				return true // step face too tall to climb
 			}
-			if w.CeilAt(tx, ty)-math.Max(f, z) < world.MinHeadroom {
-				return true // not enough room to stand
+			if w.CeilAt(tx, ty)-f < world.MinHeadroom {
+				return true // the cell itself is too cramped to stand in
 			}
 		}
 	}
