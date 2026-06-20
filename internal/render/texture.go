@@ -164,6 +164,11 @@ func defaultItemTextures() []*texture {
 	items[world.ItemShells] = genAmmoBox(color.RGBA{R: 196, G: 70, B: 50, A: 255})
 	items[world.ItemRockets] = genAmmoBox(color.RGBA{R: 120, G: 120, B: 130, A: 255})
 	items[world.ItemBackpack] = genBackpack()
+	items[world.ItemSoul] = genSphere(color.RGBA{R: 70, G: 110, B: 230, A: 255})
+	items[world.ItemMega] = genSphere(color.RGBA{R: 230, G: 200, B: 80, A: 255})
+	items[world.ItemBerserk] = genMedkit() // a red medkit-like stim, fitting berserk
+	items[world.ItemInvuln] = genSphere(color.RGBA{R: 80, G: 230, B: 120, A: 255})
+	items[world.ItemRadSuit] = genArmor()
 	items[world.ItemKeyRed] = genKey(color.RGBA{R: 210, G: 50, B: 50, A: 255})
 	items[world.ItemKeyBlue] = genKey(color.RGBA{R: 70, G: 110, B: 220, A: 255})
 	items[world.ItemKeyYellow] = genKey(color.RGBA{R: 220, G: 200, B: 60, A: 255})
@@ -288,6 +293,28 @@ func genRocket() *texture {
 	fillRect(t, 26, 22, 38, 44, body)             // casing
 	fillRect(t, 28, 18, 36, 24, adjust(body, 30)) // nose
 	fillRect(t, 28, 44, 36, 52, flame)            // exhaust
+	return t
+}
+
+// genSphere draws a glowing orb (soulsphere/megasphere/invulnerability) with a
+// bright core fading to the given hue, on a transparent background.
+func genSphere(hue color.RGBA) *texture {
+	t := newTexture(texSize, texSize)
+	cx, cy := 32.0, 34.0
+	for y := range texSize {
+		for x := range texSize {
+			nx, ny := (float64(x)-cx)/16, (float64(y)-cy)/16
+			d := nx*nx + ny*ny
+			if d > 1 {
+				continue
+			}
+			if d < 0.3 {
+				t.set(x, y, color.RGBA{R: 245, G: 245, B: 250, A: 255}) // hot core
+			} else {
+				t.set(x, y, adjust(hue, int(-40*d)))
+			}
+		}
+	}
 	return t
 }
 

@@ -242,6 +242,9 @@ func (g *Game) applyContactDamage(dt float64) {
 // applyHazard drains the player's health while they stand on a damaging floor
 // tile (and are actually on the ground, not stepping over it).
 func (g *Game) applyHazard(dt float64) {
+	if g.Player.RadSuited() {
+		return // the radiation suit shrugs off slime
+	}
 	c := g.PlayerCell()
 	rate := g.World.HazardAt(c.X, c.Y)
 	if rate <= 0 {

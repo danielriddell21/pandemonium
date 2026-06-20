@@ -65,11 +65,18 @@ func (g *Game) fire() bool {
 		g.spawnPlayerRocket(w.damage)
 		return true
 	}
+	dmg := w.damage
+	if g.Player.Weapon == Fists && g.Player.Berserk {
+		dmg = berserkFistDamage // berserk turns the fists into a one-punch kill
+	}
 	for _, i := range g.hitscanMulti(w.rng, w.arcCos, w.targets) {
-		g.damageEntity(i, w.damage)
+		g.damageEntity(i, dmg)
 	}
 	return true
 }
+
+// berserkFistDamage is the punishing fist damage while berserk is active.
+const berserkFistDamage = 200.0
 
 // spendAmmo consumes one round of the given kind, reporting success.
 func (g *Game) spendAmmo(a ammoKind) bool {

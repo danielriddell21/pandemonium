@@ -36,6 +36,13 @@ const (
 	baseMaxBullets = 200
 	baseMaxShells  = 50
 	baseMaxRockets = 50
+
+	// overHealMax is the ceiling a soul/megasphere can push health and armour to,
+	// above the normal MaxHealth/MaxArmor.
+	overHealMax = 200.0
+	// Powerup lifetimes, in seconds. Berserk instead lasts the whole level.
+	invulnDuration  = 20.0
+	radSuitDuration = 30.0
 )
 
 // Player holds the camera-bearing actor's position, facing, height, health,
@@ -52,7 +59,17 @@ type Player struct {
 	Rockets  int
 	Backpack bool // doubles ammo capacity once collected
 	Keys     map[world.ItemKind]bool
+
+	Berserk    bool    // boosted fists for the rest of the level
+	InvulnTTL  float64 // seconds of invulnerability remaining
+	RadSuitTTL float64 // seconds of radiation immunity remaining
 }
+
+// Invulnerable reports whether the player currently takes no damage.
+func (p Player) Invulnerable() bool { return p.InvulnTTL > 0 }
+
+// RadSuited reports whether the player currently ignores damaging floors.
+func (p Player) RadSuited() bool { return p.RadSuitTTL > 0 }
 
 // MaxBullets is the player's current bullet capacity (doubled by a backpack).
 func (p Player) MaxBullets() int { return p.cap(baseMaxBullets) }

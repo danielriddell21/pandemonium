@@ -62,6 +62,7 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	cam := newCamera(g.Player.Angle, r.cfg.FOV)
 	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
+	drawPowerupTint(r.fb, r.cfg, g)
 	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
 	drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-statusBarH)
 	drawStatusBar(r.fb, r.cfg, g, r.tex)

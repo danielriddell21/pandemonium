@@ -77,6 +77,18 @@ func (g *Game) applyPickup(k world.ItemKind) {
 		g.Player.Bullets = min(g.Player.Bullets+bulletPickup, g.Player.MaxBullets())
 		g.Player.Shells = min(g.Player.Shells+shellPickup, g.Player.MaxShells())
 		g.Player.Rockets = min(g.Player.Rockets+1, g.Player.MaxRockets())
+	case world.ItemSoul:
+		g.Player.Health = math.Min(g.Player.Health+100, overHealMax)
+	case world.ItemMega:
+		g.Player.Health = overHealMax
+		g.Player.Armor = overHealMax
+	case world.ItemBerserk:
+		g.Player.Berserk = true
+		g.Player.Health = math.Max(g.Player.Health, MaxHealth)
+	case world.ItemInvuln:
+		g.Player.InvulnTTL = invulnDuration
+	case world.ItemRadSuit:
+		g.Player.RadSuitTTL = radSuitDuration
 	default: // keycards
 		if g.Player.Keys == nil {
 			g.Player.Keys = make(map[world.ItemKind]bool)
@@ -87,9 +99,9 @@ func (g *Game) applyPickup(k world.ItemKind) {
 }
 
 // hurtPlayer applies damage to the player, letting armour soak a share of it
-// first and clamping health at zero.
+// first and clamping health at zero. Invulnerability ignores it entirely.
 func (g *Game) hurtPlayer(dmg float64) {
-	if dmg <= 0 {
+	if dmg <= 0 || g.Player.Invulnerable() {
 		return
 	}
 	absorbed := math.Min(dmg*armorAbsorb, g.Player.Armor)
@@ -97,6 +109,16 @@ func (g *Game) hurtPlayer(dmg float64) {
 	g.Player.Health -= dmg - absorbed
 	if g.Player.Health < 0 {
 		g.Player.Health = 0
+	}
+}
+
+// tickPowerups counts down the timed powerups.
+func (g *Game) tickPowerups(dt float64) {
+	if g.Player.InvulnTTL > 0 {
+		g.Player.InvulnTTL -= dt
+	}
+	if g.Player.RadSuitTTL > 0 {
+		g.Player.RadSuitTTL -= dt
 	}
 }
 

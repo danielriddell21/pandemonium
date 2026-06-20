@@ -119,6 +119,7 @@ func (g *Game) Tick(in Input, dt float64) {
 	}
 
 	g.pickupItems()
+	g.tickPowerups(dt)
 	if g.noticeTTL > 0 {
 		g.noticeTTL -= dt
 	}

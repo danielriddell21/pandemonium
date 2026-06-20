@@ -17,6 +17,16 @@ const (
 	ItemRockets
 	// ItemBackpack doubles ammo capacity and tops the player up.
 	ItemBackpack
+	// ItemSoul is a soulsphere: a large health boost, past the normal maximum.
+	ItemSoul
+	// ItemMega is a megasphere: full overcharged health and armour.
+	ItemMega
+	// ItemBerserk grants berserk strength (devastating fists) for the level.
+	ItemBerserk
+	// ItemInvuln grants temporary invulnerability.
+	ItemInvuln
+	// ItemRadSuit grants temporary immunity to damaging floors.
+	ItemRadSuit
 	// ItemKeyRed opens red-locked doors.
 	ItemKeyRed
 	// ItemKeyBlue opens blue-locked doors.
@@ -50,6 +60,16 @@ func (k ItemKind) String() string {
 		return "rockets"
 	case ItemBackpack:
 		return "backpack"
+	case ItemSoul:
+		return "soulsphere"
+	case ItemMega:
+		return "megasphere"
+	case ItemBerserk:
+		return "berserk"
+	case ItemInvuln:
+		return "invulnerability"
+	case ItemRadSuit:
+		return "radiation suit"
 	case ItemKeyRed:
 		return "red key"
 	case ItemKeyBlue:

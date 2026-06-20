@@ -21,10 +21,32 @@ func placeItems(l *Level, g *rng) {
 
 	for i, c := range floors[:n] {
 		kind := rollConsumable(g)
-		if i == 0 && g.chance(0.25) { // an occasional backpack, never more than one
+		switch {
+		case i == 0 && g.chance(0.25): // an occasional backpack, never more than one
 			kind = ItemBackpack
+		case i == 1 && g.chance(0.4): // and sometimes a single powerup
+			kind = rollPowerup(g)
 		}
 		l.Items = append(l.Items, Item{Kind: kind, At: c})
+	}
+}
+
+// rollPowerup picks one of the DOOM-style powerups, weighted toward the more
+// common spheres.
+func rollPowerup(g *rng) ItemKind {
+	switch g.intn(5) {
+	case 0, 1:
+		return ItemSoul
+	case 2:
+		return ItemBerserk
+	case 3:
+		return ItemRadSuit
+	default:
+		// The megasphere and invulnerability are the rarest finds.
+		if g.chance(0.5) {
+			return ItemMega
+		}
+		return ItemInvuln
 	}
 }
 
