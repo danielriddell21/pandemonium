@@ -21,6 +21,10 @@ const (
 	// Barrel is a static explosive: it doesn't move or attack, but bursts when
 	// destroyed, splashing damage onto whatever is near (chaining other barrels).
 	Barrel
+	// Pinky is a fast, low-health melee charger.
+	Pinky
+	// Baron is a slow, heavily-armoured demon that hurls big, slow fireballs.
+	Baron
 )
 
 // EntityState is a demon's lifecycle phase, used for behaviour and animation.
@@ -94,12 +98,18 @@ func spawnEntities(l *world.Level) []Entity {
 	ents := make([]Entity, 0, n)
 	for i := range n {
 		c := floors[i]
-		kind := Melee // ~half melee, a quarter ranged, a quarter hitscan gunners
-		switch i % 4 {
-		case 2:
+		// A varied bestiary: melee chargers, fast pinkies, fireball imps, hitscan
+		// gunners and the occasional armoured baron.
+		kind := Melee
+		switch i % 7 {
+		case 1:
+			kind = Pinky
+		case 2, 3:
 			kind = Ranged
-		case 3:
+		case 4:
 			kind = Gunner
+		case 5:
+			kind = Baron
 		}
 		d := newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind)
 		d.Z = l.Floor(c.X, c.Y)
@@ -127,9 +137,28 @@ func newDemon(pos Vec2, kind EntityKind) Entity {
 		hp, sprite = rangedHealth, 1
 	case Gunner:
 		hp, sprite = gunnerHealth, 2
+	case Pinky:
+		hp, sprite = pinkyHealth, 3
+	case Baron:
+		hp, sprite = baronHealth, 4
 	}
 	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
 }
+
+// demonSpeed returns a demon's chase speed; pinkies rush, barons lumber.
+func demonSpeedFor(kind EntityKind) float64 {
+	switch kind {
+	case Pinky:
+		return pinkySpeed
+	case Baron:
+		return baronSpeed
+	default:
+		return demonSpeed
+	}
+}
+
+// ranges reports whether a kind attacks with projectiles.
+func ranges(kind EntityKind) bool { return kind == Ranged || kind == Baron }
 
 // countDemons counts the entities that are actual demons (excluding barrels), so
 // the kill tally's denominator isn't inflated by explosive props.

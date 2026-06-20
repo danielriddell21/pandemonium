@@ -54,21 +54,21 @@ func (g *Game) spawnPlayerRocket(dmg float64) {
 }
 
 // spawnProjectile launches a projectile from the shooter's eye toward the
-// target's eye, so demons on ledges can still hit a player below (and vice
-// versa). shooter is the firing entity's index.
-func (g *Game) spawnProjectile(shooter int, from Vec2, fromZ float64, target Vec2, targetZ float64) {
+// target's eye at the given speed and damage, so demons on ledges can still hit a
+// player below (and vice versa). shooter is the firing entity's index.
+func (g *Game) spawnProjectile(shooter int, from Vec2, fromZ float64, target Vec2, targetZ, speed, dmg float64) {
 	dx, dy := target.X-from.X, target.Y-from.Y
 	d := dist(from, target)
 	if d == 0 {
 		return
 	}
-	flight := d / projectileSpeed
+	flight := d / speed
 	g.Projectiles = append(g.Projectiles, Projectile{
 		Pos:     from,
 		Z:       fromZ,
-		Vel:     Vec2{X: dx / d * projectileSpeed, Y: dy / d * projectileSpeed},
+		Vel:     Vec2{X: dx / d * speed, Y: dy / d * speed},
 		VelZ:    (targetZ - fromZ) / flight,
-		Damage:  projectileDamage,
+		Damage:  dmg,
 		shooter: shooter,
 		Alive:   true,
 	})

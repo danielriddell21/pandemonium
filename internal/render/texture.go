@@ -144,7 +144,7 @@ func defaultTextures() *textureSet {
 		ceiling:   genCeiling(),
 		nukage:    genNukage(),
 		switchTex: genSwitch(),
-		demon:     []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
+		demon:     buildDemons(),
 		fireball:  genFireball(),
 		rocket:    genRocket(),
 		barrel:    genBarrel(),
@@ -348,6 +348,16 @@ func genFlash() *texture {
 		}
 	}
 	return t
+}
+
+// buildDemons makes the animation sets for every demon variant, one per palette
+// sprite colour (melee, ranged, gunner, pinky, baron).
+func buildDemons() []demonArt {
+	arts := make([]demonArt, len(palette.sprite))
+	for i, c := range palette.sprite {
+		arts[i] = buildDemon(c)
+	}
+	return arts
 }
 
 // buildDemon makes a variant's walk and death frames.

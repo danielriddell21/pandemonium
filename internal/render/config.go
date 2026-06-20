@@ -26,7 +26,7 @@ var palette = struct {
 	floor   color.RGBA
 	wall    color.RGBA // base tint for the wall texture
 	door    color.RGBA // base tint for the door texture
-	sprite  [3]color.RGBA
+	sprite  [5]color.RGBA
 	hudText color.RGBA // player-facing notice text
 	hudDiag color.RGBA // diagnostic/playtest readout text
 	hudDrop color.RGBA // message drop shadow
@@ -35,10 +35,12 @@ var palette = struct {
 	floor:   color.RGBA{R: 44, G: 36, B: 30, A: 255},
 	wall:    color.RGBA{R: 150, G: 110, B: 78, A: 255},
 	door:    color.RGBA{R: 120, G: 70, B: 60, A: 255},
-	sprite: [3]color.RGBA{
-		{R: 168, G: 52, B: 44, A: 255}, // melee — red
-		{R: 120, G: 40, B: 96, A: 255}, // ranged — violet
-		{R: 96, G: 120, B: 60, A: 255}, // gunner — sickly green
+	sprite: [5]color.RGBA{
+		{R: 168, G: 52, B: 44, A: 255},   // melee — red
+		{R: 120, G: 40, B: 96, A: 255},   // ranged — violet
+		{R: 96, G: 120, B: 60, A: 255},   // gunner — sickly green
+		{R: 220, G: 120, B: 150, A: 255}, // pinky — pink
+		{R: 150, G: 110, B: 40, A: 255},  // baron — armoured ochre
 	},
 	hudText: color.RGBA{R: 222, G: 214, B: 188, A: 255},
 	hudDiag: color.RGBA{R: 120, G: 200, B: 120, A: 255},

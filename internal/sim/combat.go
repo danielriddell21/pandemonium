@@ -22,10 +22,18 @@ const (
 	// (~25°), so the strike only hits what is roughly ahead.
 	attackArcCos = 0.9
 
-	// meleeHealth, rangedHealth and gunnerHealth are the demons' starting hit points.
+	// Per-kind starting hit points.
 	meleeHealth  = 60.0
 	rangedHealth = 45.0
 	gunnerHealth = 40.0
+	pinkyHealth  = 55.0
+	baronHealth  = 180.0
+	// pinkySpeed and baronSpeed bracket the default demonSpeed.
+	pinkySpeed = 3.0
+	baronSpeed = 1.2
+	// Baron fireballs are slower but hit much harder than an imp's.
+	baronProjSpeed  = 4.0
+	baronProjDamage = 30.0
 	// gunnerCooldown is the time between a gunner's instant shots; gunnerDamage is
 	// what each lands. Hitscan: no projectile, but it must have line of sight.
 	gunnerCooldown = 1.4
@@ -192,8 +200,12 @@ func (g *Game) updateEntities(dt float64) {
 		if d > detectRadius || d == 0 || !losClear(g.World, e.Pos, pp) {
 			continue
 		}
-		if e.Kind == Ranged && e.fire <= 0 && d <= rangedFireRange {
-			g.spawnProjectile(i, e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight)
+		if ranges(e.Kind) && e.fire <= 0 && d <= rangedFireRange {
+			speed, dmg := float64(projectileSpeed), float64(projectileDamage)
+			if e.Kind == Baron {
+				speed, dmg = baronProjSpeed, baronProjDamage
+			}
+			g.spawnProjectile(i, e.Pos, e.Z+demonEye, pp, g.Player.Z+eyeHeight, speed, dmg)
 			e.fire = rangedFireCooldown
 		}
 		if e.Kind == Gunner && e.fire <= 0 {
@@ -201,8 +213,9 @@ func (g *Game) updateEntities(dt float64) {
 			e.fire = gunnerCooldown
 		}
 		if d > contactRange {
+			speed := demonSpeedFor(e.Kind)
 			ux, uy := (pp.X-e.Pos.X)/d, (pp.Y-e.Pos.Y)/d
-			e.Pos = resolveMove(g.World, e.Pos, e.Z, ux*demonSpeed*dt, uy*demonSpeed*dt)
+			e.Pos = resolveMove(g.World, e.Pos, e.Z, ux*speed*dt, uy*speed*dt)
 		}
 	}
 }

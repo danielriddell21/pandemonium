@@ -4,7 +4,7 @@ import "testing"
 
 func TestDefaultTexturesBuilt(t *testing.T) {
 	ts := defaultTextures()
-	if ts.wall == nil || ts.door == nil || ts.fireball == nil || len(ts.demon) != 3 {
+	if ts.wall == nil || ts.door == nil || ts.fireball == nil || len(ts.demon) != 5 {
 		t.Fatalf("incomplete texture set: %+v", ts)
 	}
 	if len(ts.demon[0].walk) < 2 || len(ts.demon[0].dead) < 2 {
