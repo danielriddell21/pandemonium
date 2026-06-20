@@ -15,6 +15,10 @@ const (
 	Pistol
 	// Shotgun sprays several pellets across a wide arc.
 	Shotgun
+	// Chaingun is a rapid single-target hitscan that chews through bullets.
+	Chaingun
+	// RocketLauncher fires a slow rocket that bursts for splash damage on impact.
+	RocketLauncher
 )
 
 type ammoKind uint8
@@ -23,22 +27,26 @@ const (
 	ammoNone ammoKind = iota
 	ammoBullets
 	ammoShells
+	ammoRockets
 )
 
 // weaponSpec describes how a weapon fires.
 type weaponSpec struct {
-	rng      float64 // reach in tiles
+	rng      float64 // reach in tiles (hitscan weapons)
 	arcCos   float64 // cosine of the half-angle it can hit within
-	damage   float64 // damage per pellet/shot
+	damage   float64 // damage per pellet/shot (or splash damage for rockets)
 	targets  int     // how many demons a single shot can hit (spread)
 	ammo     ammoKind
 	cooldown float64 // seconds between shots
+	rocket   bool    // fires a splash projectile instead of a hitscan
 }
 
 var weapons = map[WeaponKind]weaponSpec{
-	Fists:   {rng: 1.6, arcCos: 0.80, damage: 50, targets: 1, ammo: ammoNone, cooldown: 0.40},
-	Pistol:  {rng: 9.0, arcCos: 0.97, damage: 28, targets: 1, ammo: ammoBullets, cooldown: 0.45},
-	Shotgun: {rng: 7.0, arcCos: 0.82, damage: 22, targets: 4, ammo: ammoShells, cooldown: 0.80},
+	Fists:          {rng: 1.6, arcCos: 0.80, damage: 50, targets: 1, ammo: ammoNone, cooldown: 0.40},
+	Pistol:         {rng: 9.0, arcCos: 0.97, damage: 28, targets: 1, ammo: ammoBullets, cooldown: 0.45},
+	Shotgun:        {rng: 7.0, arcCos: 0.82, damage: 22, targets: 4, ammo: ammoShells, cooldown: 0.80},
+	Chaingun:       {rng: 9.0, arcCos: 0.97, damage: 18, targets: 1, ammo: ammoBullets, cooldown: 0.12},
+	RocketLauncher: {damage: 70, ammo: ammoRockets, cooldown: 0.85, rocket: true},
 }
 
 // muzzleFlashTicks is how many ticks the muzzle flash shows after firing.
@@ -53,6 +61,10 @@ func (g *Game) fire() bool {
 		return false
 	}
 	g.flash = muzzleFlashTicks
+	if w.rocket {
+		g.spawnPlayerRocket(w.damage)
+		return true
+	}
 	for _, i := range g.hitscanMulti(w.rng, w.arcCos, w.targets) {
 		g.damageEntity(i, w.damage)
 	}
@@ -72,6 +84,11 @@ func (g *Game) spendAmmo(a ammoKind) bool {
 			return false
 		}
 		g.Player.Shells--
+	case ammoRockets:
+		if g.Player.Rockets <= 0 {
+			return false
+		}
+		g.Player.Rockets--
 	}
 	return true
 }
@@ -114,7 +131,8 @@ func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
 	return out
 }
 
-// switchWeapon selects a weapon by slot (1=fists, 2=pistol, 3=shotgun).
+// switchWeapon selects a weapon by slot (1=fists, 2=pistol, 3=shotgun,
+// 4=chaingun, 5=rocket launcher).
 func (g *Game) switchWeapon(sel int) {
 	switch sel {
 	case 1:
@@ -123,6 +141,10 @@ func (g *Game) switchWeapon(sel int) {
 		g.Player.Weapon = Pistol
 	case 3:
 		g.Player.Weapon = Shotgun
+	case 4:
+		g.Player.Weapon = Chaingun
+	case 5:
+		g.Player.Weapon = RocketLauncher
 	}
 }
 

@@ -48,9 +48,14 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 		items = append(items, billboard{pos: e.Pos, z: e.Z, tex: demonTexture(tx, e), scale: spriteScale, ground: true})
 	}
 	for _, p := range g.Projectiles {
-		if p.Alive {
-			items = append(items, billboard{pos: p.Pos, z: p.Z, tex: tx.fireball, scale: fireballScale})
+		if !p.Alive {
+			continue
 		}
+		tex := tx.fireball
+		if p.Splash {
+			tex = tx.rocket // the player's rocket reads differently from a fireball
+		}
+		items = append(items, billboard{pos: p.Pos, z: p.Z, tex: tex, scale: fireballScale})
 	}
 	for _, it := range g.Items {
 		if it.Taken {

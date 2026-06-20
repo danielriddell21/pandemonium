@@ -58,6 +58,7 @@ type textureSet struct {
 	switchTex *texture
 	demon     []demonArt
 	fireball  *texture
+	rocket    *texture
 	barrel    *texture
 	weapon    []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
 	flash     *texture   // muzzle flash
@@ -145,8 +146,9 @@ func defaultTextures() *textureSet {
 		switchTex: genSwitch(),
 		demon:     []demonArt{buildDemon(palette.sprite[0]), buildDemon(palette.sprite[1]), buildDemon(palette.sprite[2])},
 		fireball:  genFireball(),
+		rocket:    genRocket(),
 		barrel:    genBarrel(),
-		weapon:    []*texture{genFists(), genPistol(), genShotgun()},
+		weapon:    []*texture{genFists(), genPistol(), genShotgun(), genChaingun(), genRocketLauncher()},
 		flash:     genFlash(),
 		face:      []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
 		item:      defaultItemTextures(),
@@ -160,6 +162,8 @@ func defaultItemTextures() []*texture {
 	items[world.ItemArmor] = genArmor()
 	items[world.ItemBullets] = genAmmoBox(color.RGBA{R: 196, G: 170, B: 60, A: 255})
 	items[world.ItemShells] = genAmmoBox(color.RGBA{R: 196, G: 70, B: 50, A: 255})
+	items[world.ItemRockets] = genAmmoBox(color.RGBA{R: 120, G: 120, B: 130, A: 255})
+	items[world.ItemBackpack] = genBackpack()
 	items[world.ItemKeyRed] = genKey(color.RGBA{R: 210, G: 50, B: 50, A: 255})
 	items[world.ItemKeyBlue] = genKey(color.RGBA{R: 70, G: 110, B: 220, A: 255})
 	items[world.ItemKeyYellow] = genKey(color.RGBA{R: 220, G: 200, B: 60, A: 255})
@@ -249,6 +253,53 @@ func genShotgun() *texture {
 	fillRect(t, 20, 18, 44, 40, metal) // twin barrels
 	fillRect(t, 31, 18, 33, 40, adjust(metal, -40))
 	fillRect(t, 16, 38, 48, 64, wood) // stock/body
+	return t
+}
+
+func genChaingun() *texture {
+	t := newTexture(texSize, texSize)
+	metal := color.RGBA{R: 70, G: 72, B: 84, A: 255}
+	dark := color.RGBA{R: 40, G: 40, B: 48, A: 255}
+	// A cluster of rotating barrels over a chunky body.
+	for _, bx := range []int{26, 30, 34} {
+		fillRect(t, bx, 16, bx+3, 40, metal)
+	}
+	fillRect(t, 22, 38, 44, 56, dark)
+	fillRect(t, 28, 52, 40, 64, dark) // grip
+	return t
+}
+
+func genRocketLauncher() *texture {
+	t := newTexture(texSize, texSize)
+	tube := color.RGBA{R: 80, G: 84, B: 70, A: 255}
+	dark := color.RGBA{R: 44, G: 46, B: 40, A: 255}
+	fillRect(t, 18, 26, 48, 40, tube) // launch tube
+	fillRect(t, 18, 26, 48, 29, adjust(tube, 30))
+	fillRect(t, 20, 24, 30, 28, dark) // sight
+	fillRect(t, 26, 40, 40, 64, dark) // body/grip
+	return t
+}
+
+// genRocket draws the player's in-flight rocket: a metal slug with a flame tail.
+func genRocket() *texture {
+	t := newTexture(texSize, texSize)
+	body := color.RGBA{R: 150, G: 150, B: 160, A: 255}
+	flame := color.RGBA{R: 250, G: 180, B: 60, A: 255}
+	fillRect(t, 26, 22, 38, 44, body)             // casing
+	fillRect(t, 28, 18, 36, 24, adjust(body, 30)) // nose
+	fillRect(t, 28, 44, 36, 52, flame)            // exhaust
+	return t
+}
+
+// genBackpack draws a brown satchel with straps on a transparent background.
+func genBackpack() *texture {
+	t := newTexture(texSize, texSize)
+	canvas := color.RGBA{R: 120, G: 86, B: 50, A: 255}
+	strap := adjust(canvas, -45)
+	fillRect(t, 20, 24, 44, 48, canvas)
+	fillRect(t, 24, 24, 27, 48, strap)
+	fillRect(t, 37, 24, 40, 48, strap)
+	fillRect(t, 20, 30, 44, 33, strap) // buckle line
 	return t
 }
 

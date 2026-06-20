@@ -78,10 +78,12 @@ func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 // ammoText renders the current weapon's ammo count, or a dash for the fists.
 func ammoText(p sim.Player) string {
 	switch p.Weapon {
-	case sim.Pistol:
+	case sim.Pistol, sim.Chaingun:
 		return fmt.Sprintf("%d", p.Bullets)
 	case sim.Shotgun:
 		return fmt.Sprintf("%d", p.Shells)
+	case sim.RocketLauncher:
+		return fmt.Sprintf("%d", p.Rockets)
 	default:
 		return "--"
 	}

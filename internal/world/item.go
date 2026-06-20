@@ -13,6 +13,10 @@ const (
 	ItemBullets
 	// ItemShells replenishes shotgun ammunition.
 	ItemShells
+	// ItemRockets replenishes rocket-launcher ammunition.
+	ItemRockets
+	// ItemBackpack doubles ammo capacity and tops the player up.
+	ItemBackpack
 	// ItemKeyRed opens red-locked doors.
 	ItemKeyRed
 	// ItemKeyBlue opens blue-locked doors.
@@ -42,6 +46,10 @@ func (k ItemKind) String() string {
 		return "bullets"
 	case ItemShells:
 		return "shells"
+	case ItemRockets:
+		return "rockets"
+	case ItemBackpack:
+		return "backpack"
 	case ItemKeyRed:
 		return "red key"
 	case ItemKeyBlue:

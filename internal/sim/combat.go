@@ -101,7 +101,7 @@ func (g *Game) wound(i int, dmg float64, credit bool) {
 		e.Alive = false
 		e.anim = 0
 		if e.Kind == Barrel {
-			g.explode(e.Pos, e.Z) // burst, catching everything nearby
+			g.explode(e.Pos, e.Z, barrelRadius, barrelDamage) // burst, catching everything nearby
 			return
 		}
 		if credit {
@@ -113,20 +113,21 @@ func (g *Game) wound(i int, dmg float64, credit bool) {
 	}
 }
 
-// explode applies a barrel's blast: radius damage to the player and to every
-// other entity near the centre. Barrels caught in the blast burst in turn, and
-// because a bursting barrel is no longer Active the chain terminates on its own.
-func (g *Game) explode(center Vec2, z float64) {
-	if dist(center, g.Player.Pos) <= barrelRadius && math.Abs(z-g.Player.Z) < world.MinHeadroom {
-		g.hurtPlayer(barrelDamage)
+// explode applies a blast at center: radius damage to the player and to every
+// active entity within radius. Used by both barrels and rockets. Barrels caught
+// in the blast burst in turn, and because a bursting barrel is no longer Active
+// the chain terminates on its own.
+func (g *Game) explode(center Vec2, z, radius, dmg float64) {
+	if dist(center, g.Player.Pos) <= radius && math.Abs(z-g.Player.Z) < world.MinHeadroom {
+		g.hurtPlayer(dmg)
 	}
 	for i := range g.Entities {
 		e := &g.Entities[i]
 		if e.State != Active { // the bursting barrel is already Dying, so it's skipped
 			continue
 		}
-		if dist(e.Pos, center) <= barrelRadius {
-			g.wound(i, barrelDamage, true) // blast kills count for the player
+		if dist(e.Pos, center) <= radius {
+			g.wound(i, dmg, true) // blast kills count for the player
 		}
 	}
 }

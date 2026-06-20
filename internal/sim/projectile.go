@@ -15,19 +15,42 @@ const (
 	projectileHitRadius = 0.4
 	// demonEye is how far above a demon's feet its projectiles launch from.
 	demonEye = 0.4
+
+	// playerShooter marks a projectile fired by the player (a rocket): it can hit
+	// any demon and never registers a direct hit on the player, only splash.
+	playerShooter = -1
+	// rocketSpeed is how fast a player rocket travels; rocketRadius is its blast.
+	rocketSpeed  = 8.0
+	rocketRadius = 2.5
 )
 
-// Projectile is an in-flight attack (e.g. a fireball). It flies in a straight 3D
-// line; shooter is the index of the entity that fired it (-1 for none) so it
-// never hits its owner and so infighting kills aren't credited to the player.
+// Projectile is an in-flight attack (e.g. a fireball or a rocket). It flies in a
+// straight 3D line; shooter is the index of the entity that fired it
+// (playerShooter for the player) so it never hits its owner and so infighting
+// kills aren't credited to the player. Splash projectiles burst on impact.
 type Projectile struct {
 	Pos     Vec2
 	Z       float64 // height above the base floor, in wall units
 	Vel     Vec2
 	VelZ    float64
 	Damage  float64
+	Splash  bool // bursts for radius damage on impact (a rocket)
 	shooter int
 	Alive   bool
+}
+
+// spawnPlayerRocket launches a rocket from the player's eye along their facing.
+func (g *Game) spawnPlayerRocket(dmg float64) {
+	dir := g.Player.Dir()
+	g.Projectiles = append(g.Projectiles, Projectile{
+		Pos:     g.Player.Pos,
+		Z:       g.Player.Z + eyeHeight,
+		Vel:     Vec2{X: dir.X * rocketSpeed, Y: dir.Y * rocketSpeed},
+		Damage:  dmg,
+		Splash:  true,
+		shooter: playerShooter,
+		Alive:   true,
+	})
 }
 
 // spawnProjectile launches a projectile from the shooter's eye toward the
@@ -68,20 +91,34 @@ func (g *Game) advanceProjectiles(dt float64) {
 		tx, ty := int(math.Floor(p.Pos.X)), int(math.Floor(p.Pos.Y))
 		if g.World.Solid(tx, ty) ||
 			p.Z <= g.World.FloorAt(tx, ty) || p.Z >= g.World.CeilAt(tx, ty) {
-			continue // absorbed by the level
-		}
-		if j := g.projectileHitsDemon(p); j >= 0 {
-			g.wound(j, p.Damage, false) // demon hit demon — infighting, no credit
+			g.detonate(p) // absorbed by the level (rockets burst here)
 			continue
 		}
-		if dist(p.Pos, g.Player.Pos) < projectileHitRadius &&
+		if j := g.projectileHitsDemon(p); j >= 0 {
+			if p.Splash {
+				g.detonate(p)
+			} else {
+				g.wound(j, p.Damage, false) // demon hit demon — infighting, no credit
+			}
+			continue
+		}
+		// Demon projectiles strike the player directly; player rockets only splash.
+		if p.shooter != playerShooter && dist(p.Pos, g.Player.Pos) < projectileHitRadius &&
 			p.Z > g.Player.Z && p.Z < g.Player.Z+1 {
 			g.hurtPlayer(p.Damage)
-			continue // struck the player
+			continue
 		}
 		kept = append(kept, p)
 	}
 	g.Projectiles = kept
+}
+
+// detonate bursts a splash projectile at its current position; non-splash
+// projectiles simply vanish.
+func (g *Game) detonate(p Projectile) {
+	if p.Splash {
+		g.explode(p.Pos, p.Z, rocketRadius, p.Damage)
+	}
 }
 
 // projectileHitsDemon returns the index of a living demon the projectile is

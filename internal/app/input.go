@@ -49,14 +49,16 @@ func (g *Game) readInput() sim.Input {
 }
 
 // weaponSelect maps number keys and the mouse wheel to a weapon slot (1=fists,
-// 2=pistol, 3=shotgun), or 0 to keep the current weapon. Number keys win.
+// 2=pistol, 3=shotgun, 4=chaingun, 5=rocket launcher), or 0 to keep the current
+// weapon. Number keys win.
 func (g *Game) weaponSelect() int {
+	const slots = 5
 	if _, wy := ebiten.Wheel(); wy != 0 {
 		cur := int(g.sim.Player.Weapon)
 		if wy > 0 {
-			return (cur+1)%3 + 1
+			return (cur+1)%slots + 1
 		}
-		return (cur+2)%3 + 1
+		return (cur+slots-1)%slots + 1
 	}
 	switch {
 	case inpututil.IsKeyJustPressed(ebiten.Key1):
@@ -65,6 +67,10 @@ func (g *Game) weaponSelect() int {
 		return 2
 	case inpututil.IsKeyJustPressed(ebiten.Key3):
 		return 3
+	case inpututil.IsKeyJustPressed(ebiten.Key4):
+		return 4
+	case inpututil.IsKeyJustPressed(ebiten.Key5):
+		return 5
 	}
 	return 0
 }

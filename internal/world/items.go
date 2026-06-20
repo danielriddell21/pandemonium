@@ -19,23 +19,29 @@ func placeItems(l *Level, g *rng) {
 		n = len(floors)
 	}
 
-	for _, c := range floors[:n] {
-		l.Items = append(l.Items, Item{Kind: rollConsumable(g), At: c})
+	for i, c := range floors[:n] {
+		kind := rollConsumable(g)
+		if i == 0 && g.chance(0.25) { // an occasional backpack, never more than one
+			kind = ItemBackpack
+		}
+		l.Items = append(l.Items, Item{Kind: kind, At: c})
 	}
 }
 
 // rollConsumable picks a consumable kind with health and ammo common and armour
-// rarer, roughly matching how often each turns up in a DOOM level.
+// and rockets rarer, roughly matching how often each turns up in a DOOM level.
 func rollConsumable(g *rng) ItemKind {
-	switch g.intn(10) {
+	switch g.intn(12) {
 	case 0, 1, 2:
 		return ItemHealth
 	case 3, 4, 5:
 		return ItemBullets
 	case 6, 7:
 		return ItemShells
-	default:
+	case 8, 9:
 		return ItemArmor
+	default:
+		return ItemRockets
 	}
 }
 

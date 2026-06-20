@@ -31,20 +31,43 @@ const (
 	// viewRate is how quickly the camera height eases toward the body's height,
 	// so stairs read as steps rather than jolts.
 	viewRate = 5.0
+
+	// Base ammo capacities; a backpack doubles them (see Player.MaxBullets etc.).
+	baseMaxBullets = 200
+	baseMaxShells  = 50
+	baseMaxRockets = 50
 )
 
 // Player holds the camera-bearing actor's position, facing, height, health,
 // armour and arsenal, plus the keycards it has collected.
 type Player struct {
-	Pos     Vec2
-	Z       float64 // feet height above the base floor, in wall units
-	Angle   float64 // radians; 0 points along +X
-	Health  float64
-	Armor   float64
-	Weapon  WeaponKind
-	Bullets int
-	Shells  int
-	Keys    map[world.ItemKind]bool
+	Pos      Vec2
+	Z        float64 // feet height above the base floor, in wall units
+	Angle    float64 // radians; 0 points along +X
+	Health   float64
+	Armor    float64
+	Weapon   WeaponKind
+	Bullets  int
+	Shells   int
+	Rockets  int
+	Backpack bool // doubles ammo capacity once collected
+	Keys     map[world.ItemKind]bool
+}
+
+// MaxBullets is the player's current bullet capacity (doubled by a backpack).
+func (p Player) MaxBullets() int { return p.cap(baseMaxBullets) }
+
+// MaxShells is the player's current shell capacity (doubled by a backpack).
+func (p Player) MaxShells() int { return p.cap(baseMaxShells) }
+
+// MaxRockets is the player's current rocket capacity (doubled by a backpack).
+func (p Player) MaxRockets() int { return p.cap(baseMaxRockets) }
+
+func (p Player) cap(base int) int {
+	if p.Backpack {
+		return base * 2
+	}
+	return base
 }
 
 // HasKey reports whether the player holds the given keycard.
@@ -66,6 +89,7 @@ type Input struct {
 	TurnDelta float64 // direct turn applied this tick, in radians (mouse-look)
 	Interact  bool    // act on an adjacent door this tick
 	Attack    bool    // fire the current weapon this tick
-	// SelectWeapon switches weapon when non-zero: 1=fists, 2=pistol, 3=shotgun.
+	// SelectWeapon switches weapon when non-zero: 1=fists, 2=pistol, 3=shotgun,
+	// 4=chaingun, 5=rocket launcher.
 	SelectWeapon int
 }

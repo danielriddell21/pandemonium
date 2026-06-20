@@ -13,6 +13,7 @@ const (
 	armorPickup  = 25.0
 	bulletPickup = 20
 	shellPickup  = 8
+	rocketPickup = 5
 	// noticeDuration is how long a pickup or key message stays on screen, seconds.
 	noticeDuration = 2.5
 )
@@ -65,9 +66,17 @@ func (g *Game) applyPickup(k world.ItemKind) {
 	case world.ItemArmor:
 		g.Player.Armor = math.Min(g.Player.Armor+armorPickup, MaxArmor)
 	case world.ItemBullets:
-		g.Player.Bullets += bulletPickup
+		g.Player.Bullets = min(g.Player.Bullets+bulletPickup, g.Player.MaxBullets())
 	case world.ItemShells:
-		g.Player.Shells += shellPickup
+		g.Player.Shells = min(g.Player.Shells+shellPickup, g.Player.MaxShells())
+	case world.ItemRockets:
+		g.Player.Rockets = min(g.Player.Rockets+rocketPickup, g.Player.MaxRockets())
+	case world.ItemBackpack:
+		g.Player.Backpack = true
+		// The pack itself tops up a little of every ammo, up to the new caps.
+		g.Player.Bullets = min(g.Player.Bullets+bulletPickup, g.Player.MaxBullets())
+		g.Player.Shells = min(g.Player.Shells+shellPickup, g.Player.MaxShells())
+		g.Player.Rockets = min(g.Player.Rockets+1, g.Player.MaxRockets())
 	default: // keycards
 		if g.Player.Keys == nil {
 			g.Player.Keys = make(map[world.ItemKind]bool)
