@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"fmt"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
@@ -15,11 +16,16 @@ import (
 // pure internal/audio package. Every method is nil-safe, so a game built without
 // audio (e.g. on a machine with no sound device) simply runs silent.
 type Audio struct {
-	ctx     *audio.Context
-	players map[iaudio.Cue]*audio.Player
-	ambient *audio.Player
-	depth   int // levels reached; the ambient sinks as this grows
+	ctx      *audio.Context
+	players  map[iaudio.Cue]*audio.Player
+	ambient  *audio.Player
+	depth    int      // levels reached; the ambient sinks as this grows
+	listener sim.Vec2 // the player's position, for distance attenuation
 }
+
+// maxAudible is the distance (in tiles) beyond which a sound effect fades to
+// nothing.
+const maxAudible = 20.0
 
 // ambient volume settles from ambientLoud toward ambientQuiet as the run deepens,
 // so the soundscape grows colder the further in you get.
@@ -61,9 +67,18 @@ func (a *Audio) StartAmbient() {
 	a.ambient.Play()
 }
 
-// Observe plays the sound mapped to a simulation observation, if any, and sinks
-// the ambient a little each time a level is cleared. It lets the engine sit
-// alongside telemetry as a second observer on the game.
+// SetListener records the player's position so subsequent sounds are attenuated
+// by how far away they happen. The app sets it each tick before stepping the sim.
+func (a *Audio) SetListener(pos sim.Vec2) {
+	if a != nil {
+		a.listener = pos
+	}
+}
+
+// Observe plays the sound mapped to a simulation observation, if any, attenuated
+// by its distance from the listener, and sinks the ambient a little each time a
+// level is cleared. It lets the engine sit alongside telemetry as a second
+// observer on the game.
 func (a *Audio) Observe(o sim.Observation) {
 	if a == nil {
 		return
@@ -72,8 +87,19 @@ func (a *Audio) Observe(o sim.Observation) {
 		a.deepen()
 	}
 	if cue, ok := iaudio.CueFor(o.Kind); ok {
-		a.play(cue)
+		event := sim.Vec2{X: float64(o.At.X) + 0.5, Y: float64(o.At.Y) + 0.5}
+		a.playAt(cue, distanceVolume(a.listener, event))
 	}
+}
+
+// distanceVolume falls from 1 at the listener to 0 at maxAudible.
+func distanceVolume(listener, event sim.Vec2) float64 {
+	dx, dy := event.X-listener.X, event.Y-listener.Y
+	d := math.Hypot(dx, dy)
+	if d >= maxAudible {
+		return 0
+	}
+	return 1 - d/maxAudible
 }
 
 // deepen lowers the ambient volume one notch as the run reaches a new level.
@@ -90,18 +116,19 @@ func (a *Audio) deepen() {
 }
 
 // Fire plays the weapon-discharge sound, which is player-driven rather than an
-// observation.
-func (a *Audio) Fire() { a.play(iaudio.CueFire) }
+// observation, so it always plays at full volume.
+func (a *Audio) Fire() { a.playAt(iaudio.CueFire, 1) }
 
-// play restarts and triggers the player for a cue.
-func (a *Audio) play(cue iaudio.Cue) {
-	if a == nil {
+// playAt restarts and triggers the player for a cue at the given volume scale.
+func (a *Audio) playAt(cue iaudio.Cue, scale float64) {
+	if a == nil || scale <= 0 {
 		return
 	}
 	p := a.players[cue]
 	if p == nil {
 		return
 	}
+	p.SetVolume(0.6 * scale)
 	_ = p.Rewind()
 	p.Play()
 }

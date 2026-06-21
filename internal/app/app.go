@@ -91,6 +91,9 @@ func (g *Game) Update() error {
 	}
 
 	dt := 1.0 / float64(ebiten.TPS())
+	if g.audio != nil {
+		g.audio.SetListener(g.sim.Player.Pos) // attenuate the tick's sounds by distance
+	}
 	g.sim.Tick(g.readInput(), dt)
 
 	// Play the weapon sound once per shot, on the muzzle-flash rising edge.
