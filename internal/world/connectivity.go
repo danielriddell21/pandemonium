@@ -44,6 +44,17 @@ func reachable(l *Level, src, dst Coord, solid solidFn) bool {
 	return l.InBounds(dst.X, dst.Y) && dist[dst.Y*l.Width+dst.X] >= 0
 }
 
+// StepsBetween returns the shortest step-traversable distance from src to dst in
+// tiles (doors treated as open), or -1 if unreachable. It backs the intermission
+// par time.
+func StepsBetween(l *Level, src, dst Coord) int {
+	dist := floodDist(l, src, blocksWalls(l))
+	if !l.InBounds(dst.X, dst.Y) {
+		return -1
+	}
+	return dist[dst.Y*l.Width+dst.X]
+}
+
 // floodDist runs a breadth-first search from src over cells the predicate deems
 // non-solid and returns per-cell step distances (row-major), with -1 for cells
 // that are solid or unreachable. Movement between cells also honours the height

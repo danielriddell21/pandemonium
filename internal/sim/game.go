@@ -38,6 +38,7 @@ type Game struct {
 	visited map[world.Coord]bool // tiles the player has stepped on (for the automap)
 
 	elapsed                            float64 // seconds simulated this level
+	par                                float64 // target completion time, seconds
 	kills, items, found                int     // tallies for this level
 	killsTotal, itemsTotal, foundTotal int     // their level-wide totals
 
@@ -71,6 +72,7 @@ func New(l *world.Level, opts ...Option) *Game {
 	g.killsTotal = countDemons(g.Entities)
 	g.itemsTotal = len(g.Items)
 	g.foundTotal = len(l.Secrets)
+	g.par = parTime(world.StepsBetween(l, l.Spawn, l.Exit))
 	for _, opt := range opts {
 		opt(g)
 	}

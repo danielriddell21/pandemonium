@@ -8,6 +8,7 @@ type LevelStats struct {
 	Items, ItemsTotal     int
 	Secrets, SecretsTotal int
 	Elapsed               float64 // seconds spent on the level
+	Par                   float64 // a reasonable target time, in seconds
 }
 
 // LevelStats snapshots the current level's tallies.
@@ -20,6 +21,7 @@ func (g *Game) LevelStats() LevelStats {
 		Secrets:      g.found,
 		SecretsTotal: g.foundTotal,
 		Elapsed:      g.elapsed,
+		Par:          g.par,
 	}
 }
 
@@ -38,4 +40,15 @@ func pct(got, total int) int {
 		return 100
 	}
 	return got * 100 / total
+}
+
+// parTime turns a spawn-to-exit distance (in tiles) into a target time: a base
+// allowance plus a leisurely pace per tile. Unreachable distances fall back to
+// the base.
+func parTime(steps int) float64 {
+	const base, secPerTile = 12.0, 0.7
+	if steps <= 0 {
+		return base
+	}
+	return base + float64(steps)*secPerTile
 }

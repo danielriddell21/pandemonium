@@ -26,7 +26,13 @@ func drawIntermission(fb []byte, cfg Config, s sim.LevelStats) {
 	row += 18
 	drawTextCentered(fb, cfg, row, fmt.Sprintf("SECRETS  %3d%%", s.SecretsPct()), value)
 	row += 18
-	drawTextCentered(fb, cfg, row, "TIME     "+formatTime(s.Elapsed), value)
+	timeColor := value
+	if s.Par > 0 && s.Elapsed <= s.Par { // beat par — call it out in green
+		timeColor = palette.hudDiag
+	}
+	drawTextCentered(fb, cfg, row, "TIME     "+formatTime(s.Elapsed), timeColor)
+	row += 18
+	drawTextCentered(fb, cfg, row, "PAR      "+formatTime(s.Par), value)
 
 	drawTextCentered(fb, cfg, cfg.Height-24, "Press Enter to continue", palette.hudDiag)
 }
