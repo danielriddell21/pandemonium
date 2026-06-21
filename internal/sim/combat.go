@@ -127,6 +127,7 @@ func (g *Game) wound(i int, dmg float64, credit bool) {
 // the chain terminates on its own.
 func (g *Game) explode(center Vec2, z, radius, dmg float64) {
 	if dist(center, g.Player.Pos) <= radius && math.Abs(z-g.Player.Z) < world.MinHeadroom {
+		g.faceHurt(center)
 		g.hurtPlayer(dmg)
 	}
 	for i := range g.Entities {
@@ -209,6 +210,7 @@ func (g *Game) updateEntities(dt float64) {
 			e.fire = rangedFireCooldown
 		}
 		if e.Kind == Gunner && e.fire <= 0 {
+			g.faceHurt(e.Pos)
 			g.hurtPlayer(gunnerDamage) // instant hitscan — already has line of sight
 			e.fire = gunnerCooldown
 		}
@@ -237,17 +239,19 @@ func (g *Game) settleEntity(e *Entity, dt float64) {
 // cannot claw across the height difference.
 func (g *Game) applyContactDamage(dt float64) {
 	touching := false
+	var from Vec2
 	for _, e := range g.Entities {
 		if e.Kind == Barrel {
 			continue // a barrel you brush past doesn't claw you
 		}
 		if e.Alive && dist(e.Pos, g.Player.Pos) < contactRange &&
 			math.Abs(e.Z-g.Player.Z) < world.MinHeadroom {
-			touching = true
+			touching, from = true, e.Pos
 			break
 		}
 	}
 	if touching {
+		g.faceHurt(from)
 		g.hurtPlayer(contactDamage * dt)
 	}
 }
@@ -267,6 +271,28 @@ func (g *Game) applyHazard(dt float64) {
 		return // up on something above the hazard, not wading in it
 	}
 	g.hurtPlayer(rate * dt)
+}
+
+// faceHurt turns the status-bar face toward the source of a hit: ahead if it's
+// roughly in front, otherwise to whichever side it came from.
+func (g *Game) faceHurt(src Vec2) {
+	dir := g.Player.Dir()
+	tx, ty := src.X-g.Player.Pos.X, src.Y-g.Player.Pos.Y
+	d := math.Hypot(tx, ty)
+	if d == 0 {
+		return
+	}
+	fwd := (tx*dir.X + ty*dir.Y) / d
+	right := (tx*(-dir.Y) + ty*dir.X) / d
+	g.Player.hurtTTL = hurtFaceDuration
+	switch {
+	case fwd > 0.5:
+		g.Player.hurtDir = 0
+	case right > 0:
+		g.Player.hurtDir = 1
+	default:
+		g.Player.hurtDir = -1
+	}
 }
 
 // losClear reports whether the straight segment a→b crosses no solid tile.

@@ -55,11 +55,10 @@ func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 	drawText(dst, 92, labelY, "ARMOR", barLabel)
 	drawText(dst, 92, valueY, fmt.Sprintf("%d%%", int(ar*100+0.5)), armorText)
 
-	// Face, centred.
-	if len(tx.face) > 0 {
-		face := tx.face[faceBand(hp)]
+	// Face, centred, gazing toward recent damage.
+	if idx := faceIndex(faceBand(hp), g.Player.FaceDir()); idx >= 0 && idx < len(tx.face) {
 		fs := statusBarH - 6
-		blitTexture(fb, cfg, face, w/2-fs/2, top+3, fs, fs)
+		blitTexture(fb, cfg, tx.face[idx], w/2-fs/2, top+3, fs, fs)
 	}
 
 	// Ammo for the current weapon (right of centre).

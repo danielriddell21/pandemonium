@@ -43,6 +43,10 @@ const (
 	// Powerup lifetimes, in seconds. Berserk instead lasts the whole level.
 	invulnDuration  = 20.0
 	radSuitDuration = 30.0
+
+	// hurtFaceDuration is how long the status-bar face keeps turning toward the
+	// source of a hit.
+	hurtFaceDuration = 0.6
 )
 
 // Player holds the camera-bearing actor's position, facing, height, health,
@@ -63,6 +67,18 @@ type Player struct {
 	Berserk    bool    // boosted fists for the rest of the level
 	InvulnTTL  float64 // seconds of invulnerability remaining
 	RadSuitTTL float64 // seconds of radiation immunity remaining
+
+	hurtDir int     // -1 left, 0 ahead, +1 right: where recent damage came from
+	hurtTTL float64 // how long the face keeps looking that way
+}
+
+// FaceDir reports which way the status-bar face should look in reaction to recent
+// damage (-1 left, 0 ahead, +1 right), settling back to ahead once it lapses.
+func (p Player) FaceDir() int {
+	if p.hurtTTL > 0 {
+		return p.hurtDir
+	}
+	return 0
 }
 
 // Invulnerable reports whether the player currently takes no damage.

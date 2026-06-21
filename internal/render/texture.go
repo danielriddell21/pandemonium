@@ -150,7 +150,7 @@ func defaultTextures() *textureSet {
 		barrel:    genBarrel(),
 		weapon:    []*texture{genFists(), genPistol(), genShotgun(), genChaingun(), genRocketLauncher()},
 		flash:     genFlash(),
-		face:      []*texture{genFace(0), genFace(1), genFace(2), genFace(3)},
+		face:      buildFaces(),
 		item:      defaultItemTextures(),
 	}
 }
@@ -473,11 +473,27 @@ func genCeiling() *texture {
 	return t
 }
 
-// genFace draws the status-bar mugshot for a health band (0 = healthy, 3 = dead):
-// a skin disc with eyes, a brow that lowers and a mouth that turns from a faint
-// smile to a pained grimace as the band rises. The background stays transparent so
-// the bar panel shows through.
-func genFace(band int) *texture {
+// buildFaces makes the status-bar mugshots: one per health band (0 healthy ..
+// 3 dead) and gaze direction (-1 left, 0 ahead, +1 right), indexed band*3+dir+1.
+func buildFaces() []*texture {
+	const bands, dirs = 4, 3
+	faces := make([]*texture, bands*dirs)
+	for b := range bands {
+		for d := -1; d <= 1; d++ {
+			faces[b*dirs+d+1] = genFace(b, d)
+		}
+	}
+	return faces
+}
+
+// faceIndex maps a health band and gaze direction to its buildFaces slot.
+func faceIndex(band, dir int) int { return band*3 + dir + 1 }
+
+// genFace draws the status-bar mugshot for a health band and gaze direction: a
+// skin disc with eyes (shifted by gaze), a brow that lowers and a mouth that
+// turns from a faint smile to a pained grimace as the band rises. The background
+// stays transparent so the bar panel shows through.
+func genFace(band, gaze int) *texture {
 	t := newTexture(texSize, texSize)
 	skins := []color.RGBA{
 		{R: 210, G: 162, B: 120, A: 255},
@@ -502,8 +518,9 @@ func genFace(band int) *texture {
 		}
 	}
 	eye := color.RGBA{R: 30, G: 20, B: 20, A: 255}
-	fillRect(t, 22, 26, 27, 31, eye)
-	fillRect(t, 37, 26, 42, 31, eye)
+	ex := gaze * 4 // shift the eyes toward where the damage came from
+	fillRect(t, 22+ex, 26, 27+ex, 31, eye)
+	fillRect(t, 37+ex, 26, 42+ex, 31, eye)
 	brow := adjust(skin, -80)
 	by := 22 + band*2 // brow lowers (angrier/pained) as health drops
 	fillRect(t, 20, by, 44, by+2, brow)

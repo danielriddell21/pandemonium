@@ -120,6 +120,9 @@ func (g *Game) tickPowerups(dt float64) {
 	if g.Player.RadSuitTTL > 0 {
 		g.Player.RadSuitTTL -= dt
 	}
+	if g.Player.hurtTTL > 0 {
+		g.Player.hurtTTL -= dt
+	}
 }
 
 // setNotice posts a short-lived on-screen message (pickups, locked doors, finds).

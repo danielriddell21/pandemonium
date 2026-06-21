@@ -105,6 +105,7 @@ func (g *Game) advanceProjectiles(dt float64) {
 		// Demon projectiles strike the player directly; player rockets only splash.
 		if p.shooter != playerShooter && dist(p.Pos, g.Player.Pos) < projectileHitRadius &&
 			p.Z > g.Player.Z && p.Z < g.Player.Z+1 {
+			g.faceHurt(p.Pos)
 			g.hurtPlayer(p.Damage)
 			continue
 		}
