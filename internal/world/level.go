@@ -25,6 +25,7 @@ type Level struct {
 	Hazard        map[Coord]float64  // damaging floor tiles -> health lost per second
 	Switches      map[Coord]Switch   // wall switches the player presses with use
 	Light         []float64          // per-tile brightness multiplier (1 = full)
+	Theme         []uint8            // per-tile wall theme index
 	Seed          int64
 }
 

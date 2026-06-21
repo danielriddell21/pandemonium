@@ -48,9 +48,18 @@ type demonArt struct {
 	dead []*texture // death sequence (last frame is the settled corpse)
 }
 
+// wallThemes tints the brick texture per world theme, so different rooms read as
+// different stone. Index 0 is the base theme used by corridors.
+var wallThemes = [world.NumThemes]color.RGBA{
+	palette.wall,                    // warm brown
+	{R: 96, G: 104, B: 130, A: 255}, // cold blue-grey
+	{R: 150, G: 78, B: 70, A: 255},  // red rock
+}
+
 // textureSet holds the textures the renderer draws with.
 type textureSet struct {
 	wall      *texture
+	walls     [world.NumThemes]*texture // themed wall variants, by Level theme
 	door      *texture
 	floor     *texture
 	ceiling   *texture
@@ -139,6 +148,7 @@ func loadPNG(path string) (*texture, bool) {
 func defaultTextures() *textureSet {
 	return &textureSet{
 		wall:      genBrick(palette.wall),
+		walls:     buildWallThemes(),
 		door:      genDoor(palette.door),
 		floor:     genFloor(),
 		ceiling:   genCeiling(),
@@ -348,6 +358,15 @@ func genFlash() *texture {
 		}
 	}
 	return t
+}
+
+// buildWallThemes renders the brick texture in each theme tint.
+func buildWallThemes() [world.NumThemes]*texture {
+	var ws [world.NumThemes]*texture
+	for i, tint := range wallThemes {
+		ws[i] = genBrick(tint)
+	}
+	return ws
 }
 
 // buildDemons makes the animation sets for every demon variant, one per palette

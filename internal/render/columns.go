@@ -103,8 +103,9 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		ceilEdge := row(aCeil, d)
 		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
 
-		// The texture column for any face on this boundary, lit by the cell it faces.
-		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy)
+		// The texture column for any face on this boundary, themed by the room
+		// it's seen from and lit by the cell it faces.
+		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy, g.World.Level.ThemeAt(aX, aY))
 		bLight := g.World.Level.LightAt(mapX, mapY)
 
 		if g.World.Solid(mapX, mapY) {
@@ -135,7 +136,7 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 // boundaryTexture picks the texture and texture column for a face crossed at
 // distance d, using where along the cell edge the ray landed (flipped so the
 // image faces the camera consistently).
-func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, py, dx, dy float64) (int, *texture) {
+func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, py, dx, dy float64, theme uint8) (int, *texture) {
 	var wallX float64
 	if side == 0 {
 		wallX = py + d*dy
@@ -144,7 +145,7 @@ func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, p
 	}
 	wallX -= math.Floor(wallX)
 
-	tex := tx.wall
+	tex := tx.walls[int(theme)%len(tx.walls)] // themed by the room being viewed from
 	switch g.World.Level.At(mapX, mapY) {
 	case world.TileDoor:
 		tex = tx.door
