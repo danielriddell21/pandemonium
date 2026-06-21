@@ -22,10 +22,11 @@ as the walls sweep past.
 
 ![combat](demos/combat.gif)
 
-Fighting through billboarded demons — melee chargers, fireball-lobbing imps and
-hitscan gunners — while explosive barrels and stray shots catch other demons in
-the crossfire. Demons animate and collapse when killed; sprites always face the
-camera and are occluded correctly by nearer walls.
+Fighting through a varied bestiary — melee chargers, fast pinkies, fireball-lobbing
+imps, hitscan gunners and armoured barons — with pistol, shotgun, chaingun and
+rocket launcher, while explosive barrels and stray shots catch other demons in the
+crossfire. Demons animate and collapse when killed; sprites always face the camera
+and are occluded correctly by nearer walls.
 
 ## Tally
 
