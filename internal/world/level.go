@@ -24,6 +24,7 @@ type Level struct {
 	Barrels       []Coord            // explosive barrels scattered across the floor
 	Hazard        map[Coord]float64  // damaging floor tiles -> health lost per second
 	Switches      map[Coord]Switch   // wall switches the player presses with use
+	Light         []float64          // per-tile brightness multiplier (1 = full)
 	Seed          int64
 }
 
@@ -41,9 +42,11 @@ func newLevel(width, height int, seed int64) *Level {
 	tiles := make([]TileType, width*height)
 	floors := make([]float64, width*height)
 	ceils := make([]float64, width*height)
+	light := make([]float64, width*height)
 	for i := range tiles {
 		tiles[i] = TileWall
 		ceils[i] = 1
+		light[i] = 1
 	}
 	return &Level{
 		Width:  width,
@@ -51,6 +54,7 @@ func newLevel(width, height int, seed int64) *Level {
 		Tiles:  tiles,
 		FloorH: floors,
 		CeilH:  ceils,
+		Light:  light,
 		Seed:   seed,
 	}
 }
@@ -90,6 +94,14 @@ func (l *Level) Ceil(x, y int) float64 {
 // HazardAt returns the health-per-second a tile drains, or 0 if it is safe.
 func (l *Level) HazardAt(x, y int) float64 {
 	return l.Hazard[Coord{X: x, Y: y}]
+}
+
+// LightAt returns the brightness multiplier at (x, y); out of bounds is full.
+func (l *Level) LightAt(x, y int) float64 {
+	if !l.InBounds(x, y) || len(l.Light) == 0 {
+		return 1
+	}
+	return l.Light[y*l.Width+x]
 }
 
 // setFloor / setCeil write heights at (x, y) if in bounds.

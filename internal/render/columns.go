@@ -93,30 +93,32 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		// Fill the departed tile's floor and ceiling up to this boundary. The
 		// spans self-clamp to empty when a surface is out of view (e.g. a floor
 		// above eye level, whose step face was drawn at the previous boundary).
+		aLight := g.World.Level.LightAt(aX, aY)
 		floorEdge := row(aFloor, d)
 		ftex := tx.floor
 		if g.World.HazardAt(aX, aY) > 0 {
 			ftex = tx.nukage
 		}
-		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex)
+		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex, aLight)
 		ceilEdge := row(aCeil, d)
-		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling)
+		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
 
-		// The texture column for any face on this boundary.
+		// The texture column for any face on this boundary, lit by the cell it faces.
 		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy)
+		bLight := g.World.Level.LightAt(mapX, mapY)
 
 		if g.World.Solid(mapX, mapY) {
-			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side)
+			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
 			return d
 		}
 
 		bFloor := g.World.FloorAt(mapX, mapY)
 		bCeil := g.World.CeilAt(mapX, mapY)
 		if bFloor > aFloor { // rising step face
-			drawWallSpan(fb, cfg, x, max(yTop, row(bFloor, d)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side)
+			drawWallSpan(fb, cfg, x, max(yTop, row(bFloor, d)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
 		}
 		if bCeil < aCeil { // dropping ceiling face
-			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, row(bCeil, d)), d, eyeZ, texX, tex, side)
+			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, row(bCeil, d)), d, eyeZ, texX, tex, side, bLight)
 		}
 
 		yBot = min(yBot, row(math.Max(aFloor, bFloor), d))
@@ -161,18 +163,19 @@ func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, p
 
 // drawWallSpan paints rows y0..y1 of a vertical face at distance d, mapping each
 // row to its world height so the texture tiles once per wall unit.
-func drawWallSpan(fb []byte, cfg Config, x, y0, y1 int, d, eyeZ float64, texX int, tex *texture, side int) {
+func drawWallSpan(fb []byte, cfg Config, x, y0, y1 int, d, eyeZ float64, texX int, tex *texture, side int, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
 		z := eyeZ - (float64(y)-fh/2)*d/fh
 		v := int((1 - z) * float64(tex.h)) // tex.at wraps, tiling tall faces
-		setPixel(fb, cfg.Width, x, y, shade(tex.at(texX, v), d, side))
+		setPixel(fb, cfg.Width, x, y, scaleColor(shade(tex.at(texX, v), d, side), light))
 	}
 }
 
 // fillFloorSpan paints rows y0..y1 of a horizontal floor surface at height z,
-// recovering each row's world position from its distance along the ray.
-func fillFloorSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture) {
+// recovering each row's world position from its distance along the ray. light is
+// the surface tile's brightness.
+func fillFloorSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
 		p := float64(y) - fh/2
@@ -180,12 +183,12 @@ func fillFloorSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy
 			p = 0.5
 		}
 		rowDist := (eyeZ - z) * fh / p
-		sampleFlat(fb, cfg, x, y, rowDist, px, py, dx, dy, tex, shadeFactor(rowDist))
+		sampleFlat(fb, cfg, x, y, rowDist, px, py, dx, dy, tex, shadeFactor(rowDist)*light)
 	}
 }
 
 // fillCeilSpan paints rows y0..y1 of a ceiling surface at height z.
-func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture) {
+func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
 		p := fh/2 - float64(y)
@@ -193,7 +196,7 @@ func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy 
 			p = 0.5
 		}
 		rowDist := (z - eyeZ) * fh / p
-		sampleFlat(fb, cfg, x, y, rowDist, px, py, dx, dy, tex, shadeFactor(rowDist)*ceilingDim)
+		sampleFlat(fb, cfg, x, y, rowDist, px, py, dx, dy, tex, shadeFactor(rowDist)*ceilingDim*light)
 	}
 }
 
