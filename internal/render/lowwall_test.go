@@ -1,0 +1,93 @@
+package render
+
+import (
+	"testing"
+
+	"github.com/danielriddell21/pandemonium/internal/sim"
+	"github.com/danielriddell21/pandemonium/internal/world"
+)
+
+// twoRoomLevel builds two rooms split by a wall column at x=5, with the divider
+// cell on the player's eye line either full-height or a low wall.
+func twoRoomLevel(lowWall bool) *world.Level {
+	const w, h = 12, 8
+	l := &world.Level{
+		Width: w, Height: h,
+		Tiles:   make([]world.TileType, w*h),
+		FloorH:  make([]float64, w*h),
+		CeilH:   make([]float64, w*h),
+		Light:   make([]float64, w*h),
+		Theme:   make([]uint8, w*h),
+		WallTop: make([]float64, w*h),
+		Spawn:   world.Coord{X: 2, Y: 4},
+		Exit:    world.Coord{X: 9, Y: 4},
+	}
+	for i := range l.CeilH {
+		l.CeilH[i] = 1
+		l.Light[i] = 1
+	}
+	for y := range h {
+		for x := range w {
+			if x == 0 || y == 0 || x == w-1 || y == h-1 || x == 5 {
+				l.Tiles[y*w+x] = world.TileWall
+			}
+		}
+	}
+	if lowWall {
+		l.WallTop[4*w+5] = 0.4
+	}
+	return l
+}
+
+func renderEyeLine(l *world.Level) []byte {
+	cfg := Config{Width: 200, Height: 120, FOV: 1.152}
+	g := sim.New(l)
+	g.Entities = nil
+	g.Player.Pos = sim.Vec2{X: 2.5, Y: 4.5}
+	g.Player.Angle = 0 // straight toward the divider
+	fb := make([]byte, cfg.Width*cfg.Height*4)
+	zb := make([]float64, cfg.Width)
+	drawScene(fb, zb, g, newCamera(0, cfg.FOV), cfg, defaultTextures())
+	return fb
+}
+
+func TestLowWallRevealsRoomBeyond(t *testing.T) {
+	full := renderEyeLine(twoRoomLevel(false))
+	low := renderEyeLine(twoRoomLevel(true))
+
+	diff := 0
+	for i := range full {
+		if full[i] != low[i] {
+			diff++
+		}
+	}
+	if diff == 0 {
+		t.Fatal("lowering the divider wall changed nothing in the view")
+	}
+
+	// Just above the horizon, straight ahead, the full wall shows wall texture
+	// while the low wall shows the space beyond — so the centre column must differ.
+	cfg := Config{Width: 200, Height: 120}
+	x := cfg.Width / 2
+	rowDiff := false
+	for y := cfg.Height/2 - 20; y < cfg.Height/2; y++ {
+		i := (y*cfg.Width + x) * 4
+		if full[i] != low[i] || full[i+1] != low[i+1] || full[i+2] != low[i+2] {
+			rowDiff = true
+		}
+	}
+	if !rowDiff {
+		t.Error("expected to see over the low wall above the horizon")
+	}
+}
+
+func TestFullWallStillOccludes(t *testing.T) {
+	// A level with no low walls must not trip the see-over path: it still renders
+	// (every pixel painted) and the divider fully blocks the view.
+	fb := renderEyeLine(twoRoomLevel(false))
+	for i := 3; i < len(fb); i += 4 {
+		if fb[i] != 255 {
+			t.Fatalf("pixel %d unpainted by the full-wall render", i/4)
+		}
+	}
+}

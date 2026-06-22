@@ -79,6 +79,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	placeHazards(l, g)
 	assignLight(l, g, rooms)
 	assignThemes(l, g, rooms)
+	placeLowWalls(l, g)
 	return l
 }
 

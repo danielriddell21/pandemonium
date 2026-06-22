@@ -26,6 +26,7 @@ type Level struct {
 	Switches      map[Coord]Switch   // wall switches the player presses with use
 	Light         []float64          // per-tile brightness multiplier (1 = full)
 	Theme         []uint8            // per-tile wall theme index
+	WallTop       []float64          // solid-tile height; 0 = full wall, >0 = low wall
 	Seed          int64
 }
 
@@ -44,19 +45,21 @@ func newLevel(width, height int, seed int64) *Level {
 	floors := make([]float64, width*height)
 	ceils := make([]float64, width*height)
 	light := make([]float64, width*height)
+	wallTop := make([]float64, width*height) // 0 everywhere: all walls full-height
 	for i := range tiles {
 		tiles[i] = TileWall
 		ceils[i] = 1
 		light[i] = 1
 	}
 	return &Level{
-		Width:  width,
-		Height: height,
-		Tiles:  tiles,
-		FloorH: floors,
-		CeilH:  ceils,
-		Light:  light,
-		Seed:   seed,
+		Width:   width,
+		Height:  height,
+		Tiles:   tiles,
+		FloorH:  floors,
+		CeilH:   ceils,
+		Light:   light,
+		WallTop: wallTop,
+		Seed:    seed,
 	}
 }
 
@@ -95,6 +98,15 @@ func (l *Level) Ceil(x, y int) float64 {
 // HazardAt returns the health-per-second a tile drains, or 0 if it is safe.
 func (l *Level) HazardAt(x, y int) float64 {
 	return l.Hazard[Coord{X: x, Y: y}]
+}
+
+// WallTopAt returns a solid tile's height: 0 means a full-height wall, a positive
+// value a low wall you can see over.
+func (l *Level) WallTopAt(x, y int) float64 {
+	if !l.InBounds(x, y) || len(l.WallTop) == 0 {
+		return 0
+	}
+	return l.WallTop[y*l.Width+x]
 }
 
 // LightAt returns the brightness multiplier at (x, y); out of bounds is full.

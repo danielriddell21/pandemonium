@@ -108,13 +108,19 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy, g.World.Level.ThemeAt(aX, aY))
 		bLight := g.World.Level.LightAt(mapX, mapY)
 
-		if g.World.Solid(mapX, mapY) {
-			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
-			return d
-		}
-
 		bFloor := g.World.FloorAt(mapX, mapY)
 		bCeil := g.World.CeilAt(mapX, mapY)
+		if g.World.Solid(mapX, mapY) {
+			if top := g.World.Level.WallTopAt(mapX, mapY); top > 0 {
+				// A low wall: a solid block we can see over. Treat it like an
+				// unclimbable step up to its top, then keep walking the ray so the
+				// room beyond is drawn above it.
+				bFloor, bCeil = top, 1
+			} else {
+				drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
+				return d
+			}
+		}
 		if bFloor > aFloor { // rising step face
 			drawWallSpan(fb, cfg, x, max(yTop, row(bFloor, d)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
 		}
