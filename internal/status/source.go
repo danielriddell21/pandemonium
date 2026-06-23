@@ -41,6 +41,9 @@ type Cue struct {
 	WrongDoorsTotal int
 	ExploreScore    float64 // 0..1; lower means more retreading
 	Rushing         bool    // tends to beeline rather than explore (low explore score)
+
+	// Arrival marks the single moment the run first reaches the deepest band.
+	Arrival bool
 }
 
 // Line is a chosen message with its presentation channel and lifetime in frames.
@@ -61,6 +64,10 @@ type Source interface {
 // messageFrames is how long a posted line stays up (~2.5s at 60 fps).
 const messageFrames = 150
 
+// deepestBand is the highest progression band, where the run's own length becomes
+// the subject and the voice finally falls quiet.
+const deepestBand = 4
+
 // tableSource is the default scripted policy. It stays silent for the first
 // couple of levels, surfaces diagnostic readouts (debug-only) in the mid band,
 // and player-facing notices later.
@@ -77,8 +84,10 @@ func band(level int) int {
 		return 1 // diagnostic (debug-only)
 	case level < 9:
 		return 2 // notice
-	default:
+	case level < 15:
 		return 3 // notice, more pointed
+	default:
+		return 4 // the deepest register: the run's own length is the subject
 	}
 }
 
@@ -90,6 +99,10 @@ func (tableSource) Request(c Cue, emit func(Line)) {
 
 // scriptedLine computes the banded line for a cue, or reports false to stay silent.
 func scriptedLine(c Cue) (Line, bool) {
+	if c.Arrival {
+		// The single line for first reaching the deepest band.
+		return Line{Text: "You've gone as deep as it goes. It just keeps going.", Channel: hud.Notice, Frames: messageFrames}, true
+	}
 	b := band(c.Level)
 	switch b {
 	case 0:
@@ -160,6 +173,8 @@ func noticeText(c Cue, b int) (string, bool) {
 	switch c.Kind {
 	case CueExit:
 		switch {
+		case b >= 4:
+			return "Another way out. Into another room exactly like this one.", true
 		case c.Rushing:
 			return "Straight to the exit. Predictable.", true
 		case b >= 3:
@@ -169,6 +184,8 @@ func noticeText(c Cue, b int) (string, bool) {
 		}
 	case CueWrongDoor:
 		switch {
+		case b >= 4:
+			return "Does it matter which door? You'll open the next one too.", true
 		case c.WrongDoorsTotal >= 3:
 			return "You keep opening the wrong ones.", true
 		case b >= 3:
@@ -177,27 +194,45 @@ func noticeText(c Cue, b int) (string, bool) {
 			return "Nothing behind that one.", true
 		}
 	case CueDecoy:
-		if b >= 3 {
+		switch {
+		case b >= 4:
+			return "You reach for every way out. None of them are the way out.", true
+		case b >= 3:
 			return "So close to the way out. But not quite.", true
+		default:
+			return "Not every door leads onward.", true
 		}
-		return "Not every door leads onward.", true
 	case CueKill:
-		if b >= 3 {
+		switch {
+		case b >= 4:
+			return "More of them. There are always more.", true
+		case b >= 3:
 			return "They keep coming. You keep firing.", true
+		default:
+			return "Efficient.", true
 		}
-		return "Efficient.", true
 	case CueItem:
-		if b >= 3 {
+		switch {
+		case b >= 4:
+			return "You still pick things up. Habits outlast their reasons.", true
+		case b >= 3:
 			return "Gathering things. As if it changes anything.", true
+		default:
+			return "You take what you find.", true
 		}
-		return "You take what you find.", true
 	case CueSecret:
-		if b >= 3 {
+		switch {
+		case b >= 4:
+			return "A hidden room. As if finding it changes where you are.", true
+		case b >= 3:
 			return "You found the seam in things.", true
+		default:
+			return "A hidden place. Noted.", true
 		}
-		return "A hidden place. Noted.", true
 	case CueDeath:
 		switch {
+		case b >= 4:
+			return "It doesn't even stop you anymore.", true
 		case c.Deaths >= 3:
 			return "You've done this so many times now.", true
 		case b >= 3:

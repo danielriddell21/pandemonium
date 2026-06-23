@@ -17,7 +17,7 @@ func TestBandThresholds(t *testing.T) {
 		level int
 		want  int
 	}{
-		{0, 0}, {1, 0}, {2, 1}, {4, 1}, {5, 2}, {8, 2}, {9, 3}, {20, 3},
+		{0, 0}, {1, 0}, {2, 1}, {4, 1}, {5, 2}, {8, 2}, {9, 3}, {14, 3}, {15, 4}, {30, 4},
 	}
 	for _, c := range cases {
 		if got := band(c.level); got != c.want {

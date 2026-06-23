@@ -18,6 +18,7 @@ type Reporter struct {
 	level   int  // level index of the events seen so far
 	sawKill bool // a kill has been remarked on this level
 	sawItem bool // an item pickup has been remarked on this level
+	arrived bool // the run has reached the deepest band (its terminal beat fired)
 }
 
 // Compile-time check that Reporter consumes telemetry.
@@ -36,6 +37,17 @@ func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 		return
 	}
 	r.enrich(&cue)
+	// At the deepest band the run reaches its terminal beat once, then the voice
+	// goes sparse — only the largest moments still draw a line.
+	if band(cue.Level) >= deepestBand {
+		switch {
+		case !r.arrived:
+			r.arrived = true
+			cue.Arrival = true
+		case cue.Kind != CueExit && cue.Kind != CueDeath:
+			return
+		}
+	}
 	r.src.Request(cue, r.emit)
 }
 
