@@ -16,6 +16,7 @@ type Renderer struct {
 	overlay     *hud.Overlay
 	diagnostics bool
 	showMap     bool
+	gloom       float64 // global light multiplier (1 = normal); falls as the run deepens
 }
 
 // Option configures a Renderer.
@@ -42,6 +43,7 @@ func NewRenderer(cfg Config, opts ...Option) *Renderer {
 		zbuf:        make([]float64, cfg.Width),
 		tex:         loadTextures(assetDir()),
 		diagnostics: diagnosticsFromEnv(),
+		gloom:       1,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -55,12 +57,23 @@ func (r *Renderer) Config() Config { return r.cfg }
 // SetAutomap toggles whether Frame overlays the explored-level minimap.
 func (r *Renderer) SetAutomap(on bool) { r.showMap = on }
 
+// SetGloom sets the global light multiplier (clamped to [0.3, 1]); the app lowers
+// it as the run goes deeper so the world darkens toward the end.
+func (r *Renderer) SetGloom(g float64) {
+	if g < 0.3 {
+		g = 0.3
+	} else if g > 1 {
+		g = 1
+	}
+	r.gloom = g
+}
+
 // Frame renders the current state of g and returns the RGBA buffer (row-major,
 // 4 bytes per pixel). The slice is owned by the Renderer and overwritten on the
 // next call, so callers should upload or copy it before calling again.
 func (r *Renderer) Frame(g *sim.Game) []byte {
 	cam := newCamera(g.Player.Angle, r.cfg.FOV)
-	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
+	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex, r.gloom)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)
 	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]

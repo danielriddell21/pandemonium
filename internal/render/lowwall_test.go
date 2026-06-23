@@ -47,7 +47,7 @@ func renderEyeLine(l *world.Level) []byte {
 	g.Player.Angle = 0 // straight toward the divider
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zb := make([]float64, cfg.Width)
-	drawScene(fb, zb, g, newCamera(0, cfg.FOV), cfg, defaultTextures())
+	drawScene(fb, zb, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
 	return fb
 }
 

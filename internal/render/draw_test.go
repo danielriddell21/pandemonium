@@ -20,7 +20,7 @@ func renderFrame(t *testing.T, seed int64, cfg Config) ([]byte, []float64) {
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zbuf := make([]float64, cfg.Width)
 	cam := newCamera(g.Player.Angle, cfg.FOV)
-	drawScene(fb, zbuf, g, cam, cfg, tex)
+	drawScene(fb, zbuf, g, cam, cfg, tex, 1)
 	drawSprites(fb, zbuf, g, cam, cfg, tex)
 	return fb, zbuf
 }

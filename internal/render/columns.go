@@ -26,16 +26,16 @@ const ceilingDim = 0.85
 // floor (or drop in ceiling) across the boundary is drawn as a textured step
 // face, and the window tightens. A solid tile paints the remaining window as a
 // full wall and closes the column.
-func drawScene(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
+func drawScene(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet, gloom float64) {
 	eyeZ := g.EyeZ()
 	for x := range cfg.Width {
-		zbuf[x] = drawColumn(fb, g, cam, cfg, tx, x, eyeZ)
+		zbuf[x] = drawColumn(fb, g, cam, cfg, tx, x, eyeZ, gloom)
 	}
 }
 
 // drawColumn renders one screen column and returns the distance at which it
-// closed (its occlusion depth).
-func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, x int, eyeZ float64) float64 {
+// closed (its occlusion depth). gloom scales all surface lighting.
+func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, x int, eyeZ, gloom float64) float64 {
 	w, h := cfg.Width, cfg.Height
 	fh := float64(h)
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
@@ -93,7 +93,7 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		// Fill the departed tile's floor and ceiling up to this boundary. The
 		// spans self-clamp to empty when a surface is out of view (e.g. a floor
 		// above eye level, whose step face was drawn at the previous boundary).
-		aLight := g.World.Level.LightAt(aX, aY)
+		aLight := g.World.Level.LightAt(aX, aY) * gloom
 		floorEdge := row(aFloor, d)
 		ftex := tx.floor
 		if g.World.HazardAt(aX, aY) > 0 {
@@ -106,7 +106,7 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		// The texture column for any face on this boundary, themed by the room
 		// it's seen from and lit by the cell it faces.
 		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy, g.World.Level.ThemeAt(aX, aY))
-		bLight := g.World.Level.LightAt(mapX, mapY)
+		bLight := g.World.Level.LightAt(mapX, mapY) * gloom
 
 		bFloor := g.World.FloorAt(mapX, mapY)
 		bCeil := g.World.CeilAt(mapX, mapY)

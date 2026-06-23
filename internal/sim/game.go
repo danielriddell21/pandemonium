@@ -239,7 +239,7 @@ func (g *Game) pressSwitch(sw world.Switch) {
 }
 
 // interact acts on whatever is immediately ahead of the player: a wall switch
-// (ending the level or opening a remote door) or a closed door.
+// (finishing the level or opening a remote door) or a closed door.
 func (g *Game) interact() {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))

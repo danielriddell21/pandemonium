@@ -39,6 +39,7 @@ type Game struct {
 	state      state
 	tally      sim.LevelStats // captured stats shown on the intermission screen
 	showMap    bool           // automap overlay toggled with Tab
+	depth      int            // levels advanced into the run, dimming the world
 	haveMouse  bool
 	lastMouseX int
 }
@@ -85,6 +86,8 @@ func (g *Game) Update() error {
 			if ng := g.next(); ng != nil {
 				g.sim = ng
 			}
+			g.depth++
+			g.renderer.SetGloom(1 - 0.04*float64(g.depth)) // the world darkens as the run deepens
 			g.state = statePlaying
 		}
 		return nil

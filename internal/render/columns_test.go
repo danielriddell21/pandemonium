@@ -40,7 +40,7 @@ func sceneFor(l *world.Level, cfg Config) []byte {
 	g.Player.Angle = 0
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zbuf := make([]float64, cfg.Width)
-	drawScene(fb, zbuf, g, newCamera(0, cfg.FOV), cfg, defaultTextures())
+	drawScene(fb, zbuf, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
 	return fb
 }
 
@@ -114,7 +114,7 @@ func TestSpriteStandsOnItsFloor(t *testing.T) {
 		fb := make([]byte, cfg.Width*cfg.Height*4)
 		zbuf := make([]float64, cfg.Width)
 		cam := newCamera(0, cfg.FOV)
-		drawScene(fb, zbuf, g, cam, cfg, defaultTextures())
+		drawScene(fb, zbuf, g, cam, cfg, defaultTextures(), 1)
 		drawSprites(fb, zbuf, g, cam, cfg, defaultTextures())
 		return fb
 	}
