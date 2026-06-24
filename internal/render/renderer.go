@@ -16,6 +16,7 @@ type Renderer struct {
 	overlay     *hud.Overlay
 	diagnostics bool
 	showMap     bool
+	hideHUD     bool    // when set, Frame draws only the world view (no weapon or status bar)
 	gloom       float64 // global light multiplier (1 = normal); falls as the run deepens
 }
 
@@ -57,6 +58,11 @@ func (r *Renderer) Config() Config { return r.cfg }
 // SetAutomap toggles whether Frame overlays the explored-level minimap.
 func (r *Renderer) SetAutomap(on bool) { r.showMap = on }
 
+// SetHUD toggles the on-screen chrome — the held weapon, the status bar and any
+// notices. Turning it off leaves just the rendered world, which suits clean
+// screenshots of the scene itself.
+func (r *Renderer) SetHUD(on bool) { r.hideHUD = !on }
+
 // SetGloom sets the global light multiplier (clamped to [0.3, 1]); the app lowers
 // it as the run goes deeper so the world darkens toward the end.
 func (r *Renderer) SetGloom(g float64) {
@@ -76,13 +82,15 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex, r.gloom)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)
-	weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
-	drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-statusBarH)
-	drawStatusBar(r.fb, r.cfg, g, r.tex)
-	drawNotice(r.fb, r.cfg, g.Notice())
-	if r.overlay != nil {
-		if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {
-			drawMessage(r.fb, r.cfg, msg, ch)
+	if !r.hideHUD {
+		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
+		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-statusBarH)
+		drawStatusBar(r.fb, r.cfg, g, r.tex)
+		drawNotice(r.fb, r.cfg, g.Notice())
+		if r.overlay != nil {
+			if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {
+				drawMessage(r.fb, r.cfg, msg, ch)
+			}
 		}
 	}
 	if r.showMap {
