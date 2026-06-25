@@ -35,6 +35,10 @@ tidy:
 assets:
     ./scripts/fetch-assets.sh
 
+# Regenerate the documentation demo clips and stills (needs ffmpeg)
+demos:
+    go run ./tools/demogen
+
 # Remove build artifacts
 clean:
     rm -rf {{bin_dir}} dist
