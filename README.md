@@ -13,9 +13,7 @@ deterministic from a seed, so a given seed always produces the same world.
 go run ./cmd/pandemonium --seed 42
 ```
 
-[![pandemonium gameplay](docs/demos/hero-poster.png)](docs/demos/hero.mp4)
-
-*(click for the gameplay video)*
+![pandemonium gameplay](docs/demos/hero.mp4)
 
 ## Controls
 
