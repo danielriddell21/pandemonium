@@ -220,7 +220,7 @@ func sampleFlat(fb []byte, cfg Config, x, y int, rowDist, px, py, dx, dy float64
 // shadeFactor is the distance-dimming multiplier used for flat surfaces, matching
 // the wall shading curve (see shade) for a north/south face.
 func shadeFactor(dist float64) float64 {
-	return math.Max(0.08, math.Min(1, 1.0/(1.0+dist*0.18)))
+	return math.Max(shadeFloor, math.Min(1, 1.0/(1.0+dist*shadeDecay)))
 }
 
 // scaleColor multiplies an RGB colour by f, keeping it opaque.
