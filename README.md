@@ -19,13 +19,14 @@ go run ./cmd/pandemonium --seed 42
 
 | Input              | Action            |
 | ------------------ | ----------------- |
-| `W` / `S`          | Move forward/back |
+| `W` / `S` (or `↑` `↓`) | Move forward/back |
 | `A` / `D`          | Strafe left/right |
 | Mouse / `←` `→`    | Turn              |
 | Left-click / `Ctrl` / `F` | Attack     |
-| `1` `2` `3` / wheel | Switch weapon    |
-| `E`                | Interact (doors)  |
+| `1`–`5` / wheel    | Switch weapon (fists, pistol, shotgun, chaingun, rockets) |
+| `E` / `Space`      | Interact (doors, switches) |
 | `Tab`              | Toggle automap    |
+| `Enter` / `Space`  | Next level (on the tally screen) |
 | `Esc`              | Quit              |
 
 ## CLI
