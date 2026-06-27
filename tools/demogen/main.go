@@ -622,6 +622,9 @@ func nearestDemon(g *sim.Game) (sim.Entity, bool) {
 	return found, ok
 }
 
+// losClear mirrors the simulation's line-of-sight test (internal/sim/combat.go)
+// with a coarser sample step: the bot only needs a rough "can I shoot it" answer,
+// not the sim's exact rule, so a copy keeps the sim's API surface small.
 func losClear(w *sim.World, a, b sim.Vec2) bool {
 	steps := int(dist(a, b)/0.1) + 1
 	for i := 1; i <= steps; i++ {

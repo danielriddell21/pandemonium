@@ -8,8 +8,10 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// statusBarH is the height in pixels of the bottom status panel.
-const statusBarH = 38
+// StatusBarH is the height in pixels of the bottom status panel. It is exported
+// so out-of-package tooling (the demo capture tool) can crop or align against
+// the panel without duplicating the value.
+const StatusBarH = 38
 
 // statusbar colours.
 var (
@@ -33,7 +35,7 @@ var keyColors = [...]struct {
 // current-weapon ammo and the keycards held. It replaces the minimal health bar.
 func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
-	top := h - statusBarH
+	top := h - StatusBarH
 
 	// Panel and top edge.
 	fillRows(fb, w, top, h, barBG)
@@ -57,7 +59,7 @@ func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 
 	// Face, centred, gazing toward recent damage.
 	if idx := faceIndex(faceBand(hp), g.Player.FaceDir()); idx >= 0 && idx < len(tx.face) {
-		fs := statusBarH - 6
+		fs := StatusBarH - 6
 		blitTexture(fb, cfg, tx.face[idx], w/2-fs/2, top+3, fs, fs)
 	}
 

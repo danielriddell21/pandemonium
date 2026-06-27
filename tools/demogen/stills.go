@@ -18,10 +18,6 @@ import (
 // resolution the animated clips use, so stills and clips match visually.
 var stillCfg = render.Config{Width: 256, Height: 160, FOV: 1.152}
 
-// statusBarH mirrors the renderer's bottom-panel height (render is internal, so
-// the value is duplicated here for cropping the HUD strip).
-const statusBarH = 38
-
 // ceilingFill is the dark backdrop used to pad montage cells that hold no frame.
 var ceilingFill = color.RGBA{R: 28, G: 26, B: 30, A: 255}
 
@@ -128,7 +124,7 @@ func arsenalShot(cfg render.Config) image.Image {
 	// resting on the status-bar baseline), with a little headroom around it.
 	const cropW, cropH = 128, 112
 	cropX := cfg.Width/2 - cropW/2
-	cropY := cfg.Height - statusBarH - cropH
+	cropY := cfg.Height - render.StatusBarH - cropH
 	montage := image.NewRGBA(image.Rect(0, 0, cropW*len(guns), cropH))
 	for i, wk := range guns {
 		g := arenaGame(12, 12)
@@ -205,8 +201,8 @@ func hudShot(cfg render.Config) image.Image {
 		world.ItemKeyRed: true, world.ItemKeyBlue: true, world.ItemKeyYellow: true,
 	}
 	frame := frameImage(g, cfg, true)
-	bar := image.NewRGBA(image.Rect(0, 0, cfg.Width, statusBarH))
-	draw.Draw(bar, bar.Bounds(), frame, image.Pt(0, cfg.Height-statusBarH), draw.Src)
+	bar := image.NewRGBA(image.Rect(0, 0, cfg.Width, render.StatusBarH))
+	draw.Draw(bar, bar.Bounds(), frame, image.Pt(0, cfg.Height-render.StatusBarH), draw.Src)
 	return bar
 }
 

@@ -84,7 +84,7 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawPowerupTint(r.fb, r.cfg, g)
 	if !r.hideHUD {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
-		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-statusBarH)
+		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-StatusBarH)
 		drawStatusBar(r.fb, r.cfg, g, r.tex)
 		drawNotice(r.fb, r.cfg, g.Notice())
 		if r.overlay != nil {
