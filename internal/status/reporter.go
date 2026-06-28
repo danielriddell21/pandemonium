@@ -66,7 +66,9 @@ func (r *Reporter) emit(line Line) {
 	r.overlay.Post(line.Text, line.Frames, line.Channel)
 }
 
-// OnPathSummary is unused for now.
+// OnPathSummary is intentionally a no-op for now: it is reserved for lines that
+// react to route quality (backtracking, detours, optimal play), which the
+// per-event cues do not capture.
 func (r *Reporter) OnPathSummary(telemetry.PathSummary) {}
 
 // OnRunProfile records the latest cumulative profile so later cues can react to it.
