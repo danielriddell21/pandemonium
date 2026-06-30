@@ -17,6 +17,7 @@ type Renderer struct {
 	diagnostics bool
 	showMap     bool
 	hideHUD     bool    // when set, Frame draws only the world view (no weapon or status bar)
+	crosshair   bool    // when set, Frame draws a small aiming cross at view centre
 	gloom       float64 // global light multiplier (1 = normal); falls as the run deepens
 }
 
@@ -63,6 +64,20 @@ func (r *Renderer) SetAutomap(on bool) { r.showMap = on }
 // screenshots of the scene itself.
 func (r *Renderer) SetHUD(on bool) { r.hideHUD = !on }
 
+// SetCrosshair toggles a small aiming cross at the centre of the view.
+func (r *Renderer) SetCrosshair(on bool) { r.crosshair = on }
+
+// SetFOV changes the horizontal field of view (radians, clamped to a sane
+// range) for subsequent frames.
+func (r *Renderer) SetFOV(fov float64) {
+	if fov < 0.6 {
+		fov = 0.6
+	} else if fov > 1.8 {
+		fov = 1.8
+	}
+	r.cfg.FOV = fov
+}
+
 // SetGloom sets the global light multiplier (clamped to [0.3, 1]); the app lowers
 // it as the run goes deeper so the world darkens toward the end.
 func (r *Renderer) SetGloom(g float64) {
@@ -82,6 +97,9 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex, r.gloom)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)
+	if r.crosshair {
+		drawCrosshair(r.fb, r.cfg, r.hideHUD)
+	}
 	if !r.hideHUD {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
 		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-StatusBarH)
