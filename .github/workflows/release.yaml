@@ -14,7 +14,7 @@ jobs:
     # cannot cross-build a darwin cgo binary).
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v6
