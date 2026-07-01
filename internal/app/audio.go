@@ -21,6 +21,9 @@ type Audio struct {
 	ambient  *audio.Player
 	depth    int      // levels reached; the ambient sinks as this grows
 	listener sim.Vec2 // the player's position, for distance attenuation
+
+	sfxVolume     float64 // user volume scale for sound effects (0..1)
+	ambientVolume float64 // user volume scale for the ambient loop (0..1)
 }
 
 // maxAudible is the distance (in tiles) beyond which a sound effect fades to
@@ -42,7 +45,7 @@ var _ sim.Observer = (*Audio)(nil)
 // looping ambient track, all from the procedural PCM.
 func NewAudio() (*Audio, error) {
 	ctx := audio.NewContext(iaudio.SampleRate)
-	a := &Audio{ctx: ctx, players: make(map[iaudio.Cue]*audio.Player)}
+	a := &Audio{ctx: ctx, players: make(map[iaudio.Cue]*audio.Player), sfxVolume: 1, ambientVolume: 1}
 	for cue, pcm := range iaudio.Synth() {
 		p := ctx.NewPlayerFromBytes(pcm)
 		p.SetVolume(0.6)
@@ -54,10 +57,23 @@ func NewAudio() (*Audio, error) {
 	if err != nil {
 		return nil, fmt.Errorf("audio: ambient player: %w", err)
 	}
-	ap.SetVolume(ambientLoud)
 	a.ambient = ap
+	a.applyAmbient()
 	return a, nil
 }
+
+// SetVolumes applies the user's sound-effect and ambient volume scales (each
+// clamped to [0, 1]) on top of the engine's own levels.
+func (a *Audio) SetVolumes(sfx, ambient float64) {
+	if a == nil {
+		return
+	}
+	a.sfxVolume = clamp01(sfx)
+	a.ambientVolume = clamp01(ambient)
+	a.applyAmbient()
+}
+
+func clamp01(v float64) float64 { return math.Max(0, math.Min(1, v)) }
 
 // StartAmbient begins the looping ambient track.
 func (a *Audio) StartAmbient() {
@@ -105,6 +121,12 @@ func distanceVolume(listener, event sim.Vec2) float64 {
 // deepen lowers the ambient volume one notch as the run reaches a new level.
 func (a *Audio) deepen() {
 	a.depth++
+	a.applyAmbient()
+}
+
+// applyAmbient sets the ambient player's volume from the depth curve scaled by
+// the user's ambient volume.
+func (a *Audio) applyAmbient() {
 	if a.ambient == nil {
 		return
 	}
@@ -112,7 +134,7 @@ func (a *Audio) deepen() {
 	if vol < ambientQuiet {
 		vol = ambientQuiet
 	}
-	a.ambient.SetVolume(vol)
+	a.ambient.SetVolume(vol * a.ambientVolume)
 }
 
 // Fire plays the weapon-discharge sound, which is player-driven rather than an
@@ -128,7 +150,7 @@ func (a *Audio) playAt(cue iaudio.Cue, scale float64) {
 	if p == nil {
 		return
 	}
-	p.SetVolume(0.6 * scale)
+	p.SetVolume(0.6 * scale * a.sfxVolume)
 	_ = p.Rewind()
 	p.Play()
 }
