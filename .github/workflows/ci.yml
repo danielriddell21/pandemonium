@@ -21,13 +21,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libxcursor-dev libxi-dev \
-            libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
+            libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config xvfb
       - name: Build
         run: go build ./...
       - name: Vet
         run: go vet ./...
       - name: Test
-        run: go test -race ./...
+        # The app package initialises Ebiten/GLFW on import, which needs a display.
+        run: xvfb-run -a go test -race ./...
 
   lint:
     runs-on: ubuntu-latest

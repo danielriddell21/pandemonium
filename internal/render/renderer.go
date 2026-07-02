@@ -37,15 +37,14 @@ func WithDiagnostics(on bool) Option {
 }
 
 // NewRenderer builds a renderer for the given configuration. Diagnostic messages
-// default to the PANDEMONIUM_DEBUG environment setting.
+// are off by default; enable them with WithDiagnostics or SetDiagnostics.
 func NewRenderer(cfg Config, opts ...Option) *Renderer {
 	r := &Renderer{
-		cfg:         cfg,
-		fb:          make([]byte, cfg.Width*cfg.Height*4),
-		zbuf:        make([]float64, cfg.Width),
-		tex:         loadTextures(assetDir()),
-		diagnostics: diagnosticsFromEnv(),
-		gloom:       1,
+		cfg:   cfg,
+		fb:    make([]byte, cfg.Width*cfg.Height*4),
+		zbuf:  make([]float64, cfg.Width),
+		tex:   loadTextures(assetDir()),
+		gloom: 1,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -66,6 +65,9 @@ func (r *Renderer) SetHUD(on bool) { r.hideHUD = !on }
 
 // SetCrosshair toggles a small aiming cross at the centre of the view.
 func (r *Renderer) SetCrosshair(on bool) { r.crosshair = on }
+
+// SetDiagnostics toggles the on-screen diagnostic (playtest) message channel.
+func (r *Renderer) SetDiagnostics(on bool) { r.diagnostics = on }
 
 // SetFOV changes the horizontal field of view (radians, clamped to a sane
 // range) for subsequent frames.

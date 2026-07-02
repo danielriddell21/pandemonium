@@ -31,5 +31,15 @@ faces inside a shrinking clip window until a wall closes the column — so the
 vertical feel comes from the same single pass that draws the walls.
 
 The Ebiten front-end lives in `internal/app` — the only package that imports
-Ebiten — which drives the loop, reads input, and uploads each rendered frame.
+Ebiten — which drives the loop, reads input, and uploads each rendered frame. It
+is a small state machine: a **title** screen (which idles into a bot-driven
+attract demo), **play**, the between-levels **intermission** tally, a **pause**
+menu, and a **settings** screen. Player options (sound, volumes, sensitivity,
+field of view, crosshair, debug messages) live in `Settings`, persisted as JSON
+under the user config directory and applied to the renderer and audio engine.
+
+The attract demo and the documentation clips share one brain: `internal/sim/bot`
+is a pure, headless pilot that routes to the exit and fights as it goes, so the
+title screen and the capture tool play the game the same way a person would.
+
 `cmd/pandemonium` is the composition root that wires the layers together.

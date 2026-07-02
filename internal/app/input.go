@@ -86,5 +86,5 @@ func (g *Game) mouseTurn() float64 {
 	}
 	delta := mx - g.lastMouseX
 	g.lastMouseX = mx
-	return float64(delta) * mouseSensitivity
+	return float64(delta) * mouseSensitivity * g.settings.Sensitivity
 }
