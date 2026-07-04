@@ -15,6 +15,7 @@ type Reporter struct {
 	src     Source
 	profile telemetry.RunProfile // latest cumulative run profile
 
+	reach   int  // a floor on the effective level, carried from past runs
 	level   int  // level index of the events seen so far
 	sawKill bool // a kill has been remarked on this level
 	sawItem bool // an item pickup has been remarked on this level
@@ -24,9 +25,27 @@ type Reporter struct {
 // Compile-time check that Reporter consumes telemetry.
 var _ telemetry.Subscriber = (*Reporter)(nil)
 
+// Option configures a Reporter.
+type Option func(*Reporter)
+
+// WithReach carries a floor on the effective level into a fresh run, so the
+// commentary resumes near how far earlier runs had gone rather than starting
+// over from the quietest band. A zero or negative reach changes nothing.
+func WithReach(level int) Option {
+	return func(r *Reporter) {
+		if level > 0 {
+			r.reach = level
+		}
+	}
+}
+
 // New builds a Reporter that posts to overlay using src.
-func New(overlay *hud.Overlay, src Source) *Reporter {
-	return &Reporter{overlay: overlay, src: src}
+func New(overlay *hud.Overlay, src Source, opts ...Option) *Reporter {
+	r := &Reporter{overlay: overlay, src: src}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // OnEvent maps a player event to a cue, folds in the run so far, and asks the
@@ -51,7 +70,9 @@ func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 	r.src.Request(cue, r.emit)
 }
 
-// enrich folds the cumulative run profile into a cue.
+// enrich folds the cumulative run profile into a cue and lifts the effective
+// level to the carried reach, so a returning run picks up the register it had
+// drifted to before rather than resetting to the quietest band.
 func (r *Reporter) enrich(c *Cue) {
 	p := r.profile
 	c.LevelsCleared = p.LevelsCleared
@@ -59,6 +80,9 @@ func (r *Reporter) enrich(c *Cue) {
 	c.WrongDoorsTotal = p.TotalWrongDoors
 	c.ExploreScore = p.ExploreScore
 	c.Rushing = p.ExploreScore > 0 && p.ExploreScore < rushThreshold
+	if r.reach > c.Level {
+		c.Level = r.reach
+	}
 }
 
 // emit posts a line to the overlay. It is safe to call from any goroutine.

@@ -20,6 +20,26 @@ func TestReporterSilentInEarlyBand(t *testing.T) {
 	}
 }
 
+func TestReporterReachLiftsEarlyBand(t *testing.T) {
+	// A run that carries reach from earlier progress speaks on an early level
+	// that would otherwise be silent — the commentary resumes where it left off.
+	o := hud.New()
+	r := New(o, NewTableSource(), WithReach(7))
+	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
+	if _, ch, ok := o.Active(); !ok || ch != hud.Notice {
+		t.Error("with reach carried, an early exit should post a Notice")
+	}
+}
+
+func TestReporterReachZeroIsPristine(t *testing.T) {
+	o := hud.New()
+	r := New(o, NewTableSource(), WithReach(0))
+	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
+	if _, _, ok := o.Active(); ok {
+		t.Error("zero reach must not change the pristine early-band silence")
+	}
+}
+
 func TestReporterDiagnosticInMidBand(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
