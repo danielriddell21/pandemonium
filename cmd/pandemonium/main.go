@@ -54,10 +54,16 @@ func run(seed int64, width, height int) error {
 	}
 	fmt.Printf("pandemonium — seed %d\n", seed)
 
-	overlay := hud.New()
-	bus := telemetry.NewBus(status.New(overlay, status.NewTableSource()))
-
 	settings := app.LoadSettings()
+
+	// Carry the player's history forward: the commentary resumes near the deepest
+	// level earlier runs reached, and the keeper folds this run back into the file.
+	records := app.LoadRecords()
+	keeper := app.NewRecordKeeper(records)
+
+	overlay := hud.New()
+	reporter := status.New(overlay, status.NewTableSource(), status.WithReach(records.Reach()))
+	bus := telemetry.NewBus(reporter, keeper)
 
 	// Sound is on by default but optional via the settings file (turn it off on a
 	// headless machine with no audio device). If the engine fails to initialise we
@@ -79,6 +85,7 @@ func run(seed int64, width, height int) error {
 		app.WithAudio(aud),
 		app.WithSettings(settings),
 		app.WithAttract(sess.attract),
+		app.WithRecords(keeper),
 	)
 	return game.Run()
 }

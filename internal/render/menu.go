@@ -9,15 +9,18 @@ type MenuItem struct {
 	Value string
 }
 
-// Menu renders a full-screen menu — a title, the items with the selected one
-// highlighted, and a footer hint — and returns the RGBA buffer (owned by the
-// Renderer, overwritten on the next call). The app drives selection; this only
-// draws.
-func (r *Renderer) Menu(title string, items []MenuItem, selected int, footer string) []byte {
+// Menu renders a full-screen menu — a title, an optional subtitle, the items
+// with the selected one highlighted, and a footer hint — and returns the RGBA
+// buffer (owned by the Renderer, overwritten on the next call). The app drives
+// selection; this only draws.
+func (r *Renderer) Menu(title, subtitle string, items []MenuItem, selected int, footer string) []byte {
 	fillBackground(r.fb, palette.ceiling)
 
 	titleCol := color.RGBA{R: 222, G: 120, B: 60, A: 255}
 	drawTextCentered(r.fb, r.cfg, r.cfg.Height/6, title, titleCol)
+	if subtitle != "" {
+		drawTextCentered(r.fb, r.cfg, r.cfg.Height/6+16, subtitle, palette.hudDiag)
+	}
 
 	// Size the value column off the widest label so values line up.
 	widest := 0
@@ -32,6 +35,9 @@ func (r *Renderer) Menu(title string, items []MenuItem, selected int, footer str
 	const idealRow = 18
 	footerY := r.cfg.Height - 12
 	top := r.cfg.Height/6 + 24
+	if subtitle != "" {
+		top = r.cfg.Height/6 + 44 // clear the subtitle line before the items
+	}
 	rowH := idealRow
 	if n := len(items); n > 0 {
 		if fit := (footerY - 8 - top) / n; fit < rowH {

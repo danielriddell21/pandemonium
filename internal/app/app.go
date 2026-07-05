@@ -63,6 +63,7 @@ type Game struct {
 	quit       bool
 
 	settings     Settings
+	records      *RecordKeeper
 	titleMenu    *menuModel
 	pauseMenu    *menuModel
 	settingsMenu *menuModel
@@ -97,6 +98,19 @@ func WithSettings(s Settings) Option {
 // unobserved simulation the bot can play while the menu idles.
 func WithAttract(gen func() *sim.Game) Option {
 	return func(g *Game) { g.attractGen = gen }
+}
+
+// WithRecords attaches the cross-run history shown on the title screen.
+func WithRecords(k *RecordKeeper) Option {
+	return func(g *Game) { g.records = k }
+}
+
+// titleSubtitle is the records readout under the title, if any history exists.
+func (g *Game) titleSubtitle() string {
+	if g.records == nil {
+		return ""
+	}
+	return g.records.Current().Summary()
 }
 
 // New builds the application around an initial simulation. next advances to a
@@ -391,13 +405,13 @@ func (g *Game) buildMenus() {
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case stateTitle:
-		screen.WritePixels(g.renderer.Menu("PANDEMONIUM", g.titleMenu.items(), g.titleMenu.sel,
+		screen.WritePixels(g.renderer.Menu("PANDEMONIUM", g.titleSubtitle(), g.titleMenu.items(), g.titleMenu.sel,
 			"Up/Down select   Enter confirm"))
 	case statePaused:
-		screen.WritePixels(g.renderer.Menu("PAUSED", g.pauseMenu.items(), g.pauseMenu.sel,
+		screen.WritePixels(g.renderer.Menu("PAUSED", "", g.pauseMenu.items(), g.pauseMenu.sel,
 			"Esc resumes"))
 	case stateSettings:
-		screen.WritePixels(g.renderer.Menu("SETTINGS", g.settingsMenu.items(), g.settingsMenu.sel,
+		screen.WritePixels(g.renderer.Menu("SETTINGS", "", g.settingsMenu.items(), g.settingsMenu.sel,
 			"Left/Right adjust   Esc back"))
 	case stateAttract:
 		screen.WritePixels(g.renderer.Frame(g.attract))

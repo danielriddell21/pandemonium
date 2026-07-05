@@ -29,9 +29,10 @@ go run ./cmd/pandemonium --seed 42
 | `Enter` / `Space`  | Next level (on the tally screen) |
 | `Esc`              | Pause / back (quit from the menu) |
 
-The game opens on a title screen; left idle it plays a short demo of itself.
-`Esc` during play opens a pause menu (resume, settings, quit) rather than
-quitting outright.
+The game opens on a title screen — which shows your run history (runs played and
+the deepest level reached) and, left idle, plays a short demo of itself. `Esc`
+during play opens a pause menu (resume, settings, quit) rather than quitting
+outright.
 
 ## CLI
 
@@ -52,7 +53,8 @@ Open the settings screen from the title or pause menu (`←` `→` adjust the
 highlighted row): sound on/off, sound-effect and ambient volume, mouse
 sensitivity, field of view, a crosshair toggle, and on-screen debug messages.
 Changes are saved to a JSON file under your user config directory
-(`~/.config/pandemonium/settings.json` on Linux) and reloaded on the next run.
+(`~/.config/pandemonium/settings.json` on Linux) and reloaded on the next run;
+your run history is kept alongside it in `records.json`.
 Turn **sound** off there to run silently on a machine with no audio device; the
 game also falls back to silence on its own if the audio engine can't start.
 
