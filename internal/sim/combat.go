@@ -151,7 +151,7 @@ func (g *Game) die() {
 	g.viewZ = g.Player.Z
 	g.Player.Angle = facing(l.Spawn, l.Exit)
 	g.Player.Health = MaxHealth
-	g.Entities = spawnEntities(l)
+	g.Entities = g.spawnEntities()
 	g.Projectiles = nil
 	g.kills = 0 // the demons are back; the kill tally restarts with them
 	g.tracker.lastCell = l.Spawn

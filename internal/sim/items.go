@@ -99,11 +99,13 @@ func (g *Game) applyPickup(k world.ItemKind) {
 }
 
 // hurtPlayer applies damage to the player, letting armour soak a share of it
-// first and clamping health at zero. Invulnerability ignores it entirely.
+// first and clamping health at zero. The skill scales the incoming damage, and
+// invulnerability ignores it entirely.
 func (g *Game) hurtPlayer(dmg float64) {
 	if dmg <= 0 || g.Player.Invulnerable() {
 		return
 	}
+	dmg *= g.skill.damageScale()
 	absorbed := math.Min(dmg*armorAbsorb, g.Player.Armor)
 	g.Player.Armor -= absorbed
 	g.Player.Health -= dmg - absorbed

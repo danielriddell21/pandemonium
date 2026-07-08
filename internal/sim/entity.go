@@ -56,22 +56,24 @@ type Entity struct {
 	anim float64 // animation clock, in seconds
 }
 
-// entityCount scales the number of demons with the floor area of the level.
-func entityCount(l *world.Level) int {
+// entityCount scales the number of demons with the floor area of the level and
+// the skill: harder skills pack more demons in (and allow a higher ceiling).
+func entityCount(l *world.Level, skill Skill) int {
 	floors := 0
 	for _, t := range l.Tiles {
 		if t.Walkable() {
 			floors++
 		}
 	}
-	n := floors / 40
-	return min(max(n, 1), 16)
+	n := int(float64(floors/40) * skill.countScale())
+	return min(max(n, 1), 24)
 }
 
 // spawnEntities deterministically scatters demons across walkable tiles, keeping
 // them clear of the immediate spawn area. Derived from the level seed, so a seed
-// always produces the same encounter layout.
-func spawnEntities(l *world.Level) []Entity {
+// always produces the same encounter layout (the count scaled by the skill).
+func (g *Game) spawnEntities() []Entity {
+	l := g.World.Level
 	r := rand.New(rand.NewPCG(uint64(l.Seed), 0xA5A5A5A5))
 
 	var floors []world.Coord
@@ -94,7 +96,7 @@ func spawnEntities(l *world.Level) []Entity {
 	// Shuffle deterministically and take the first N distinct tiles.
 	r.Shuffle(len(floors), func(i, j int) { floors[i], floors[j] = floors[j], floors[i] })
 
-	n := min(entityCount(l), len(floors))
+	n := min(entityCount(l, g.skill), len(floors))
 	ents := make([]Entity, 0, n)
 	for i := range n {
 		c := floors[i]

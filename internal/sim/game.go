@@ -44,11 +44,13 @@ type Game struct {
 
 	observer Observer
 	tracker  tracker
+	skill    Skill
 }
 
 // New builds a simulation for a generated level, placing the player at the spawn
 // facing roughly toward the exit and scattering demons across the map. Options
-// may attach an observer; by default observations are discarded.
+// may attach an observer or set the difficulty; by default observations are
+// discarded and the skill is SkillNormal.
 func New(l *world.Level, opts ...Option) *Game {
 	g := &Game{
 		World: NewWorld(l),
@@ -61,21 +63,23 @@ func New(l *world.Level, opts ...Option) *Game {
 			Bullets: 50,
 			Shells:  20,
 		},
-		Entities: spawnEntities(l),
 		Items:    newItems(l),
 		secrets:  newSecrets(l),
 		visited:  map[world.Coord]bool{l.Spawn: true},
 		observer: nopObserver{},
 		tracker:  newTracker(l),
+		skill:    SkillNormal,
 	}
+	// Apply options before spawning so the difficulty governs the encounter.
+	for _, opt := range opts {
+		opt(g)
+	}
+	g.Entities = g.spawnEntities()
 	g.viewZ = g.Player.Z
 	g.killsTotal = countDemons(g.Entities)
 	g.itemsTotal = len(g.Items)
 	g.foundTotal = len(l.Secrets)
 	g.par = parTime(world.StepsBetween(l, l.Spawn, l.Exit))
-	for _, opt := range opts {
-		opt(g)
-	}
 	return g
 }
 
