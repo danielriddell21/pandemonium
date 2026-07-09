@@ -34,9 +34,12 @@ The Ebiten front-end lives in `internal/app` — the only package that imports
 Ebiten — which drives the loop, reads input, and uploads each rendered frame. It
 is a small state machine: a **title** screen (which idles into a bot-driven
 attract demo), **play**, the between-levels **intermission** tally, a **pause**
-menu, and a **settings** screen. Player options (sound, volumes, sensitivity,
-field of view, crosshair, debug messages) live in `Settings`, persisted as JSON
-under the user config directory and applied to the renderer and audio engine.
+menu, and a **settings** screen. Player options (difficulty, sound, volumes,
+sensitivity, field of view, crosshair, debug messages) live in `Settings`,
+persisted as JSON under the user config directory and applied to the renderer,
+audio engine and level builder. Difficulty (`sim.Skill`) scales the threat —
+demon count and the damage they deal — without touching the generated geometry,
+so a seed yields the same map at every skill.
 
 The attract demo and the documentation clips share one brain: `internal/sim/bot`
 is a pure, headless pilot that routes to the exit and fights as it goes, so the

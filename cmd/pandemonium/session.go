@@ -18,7 +18,8 @@ type session struct {
 	bus           *telemetry.Bus
 	audio         sim.Observer // optional sound engine; nil when audio is off
 	level         int
-	attractSeed   int64 // advances each attract level, offset far from the run's seeds
+	skill         sim.Skill // difficulty applied to every level built
+	attractSeed   int64     // advances each attract level, offset far from the run's seeds
 }
 
 // attractSeedBase keeps the title-screen demo worlds well clear of any plausible
@@ -28,11 +29,20 @@ const attractSeedBase = 1 << 40
 // newSession starts a run at the given base seed and level dimensions. audio may
 // be nil, in which case the game runs silent.
 func newSession(baseSeed int64, width, height int, bus *telemetry.Bus, audio *app.Audio) *session {
-	s := &session{baseSeed: baseSeed, width: width, height: height, bus: bus}
+	s := &session{baseSeed: baseSeed, width: width, height: height, bus: bus, skill: sim.SkillNormal}
 	if audio != nil { // keep the observer slot a true nil when there is no engine
 		s.audio = audio
 	}
 	return s
+}
+
+// setSkill records the difficulty for levels built from now on, clamped to the
+// valid range. The app calls it as the player changes the setting.
+func (s *session) setSkill(skill int) {
+	if skill < int(sim.SkillEasy) || skill > int(sim.SkillNightmare) {
+		skill = int(sim.SkillNormal)
+	}
+	s.skill = sim.Skill(skill)
 }
 
 // start builds the first level's simulation.
@@ -64,7 +74,7 @@ func (s *session) build() *sim.Game {
 	s.bus.BeginLevel(seed, s.level)
 	fmt.Printf("level %d  seed %d  (%dx%d)\n", s.level+1, seed, s.width, s.height)
 	// Telemetry always observes; the sound engine observes too when present.
-	return sim.New(lvl, sim.WithObserver(sim.Fanout(s.bus, s.audio)))
+	return sim.New(lvl, sim.WithSkill(s.skill), sim.WithObserver(sim.Fanout(s.bus, s.audio)))
 }
 
 // attract builds a throwaway level for the title screen's demo loop: a fresh

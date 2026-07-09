@@ -50,8 +50,10 @@ whenever a new level is generated, so demos are reproducible.
 ## Settings
 
 Open the settings screen from the title or pause menu (`←` `→` adjust the
-highlighted row): sound on/off, sound-effect and ambient volume, mouse
-sensitivity, field of view, a crosshair toggle, and on-screen debug messages.
+highlighted row): difficulty (easy through nightmare — it scales how many demons
+spawn and how hard they hit, leaving the map itself unchanged), sound on/off,
+sound-effect and ambient volume, mouse sensitivity, field of view, a crosshair
+toggle, and on-screen debug messages.
 Changes are saved to a JSON file under your user config directory
 (`~/.config/pandemonium/settings.json` on Linux) and reloaded on the next run;
 your run history is kept alongside it in `records.json`.

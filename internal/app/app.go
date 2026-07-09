@@ -47,7 +47,9 @@ type Game struct {
 	sim      *sim.Game
 	renderer *render.Renderer
 	overlay  *hud.Overlay
-	next     NextFunc
+	start    NextFunc        // builds the run's first level, lazily on START
+	next     NextFunc        // advances to the following level
+	setSkill func(skill int) // pushes the chosen difficulty to the level builder
 
 	audio     *Audio
 	wasFiring bool // muzzle-flash state last tick, for one shot-sound per shot
@@ -105,6 +107,13 @@ func WithRecords(k *RecordKeeper) Option {
 	return func(g *Game) { g.records = k }
 }
 
+// WithDifficulty supplies a sink that receives the chosen difficulty (0-based
+// skill index) so the level builder can use it. It is called whenever the
+// setting changes, before the next level is built.
+func WithDifficulty(set func(skill int)) Option {
+	return func(g *Game) { g.setSkill = set }
+}
+
 // titleSubtitle is the records readout under the title, if any history exists.
 func (g *Game) titleSubtitle() string {
 	if g.records == nil {
@@ -113,10 +122,11 @@ func (g *Game) titleSubtitle() string {
 	return g.records.Current().Summary()
 }
 
-// New builds the application around an initial simulation. next advances to a
-// fresh level when the player reaches an exit.
-func New(g *sim.Game, renderer *render.Renderer, next NextFunc, opts ...Option) *Game {
-	game := &Game{sim: g, renderer: renderer, next: next, state: stateTitle, settings: DefaultSettings()}
+// New builds the application around the level builders. start builds the run's
+// first level when the player chooses START (so a difficulty picked on the title
+// takes effect); next advances to a fresh level when the player reaches an exit.
+func New(start, next NextFunc, renderer *render.Renderer, opts ...Option) *Game {
+	game := &Game{start: start, next: next, renderer: renderer, state: stateTitle, settings: DefaultSettings()}
 	for _, opt := range opts {
 		opt(game)
 	}
@@ -138,6 +148,9 @@ func (g *Game) applySettings() {
 	g.renderer.SetFOV(g.settings.FOV)
 	g.renderer.SetCrosshair(g.settings.Crosshair)
 	g.renderer.SetDiagnostics(g.settings.Debug)
+	if g.setSkill != nil {
+		g.setSkill(g.settings.Difficulty)
+	}
 }
 
 // Update advances whichever mode the app is in.
@@ -321,6 +334,7 @@ func (g *Game) updatePlaying() {
 func (g *Game) buildMenus() {
 	g.titleMenu = &menuModel{entries: []menuEntry{
 		{label: "START", activate: func() {
+			g.sim = g.start() // build the first level now, with the chosen difficulty
 			g.state = statePlaying
 			g.haveMouse = false
 		}},
@@ -341,6 +355,14 @@ func (g *Game) buildMenus() {
 	}}
 
 	g.settingsMenu = &menuModel{entries: []menuEntry{
+		{
+			label: "DIFFICULTY",
+			value: func() string { return sim.Skill(g.settings.Difficulty).String() },
+			adjust: func(dir int) {
+				g.settings.Difficulty = (g.settings.Difficulty + dir + skillCount) % skillCount
+				g.applySettings()
+			},
+		},
 		{
 			label: "SOUND",
 			value: func() string { return onOff(g.settings.Sound) },

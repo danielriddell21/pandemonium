@@ -21,10 +21,10 @@ func newTestGame(t *testing.T) *sim.Game {
 
 func newApp(t *testing.T) *Game {
 	t.Helper()
-	g := newTestGame(t)
 	r := render.NewRenderer(render.Config{Width: 160, Height: 100, FOV: 1.152})
+	start := func() *sim.Game { return newTestGame(t) }
 	next := func() *sim.Game { return newTestGame(t) }
-	return New(g, r, next, WithAttract(func() *sim.Game { return newTestGame(t) }))
+	return New(start, next, r, WithAttract(func() *sim.Game { return newTestGame(t) }))
 }
 
 func TestStartsOnTitle(t *testing.T) {
@@ -109,6 +109,52 @@ func TestSoundAndDebugToggle(t *testing.T) {
 	}
 	if !g.settings.Debug { // default false, toggled once
 		t.Error("DEBUG MESSAGES did not toggle on")
+	}
+}
+
+func TestDifficultyCyclesAndReachesSink(t *testing.T) {
+	got := -1
+	r := render.NewRenderer(render.Config{Width: 160, Height: 100, FOV: 1.152})
+	start := func() *sim.Game { return newTestGame(t) }
+	g := New(start, start, r, WithDifficulty(func(d int) { got = d }))
+	// applySettings on construction pushes the default (normal) to the sink.
+	if got != defaultDifficulty {
+		t.Fatalf("sink got %d on construction, want %d", got, defaultDifficulty)
+	}
+	for _, e := range g.settingsMenu.entries {
+		if e.label == "DIFFICULTY" {
+			e.adjust(1) // normal -> hard
+		}
+	}
+	if g.settings.Difficulty != defaultDifficulty+1 {
+		t.Errorf("difficulty = %d, want %d", g.settings.Difficulty, defaultDifficulty+1)
+	}
+	if got != g.settings.Difficulty {
+		t.Errorf("sink got %d, want %d", got, g.settings.Difficulty)
+	}
+}
+
+func TestDifficultyWrapsAtEnds(t *testing.T) {
+	g := newApp(t)
+	g.settings.Difficulty = 0 // easiest
+	for _, e := range g.settingsMenu.entries {
+		if e.label == "DIFFICULTY" {
+			e.adjust(-1) // wrap down to the hardest
+			if g.settings.Difficulty != skillCount-1 {
+				t.Errorf("wrap down = %d, want %d", g.settings.Difficulty, skillCount-1)
+			}
+		}
+	}
+}
+
+func TestStartBuildsTheFirstLevel(t *testing.T) {
+	g := newApp(t)
+	if g.sim != nil {
+		t.Fatal("sim should be nil before START")
+	}
+	g.titleMenu.activate() // START
+	if g.sim == nil || g.state != statePlaying {
+		t.Error("START should build the first level and enter play")
 	}
 }
 

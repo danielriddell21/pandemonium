@@ -80,12 +80,13 @@ func run(seed int64, width, height int) error {
 	sess := newSession(seed, width, height, bus, aud)
 
 	renderer := render.NewRenderer(render.DefaultConfig(), render.WithOverlay(overlay))
-	game := app.New(sess.start(), renderer, sess.next,
+	game := app.New(sess.start, sess.next, renderer,
 		app.WithOverlay(overlay),
 		app.WithAudio(aud),
 		app.WithSettings(settings),
 		app.WithAttract(sess.attract),
 		app.WithRecords(keeper),
+		app.WithDifficulty(sess.setSkill),
 	)
 	return game.Run()
 }

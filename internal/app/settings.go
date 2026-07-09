@@ -10,6 +10,7 @@ import (
 // Settings are the player-tunable options, persisted between sessions as JSON
 // under the user's config directory.
 type Settings struct {
+	Difficulty    int     `json:"difficulty"`        // 0-based skill index (default 1 = normal)
 	Sound         bool    `json:"sound"`             // whether to run with audio at all
 	SFXVolume     float64 `json:"sfx_volume"`        // 0..1
 	AmbientVolume float64 `json:"ambient_volume"`    // 0..1
@@ -19,6 +20,12 @@ type Settings struct {
 	Debug         bool    `json:"debug"` // show on-screen diagnostic (playtest) messages
 }
 
+// skillCount is the number of difficulty levels (sim.SkillEasy..SkillNightmare).
+const skillCount = 4
+
+// defaultDifficulty is the normal skill index.
+const defaultDifficulty = 1
+
 // defaultFOV mirrors render.DefaultConfig — restated here so settings stay a
 // plain data file with no render dependency.
 const defaultFOV = 1.152
@@ -26,6 +33,7 @@ const defaultFOV = 1.152
 // DefaultSettings returns the out-of-the-box options.
 func DefaultSettings() Settings {
 	return Settings{
+		Difficulty:    defaultDifficulty,
 		Sound:         true,
 		SFXVolume:     1,
 		AmbientVolume: 1,
@@ -38,6 +46,9 @@ func DefaultSettings() Settings {
 // clamped returns the settings with every field forced into its valid range, so
 // a hand-edited or stale file cannot produce a broken game.
 func (s Settings) clamped() Settings {
+	if s.Difficulty < 0 || s.Difficulty >= skillCount {
+		s.Difficulty = defaultDifficulty
+	}
 	s.SFXVolume = clampRange(s.SFXVolume, 0, 1)
 	s.AmbientVolume = clampRange(s.AmbientVolume, 0, 1)
 	s.Sensitivity = clampRange(s.Sensitivity, 0.2, 3)
