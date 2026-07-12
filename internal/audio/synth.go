@@ -81,6 +81,59 @@ func Ambient() []byte {
 	})
 }
 
+// maxMusicBand caps how dark the music gets, so detuning never drives a voice
+// down to an inaudible or negative frequency.
+const maxMusicBand = 8
+
+// musicLoop is the music bed's loop length in seconds. Every voice frequency is
+// an integer (cycles per second), so a whole number of cycles fits the loop and
+// it repeats without a click.
+const musicLoop = 8.0
+
+// MusicBand maps how deep the run has gone to a music darkness band: the bed
+// thins, slows and detunes a notch every few levels, then holds at the floor.
+func MusicBand(depth int) int {
+	b := depth / 3
+	if b > maxMusicBand {
+		b = maxMusicBand
+	}
+	return b
+}
+
+// Music builds a seamlessly loopable minor-mode pad for the given darkness band:
+// a low triad pulsing under a sparse high shimmer. Deeper bands flatten the
+// pitch, slow the pulse, drop the minor third and fade the shimmer, so the bed
+// grows colder and emptier the further in the run goes. Deterministic.
+func Music(band int) []byte {
+	if band < 0 {
+		band = 0
+	} else if band > maxMusicBand {
+		band = maxMusicBand
+	}
+	detune := float64(band)                // flatten every voice by ~1 Hz per band
+	voices := []float64{55, 82, 110}       // A1 root, E2 fifth, A2 octave
+	const third = 65                       // C2 minor third, present early, gone deep
+	pulses := math.Max(2, 8-float64(band)) // slows with depth, stays integer
+	shimmer := 220 - 2*detune              // a high voice, also flattening
+	shimmerAmp := math.Max(0, 1-0.3*float64(band))
+	thirdAmp := math.Max(0, 1-0.2*float64(band))
+
+	return renderPCM(musicLoop, func(t float64) float64 {
+		// Amplitude pulse: an integer number of cycles over the loop.
+		pulse := 0.55 + 0.45*math.Sin(2*math.Pi*(pulses/musicLoop)*t-math.Pi/2)
+		low := 0.0
+		for _, f := range voices {
+			low += math.Sin(2 * math.Pi * (f - detune) * t)
+		}
+		low *= 0.10
+		low += 0.06 * thirdAmp * math.Sin(2*math.Pi*(third-detune)*t)
+		// A single slow swell over the loop carries the shimmer in and out.
+		swell := 0.5 + 0.5*math.Sin(2*math.Pi*(1/musicLoop)*t-math.Pi/2)
+		hi := shimmerAmp * 0.05 * swell * math.Sin(2*math.Pi*shimmer*t)
+		return low*pulse + hi
+	})
+}
+
 // renderPCM samples gen over dur seconds and encodes it to interleaved stereo
 // 16-bit little-endian PCM. gen returns a sample in [-1, 1] for time t.
 func renderPCM(dur float64, gen func(t float64) float64) []byte {
