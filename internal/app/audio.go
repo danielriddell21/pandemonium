@@ -16,11 +16,14 @@ import (
 // pure internal/audio package. Every method is nil-safe, so a game built without
 // audio (e.g. on a machine with no sound device) simply runs silent.
 type Audio struct {
-	ctx      *audio.Context
-	players  map[iaudio.Cue]*audio.Player
-	ambient  *audio.Player
-	depth    int      // levels reached; the ambient sinks as this grows
-	listener sim.Vec2 // the player's position, for distance attenuation
+	ctx       *audio.Context
+	players   map[iaudio.Cue]*audio.Player
+	ambient   *audio.Player
+	music     *audio.Player // looping musical bed, swapped as it darkens
+	musicBand int           // the band the current music player was built for
+	playing   bool          // whether the looping beds have been started
+	depth     int           // levels reached; the ambient sinks as this grows
+	listener  sim.Vec2      // the player's position, for distance attenuation
 
 	sfxVolume     float64 // user volume scale for sound effects (0..1)
 	ambientVolume float64 // user volume scale for the ambient loop (0..1)
@@ -36,6 +39,7 @@ const (
 	ambientLoud  = 0.35
 	ambientQuiet = 0.12
 	ambientFade  = 0.03 // volume lost per level cleared
+	musicLevel   = 0.5  // music bed volume, before the user's ambient scale
 )
 
 // Compile-time check that Audio can drive the simulation's observations.
@@ -51,15 +55,24 @@ func NewAudio() (*Audio, error) {
 		p.SetVolume(0.6)
 		a.players[cue] = p
 	}
-	amb := iaudio.Ambient()
-	loop := audio.NewInfiniteLoop(bytes.NewReader(amb), int64(len(amb)))
-	ap, err := ctx.NewPlayer(loop)
+	ap, err := a.loopingPlayer(iaudio.Ambient())
 	if err != nil {
 		return nil, fmt.Errorf("audio: ambient player: %w", err)
 	}
 	a.ambient = ap
+	mp, err := a.loopingPlayer(iaudio.Music(0))
+	if err != nil {
+		return nil, fmt.Errorf("audio: music player: %w", err)
+	}
+	a.music = mp
 	a.applyAmbient()
 	return a, nil
+}
+
+// loopingPlayer builds a seamlessly looping player from one PCM buffer.
+func (a *Audio) loopingPlayer(pcm []byte) (*audio.Player, error) {
+	loop := audio.NewInfiniteLoop(bytes.NewReader(pcm), int64(len(pcm)))
+	return a.ctx.NewPlayer(loop)
 }
 
 // SetVolumes applies the user's sound-effect and ambient volume scales (each
@@ -75,12 +88,18 @@ func (a *Audio) SetVolumes(sfx, ambient float64) {
 
 func clamp01(v float64) float64 { return math.Max(0, math.Min(1, v)) }
 
-// StartAmbient begins the looping ambient track.
+// StartAmbient begins the looping ambient track and the music bed.
 func (a *Audio) StartAmbient() {
-	if a == nil || a.ambient == nil {
+	if a == nil {
 		return
 	}
-	a.ambient.Play()
+	a.playing = true
+	if a.ambient != nil {
+		a.ambient.Play()
+	}
+	if a.music != nil {
+		a.music.Play()
+	}
 }
 
 // SetListener records the player's position so subsequent sounds are attenuated
@@ -118,23 +137,49 @@ func distanceVolume(listener, event sim.Vec2) float64 {
 	return 1 - d/maxAudible
 }
 
-// deepen lowers the ambient volume one notch as the run reaches a new level.
+// deepen lowers the ambient volume one notch as the run reaches a new level and
+// darkens the music bed when the run crosses into a new music band.
 func (a *Audio) deepen() {
 	a.depth++
 	a.applyAmbient()
+	a.updateMusicBand()
 }
 
-// applyAmbient sets the ambient player's volume from the depth curve scaled by
-// the user's ambient volume.
-func (a *Audio) applyAmbient() {
-	if a.ambient == nil {
+// updateMusicBand swaps the music bed for the current depth's darker variant
+// when the band changes. The swap happens at a level boundary, where the tally
+// screen masks any seam.
+func (a *Audio) updateMusicBand() {
+	band := iaudio.MusicBand(a.depth)
+	if band == a.musicBand || a.music == nil {
 		return
 	}
-	vol := ambientLoud - ambientFade*float64(a.depth)
-	if vol < ambientQuiet {
-		vol = ambientQuiet
+	next, err := a.loopingPlayer(iaudio.Music(band))
+	if err != nil {
+		return // keep the current bed playing if the swap can't be built
 	}
-	a.ambient.SetVolume(vol * a.ambientVolume)
+	old := a.music
+	a.music = next
+	a.musicBand = band
+	a.applyAmbient()
+	if a.playing {
+		a.music.Play()
+	}
+	_ = old.Close()
+}
+
+// applyAmbient sets the ambient and music players' volumes from the depth curve
+// scaled by the user's ambient volume.
+func (a *Audio) applyAmbient() {
+	if a.ambient != nil {
+		vol := ambientLoud - ambientFade*float64(a.depth)
+		if vol < ambientQuiet {
+			vol = ambientQuiet
+		}
+		a.ambient.SetVolume(vol * a.ambientVolume)
+	}
+	if a.music != nil {
+		a.music.SetVolume(musicLevel * a.ambientVolume)
+	}
 }
 
 // Fire plays the weapon-discharge sound, which is player-driven rather than an
