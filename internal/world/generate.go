@@ -80,6 +80,7 @@ func generateOnce(width, height int, seed int64) *Level {
 	assignLight(l, g, rooms)
 	assignThemes(l, g, rooms)
 	placeLowWalls(l, g)
+	assignSky(l, g, rooms) // last: purely additive, leaves earlier stages untouched
 	return l
 }
 

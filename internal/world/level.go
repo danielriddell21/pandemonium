@@ -27,6 +27,7 @@ type Level struct {
 	Light         []float64          // per-tile brightness multiplier (1 = full)
 	Theme         []uint8            // per-tile wall theme index
 	WallTop       []float64          // solid-tile height; 0 = full wall, >0 = low wall
+	Sky           []bool             // per-tile: ceiling open to the sky (rendered as open air)
 	Seed          int64
 }
 
@@ -46,6 +47,7 @@ func newLevel(width, height int, seed int64) *Level {
 	ceils := make([]float64, width*height)
 	light := make([]float64, width*height)
 	wallTop := make([]float64, width*height) // 0 everywhere: all walls full-height
+	sky := make([]bool, width*height)
 	for i := range tiles {
 		tiles[i] = TileWall
 		ceils[i] = 1
@@ -59,6 +61,7 @@ func newLevel(width, height int, seed int64) *Level {
 		CeilH:   ceils,
 		Light:   light,
 		WallTop: wallTop,
+		Sky:     sky,
 		Seed:    seed,
 	}
 }
@@ -115,6 +118,15 @@ func (l *Level) LightAt(x, y int) float64 {
 		return 1
 	}
 	return l.Light[y*l.Width+x]
+}
+
+// SkyAt reports whether the cell at (x, y) is open to the sky, so its ceiling is
+// drawn as open air. Nil-safe for hand-built levels that omit the sky layer.
+func (l *Level) SkyAt(x, y int) bool {
+	if !l.InBounds(x, y) || len(l.Sky) == 0 {
+		return false
+	}
+	return l.Sky[y*l.Width+x]
 }
 
 // setFloor / setCeil write heights at (x, y) if in bounds.

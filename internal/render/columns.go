@@ -101,7 +101,13 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		}
 		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex, aLight)
 		ceilEdge := row(aCeil, d)
-		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
+		if g.World.Level.SkyAt(aX, aY) {
+			// Open air overhead: a bright, distance-independent sky rather than
+			// distance-shaded stone (still dimming with the run's gloom).
+			fillSkySpan(fb, cfg, x, yTop, min(yBot, ceilEdge), gloom)
+		} else {
+			fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
+		}
 
 		// The texture column for any face on this boundary, themed by the room
 		// it's seen from and lit by the cell it faces.
@@ -204,6 +210,31 @@ func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy 
 		}
 		rowDist := (z - eyeZ) * fh / p
 		sampleFlat(fb, cfg, x, y, rowDist, px, py, dx, dy, tex, shadeFactor(rowDist)*ceilingDim*light)
+	}
+}
+
+// fillSkySpan paints rows y0..y1 as open sky: a vertical gradient from the dusk
+// overhead down to a pale horizon at mid-screen, scaled only by gloom (the sky is
+// effectively infinitely far, so it takes no distance shading). It darkens with
+// the run like everything else.
+func fillSkySpan(fb []byte, cfg Config, x, y0, y1 int, gloom float64) {
+	half := float64(cfg.Height) / 2
+	for y := y0; y <= y1; y++ {
+		t := float64(y) / half // 0 at the top, 1 at the horizon
+		if t > 1 {
+			t = 1
+		}
+		setPixel(fb, cfg.Width, x, y, scaleColor(lerpColor(palette.skyTop, palette.skyHorizon, t), gloom))
+	}
+}
+
+// lerpColor linearly blends two opaque colours by t in [0, 1].
+func lerpColor(a, b color.RGBA, t float64) color.RGBA {
+	return color.RGBA{
+		R: uint8(float64(a.R) + (float64(b.R)-float64(a.R))*t),
+		G: uint8(float64(a.G) + (float64(b.G)-float64(a.G))*t),
+		B: uint8(float64(a.B) + (float64(b.B)-float64(a.B))*t),
+		A: 255,
 	}
 }
 

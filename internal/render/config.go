@@ -22,14 +22,16 @@ func DefaultConfig() Config {
 // procedural textures are built from, and the HUD message colours. Walls and
 // sprites are textured and distance-shaded at draw time.
 var palette = struct {
-	ceiling color.RGBA
-	floor   color.RGBA
-	wall    color.RGBA // base tint for the wall texture
-	door    color.RGBA // base tint for the door texture
-	sprite  [5]color.RGBA
-	hudText color.RGBA // player-facing notice text
-	hudDiag color.RGBA // diagnostic/playtest readout text
-	hudDrop color.RGBA // message drop shadow
+	ceiling    color.RGBA
+	floor      color.RGBA
+	wall       color.RGBA // base tint for the wall texture
+	door       color.RGBA // base tint for the door texture
+	sprite     [5]color.RGBA
+	hudText    color.RGBA // player-facing notice text
+	hudDiag    color.RGBA // diagnostic/playtest readout text
+	hudDrop    color.RGBA // message drop shadow
+	skyTop     color.RGBA // open-air ceiling, screen top
+	skyHorizon color.RGBA // open-air ceiling, toward the horizon
 }{
 	ceiling: color.RGBA{R: 28, G: 26, B: 30, A: 255},
 	floor:   color.RGBA{R: 44, G: 36, B: 30, A: 255},
@@ -42,7 +44,9 @@ var palette = struct {
 		{R: 220, G: 120, B: 150, A: 255}, // pinky — pink
 		{R: 150, G: 110, B: 40, A: 255},  // baron — armoured ochre
 	},
-	hudText: color.RGBA{R: 222, G: 214, B: 188, A: 255},
-	hudDiag: color.RGBA{R: 120, G: 200, B: 120, A: 255},
-	hudDrop: color.RGBA{R: 0, G: 0, B: 0, A: 255},
+	hudText:    color.RGBA{R: 222, G: 214, B: 188, A: 255},
+	hudDiag:    color.RGBA{R: 120, G: 200, B: 120, A: 255},
+	hudDrop:    color.RGBA{R: 0, G: 0, B: 0, A: 255},
+	skyTop:     color.RGBA{R: 34, G: 40, B: 58, A: 255},  // deep dusk overhead
+	skyHorizon: color.RGBA{R: 120, G: 96, B: 92, A: 255}, // pale, smoky horizon
 }
