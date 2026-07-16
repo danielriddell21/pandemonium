@@ -4,7 +4,8 @@ A procedurally-generated, Wolfenstein-3D-style raycaster FPS written in Go with
 [Ebiten](https://ebitengine.org/) v2, in the visual spirit of the original DOOM.
 
 Every run drops you into a freshly generated maze of rooms and corridors — with
-staircases, raised platforms and lifts sculpted into the terrain. Walk it with
+staircases, raised platforms and lifts sculpted into the terrain, and the odd
+courtyard open to the sky. Walk it with
 `WASD`, look around with the mouse (or arrow keys), dodge the demons, and find
 the exit — which collapses the level and generates a brand new one. Levels are
 deterministic from a seed, so a given seed always produces the same world.

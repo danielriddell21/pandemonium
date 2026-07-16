@@ -59,7 +59,7 @@ a fresh level is generated to continue into.
 
 Walking a procedurally generated level from the spawn through its rooms and
 corridors toward the exit, opening doors along the way, over a textured floor and
-under a textured ceiling.
+under a textured ceiling — past the occasional courtyard open to the sky.
 
 ## Combat
 
