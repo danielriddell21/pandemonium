@@ -100,6 +100,38 @@ func (g *Game) spendAmmo(a ammoKind) bool {
 	return true
 }
 
+// ammoCount returns how many rounds of the given kind the player holds. Weapons
+// that need no ammo (the fists) always report a usable count.
+func (g *Game) ammoCount(a ammoKind) int {
+	switch a {
+	case ammoBullets:
+		return g.Player.Bullets
+	case ammoShells:
+		return g.Player.Shells
+	case ammoRockets:
+		return g.Player.Rockets
+	default:
+		return 1
+	}
+}
+
+// autoSwitchIfEmpty drops to the best still-usable weapon when the current one
+// runs dry, the way DOOM falls back after you fire your last round. The rocket
+// launcher is never auto-selected (its ammo is too precious to spend by reflex),
+// so the fists are the final fallback.
+func (g *Game) autoSwitchIfEmpty() {
+	w := weapons[g.Player.Weapon]
+	if w.ammo == ammoNone || g.ammoCount(w.ammo) > 0 {
+		return
+	}
+	for _, k := range []WeaponKind{Chaingun, Shotgun, Pistol, Fists} {
+		if k != g.Player.Weapon && g.ammoCount(weapons[k].ammo) > 0 {
+			g.Player.Weapon = k
+			return
+		}
+	}
+}
+
 // hitscanMulti returns up to n nearest living demons within range, inside the
 // facing arc, and in clear line of sight, nearest first.
 func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
