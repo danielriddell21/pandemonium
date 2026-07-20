@@ -40,7 +40,7 @@ func TestInvulnerabilityIgnoresDamageThenExpires(t *testing.T) {
 
 func TestRadSuitNegatesHazardFloor(t *testing.T) {
 	l := terrainLevel(8, 3)
-	l.Hazard = map[world.Coord]float64{{X: 4, Y: 1}: 8.0}
+	l.Hazard = map[world.Coord]world.HazardCell{{X: 4, Y: 1}: {Rate: 8.0, Kind: world.HazardNukage}}
 	g := New(l)
 	g.Entities = nil
 	g.Player.Pos = Vec2{X: 4.5, Y: 1.5}

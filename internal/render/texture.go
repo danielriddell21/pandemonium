@@ -64,6 +64,7 @@ type textureSet struct {
 	floor     *texture
 	ceiling   *texture
 	nukage    *texture
+	lava      *texture
 	switchTex *texture
 	demon     []demonArt
 	fireball  *texture
@@ -153,6 +154,7 @@ func defaultTextures() *textureSet {
 		floor:     genFloor(),
 		ceiling:   genCeiling(),
 		nukage:    genNukage(),
+		lava:      genLava(),
 		switchTex: genSwitch(),
 		demon:     buildDemons(),
 		fireball:  genFireball(),
@@ -473,6 +475,24 @@ func genNukage() *texture {
 		for x := range texSize {
 			n := ((x*9 + y*5) % 13) - 6 // coarse, blotchy variation
 			t.set(x, y, adjust(base, n*4))
+		}
+	}
+	return t
+}
+
+// genLava draws a molten floor: a hot orange crust shot through with brighter
+// veins, distinct at a glance from the green nukage.
+func genLava() *texture {
+	t := newTexture(texSize, texSize)
+	base := color.RGBA{R: 150, G: 48, B: 20, A: 255}
+	for y := range texSize {
+		for x := range texSize {
+			n := ((x*7 + y*3) % 11) - 5
+			c := adjust(base, n*5)
+			if (x*x+y*y*3)%17 < 3 { // sparse bright cracks
+				c = color.RGBA{R: 240, G: 170, B: 60, A: 255}
+			}
+			t.set(x, y, c)
 		}
 	}
 	return t

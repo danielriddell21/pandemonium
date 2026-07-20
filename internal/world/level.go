@@ -17,17 +17,17 @@ type Level struct {
 	CeilH         []float64  // per-tile ceiling height in wall units (base 1)
 	Spawn, Exit   Coord
 	Markers       []Marker
-	Items         []Item             // collectibles scattered across the level
-	Locks         map[Coord]ItemKind // door cell -> keycard required to open it
-	Secrets       []Coord            // cells that count as a hidden find
-	Lifts         map[Coord]Lift     // platform tiles that travel between two floors
-	Barrels       []Coord            // explosive barrels scattered across the floor
-	Hazard        map[Coord]float64  // damaging floor tiles -> health lost per second
-	Switches      map[Coord]Switch   // wall switches the player presses with use
-	Light         []float64          // per-tile brightness multiplier (1 = full)
-	Theme         []uint8            // per-tile wall theme index
-	WallTop       []float64          // solid-tile height; 0 = full wall, >0 = low wall
-	Sky           []bool             // per-tile: ceiling open to the sky (rendered as open air)
+	Items         []Item               // collectibles scattered across the level
+	Locks         map[Coord]ItemKind   // door cell -> keycard required to open it
+	Secrets       []Coord              // cells that count as a hidden find
+	Lifts         map[Coord]Lift       // platform tiles that travel between two floors
+	Barrels       []Coord              // explosive barrels scattered across the floor
+	Hazard        map[Coord]HazardCell // damaging floor tiles -> drain rate and kind
+	Switches      map[Coord]Switch     // wall switches the player presses with use
+	Light         []float64            // per-tile brightness multiplier (1 = full)
+	Theme         []uint8              // per-tile wall theme index
+	WallTop       []float64            // solid-tile height; 0 = full wall, >0 = low wall
+	Sky           []bool               // per-tile: ceiling open to the sky (rendered as open air)
 	Seed          int64
 }
 
@@ -100,7 +100,13 @@ func (l *Level) Ceil(x, y int) float64 {
 
 // HazardAt returns the health-per-second a tile drains, or 0 if it is safe.
 func (l *Level) HazardAt(x, y int) float64 {
-	return l.Hazard[Coord{X: x, Y: y}]
+	return l.Hazard[Coord{X: x, Y: y}].Rate
+}
+
+// HazardKindAt returns the kind of hazard on a tile (meaningful only where
+// HazardAt is positive); safe tiles report HazardNukage by default.
+func (l *Level) HazardKindAt(x, y int) HazardKind {
+	return l.Hazard[Coord{X: x, Y: y}].Kind
 }
 
 // WallTopAt returns a solid tile's height: 0 means a full-height wall, a positive

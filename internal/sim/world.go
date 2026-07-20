@@ -50,6 +50,11 @@ func (w *World) HazardAt(x, y int) float64 {
 	return w.Level.HazardAt(x, y)
 }
 
+// HazardKindAt returns the kind of hazard on the floor at (x, y).
+func (w *World) HazardKindAt(x, y int) world.HazardKind {
+	return w.Level.HazardKindAt(x, y)
+}
+
 // liftHeight is a lift platform's height at time t: dwell low, rise, dwell high,
 // sink, repeating. Pure in t, so the cycle is deterministic from the tick count.
 func liftHeight(lf world.Lift, t float64) float64 {

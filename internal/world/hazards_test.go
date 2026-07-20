@@ -13,9 +13,9 @@ func TestHazardsAreWalkableAndClearOfSpawn(t *testing.T) {
 			continue
 		}
 		found = true
-		for c, rate := range l.Hazard {
-			if rate <= 0 {
-				t.Errorf("seed %d: hazard %v has non-positive rate %v", seed, c, rate)
+		for c, hz := range l.Hazard {
+			if hz.Rate <= 0 {
+				t.Errorf("seed %d: hazard %v has non-positive rate %v", seed, c, hz.Rate)
 			}
 			if !l.At(c.X, c.Y).Walkable() {
 				t.Errorf("seed %d: hazard %v is not walkable", seed, c)

@@ -98,6 +98,9 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		ftex := tx.floor
 		if g.World.HazardAt(aX, aY) > 0 {
 			ftex = tx.nukage
+			if g.World.Level.HazardKindAt(aX, aY) == world.HazardLava {
+				ftex = tx.lava
+			}
 		}
 		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex, aLight)
 		ceilEdge := row(aCeil, d)
