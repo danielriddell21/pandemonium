@@ -99,9 +99,6 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex, r.gloom)
 	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)
-	if r.crosshair {
-		drawCrosshair(r.fb, r.cfg, r.hideHUD)
-	}
 	if !r.hideHUD {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
 		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-StatusBarH)
@@ -112,6 +109,9 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 				drawMessage(r.fb, r.cfg, msg, ch)
 			}
 		}
+	}
+	if r.crosshair { // an aiming aid sits on top of the world and the weapon
+		drawCrosshair(r.fb, r.cfg, r.hideHUD)
 	}
 	if r.showMap {
 		drawAutomap(r.fb, r.cfg, g)
