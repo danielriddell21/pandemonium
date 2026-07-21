@@ -100,5 +100,7 @@ just lint     # golangci-lint
 ## Documentation
 
 - [Architecture](docs/architecture.md) — the layered, headless-testable design.
-- [How the raycaster works](docs/raycaster.md).
+- [How the raycaster works](docs/raycaster.md) — the column renderer.
+- [How the world is generated](docs/worldgen.md) — the generation pipeline.
+- [How the audio works](docs/audio.md) — the procedural synthesis.
 - [Demos](docs/demos.md) — a tour of the features in motion.

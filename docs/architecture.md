@@ -11,7 +11,7 @@ and the simulation can be exercised headlessly, with no graphics in sight.
    splitting: the map is repeatedly cut into sub-regions, a room is carved into each
    leaf, and sibling regions are joined with corridors. A flood-fill reachability
    check guarantees the exit is reachable from the spawn; if it isn't, the level is
-   regenerated. Fully unit-testable in isolation.
+   regenerated. Fully unit-testable in isolation (see [worldgen.md](worldgen.md)).
 
 2. **`internal/sim` — simulation.** Player position and facing, movement with solid
    grid collision, billboarded entities, and interaction. State advances one fixed
@@ -51,7 +51,7 @@ A few supporting packages sit alongside these, all pure and observing inward:
 - **`internal/audio`** synthesises every sound effect and the ambient/music bed
   as raw PCM — no files, deterministic. The Ebiten playback that turns PCM into
   sound lives in `internal/app`, which also pans and attenuates effects by
-  distance and darkens the bed as the run deepens.
+  distance and darkens the bed as the run deepens (see [audio.md](audio.md)).
 - **`internal/telemetry`** attaches to the simulation as an observer and turns its
   observations into a cumulative run profile and per-event stream.
 - **`internal/status`** subscribes to that telemetry and posts the on-screen
