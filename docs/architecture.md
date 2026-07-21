@@ -1,8 +1,9 @@
 # Architecture
 
-The project is split into three deliberately decoupled layers. Dependencies only
-ever point one direction — **render → sim → world** — so the world generator and
-the simulation can be exercised headlessly, with no graphics in sight.
+The project is built around three deliberately decoupled core layers, with the
+Ebiten front-end on top and a few supporting packages alongside. Dependencies
+only ever point one direction — **render → sim → world** — so the world generator
+and the simulation can be exercised headlessly, with no graphics in sight.
 
 1. **`internal/world` — generation.** Pure Go, zero rendering knowledge, no Ebiten
    import. A level is a 2D grid of tiles (walls, floors, doors, a spawn and an exit)
@@ -44,5 +45,18 @@ so a seed yields the same map at every skill.
 The attract demo and the documentation clips share one brain: `internal/sim/bot`
 is a pure, headless pilot that routes to the exit and fights as it goes, so the
 title screen and the capture tool play the game the same way a person would.
+
+A few supporting packages sit alongside these, all pure and observing inward:
+
+- **`internal/audio`** synthesises every sound effect and the ambient/music bed
+  as raw PCM — no files, deterministic. The Ebiten playback that turns PCM into
+  sound lives in `internal/app`, which also pans and attenuates effects by
+  distance and darkens the bed as the run deepens.
+- **`internal/telemetry`** attaches to the simulation as an observer and turns its
+  observations into a cumulative run profile and per-event stream.
+- **`internal/status`** subscribes to that telemetry and posts the on-screen
+  status messages, choosing lines from a scripted source by how the run is going.
+- **`internal/hud`** is the small overlay those messages are posted to and that
+  the renderer reads back when drawing a frame.
 
 `cmd/pandemonium` is the composition root that wires the layers together.
