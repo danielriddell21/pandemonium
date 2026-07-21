@@ -70,6 +70,14 @@ gunners and armoured barons — with the full arsenal, while explosive barrels a
 stray shots catch other demons in the crossfire. Demons animate and collapse when
 killed; sprites always face the camera and are occluded correctly by nearer walls.
 
+## Arena
+
+![arena](demos/arena.gif)
+
+Every fifth level opens into a set-piece arena: one large room under open sky,
+a megasphere-and-armour cache at its heart, and a heavier fight with nowhere to
+hide — the wide floor fills with demons and the sightlines run clear across it.
+
 ## Automap
 
 ![automap](demos/automap.gif)
