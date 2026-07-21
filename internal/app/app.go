@@ -4,7 +4,9 @@
 package app
 
 import (
+	"fmt"
 	"math"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -157,6 +159,13 @@ func (g *Game) applySettings() {
 func (g *Game) Update() error {
 	if g.quit {
 		return ebiten.Termination
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyF12) {
+		if path, err := g.screenshot(); err != nil {
+			fmt.Fprintln(os.Stderr, "screenshot:", err)
+		} else if path != "" {
+			fmt.Println("saved screenshot:", path)
+		}
 	}
 	switch g.state {
 	case stateTitle:
