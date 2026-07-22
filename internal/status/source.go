@@ -106,7 +106,12 @@ func scriptedLine(c Cue) (Line, bool) {
 	b := band(c.Level)
 	switch b {
 	case 0:
-		return Line{}, false
+		// Diagnostic telemetry readouts surface from the very first level (they
+		// only display when debug messages are enabled); no player-facing notices
+		// yet — the drift stays silent until its later bands.
+		if text, ok := diagnosticText(c); ok {
+			return Line{Text: text, Channel: hud.Diagnostic, Frames: messageFrames}, true
+		}
 	case 1:
 		// The mid band is mostly debug-only readouts, but a couple of impactful
 		// moments leak a quiet player-facing whisper, so the drift is felt early.

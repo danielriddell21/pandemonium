@@ -11,12 +11,15 @@ func TestReporterImplementsSubscriber(_ *testing.T) {
 	var _ telemetry.Subscriber = New(hud.New(), NewTableSource())
 }
 
-func TestReporterSilentInEarlyBand(t *testing.T) {
+func TestReporterDiagnosticFromStart(t *testing.T) {
+	// From the very first level the only thing posted is a debug-only telemetry
+	// readout — never a player-facing notice (the narrator stays quiet early).
 	o := hud.New()
 	r := New(o, NewTableSource())
 	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
-	if _, _, ok := o.Active(); ok {
-		t.Error("expected silence in the early band (pure game)")
+	_, ch, ok := o.Active()
+	if !ok || ch != hud.Diagnostic {
+		t.Errorf("early band should post a Diagnostic readout, got ch=%v ok=%v", ch, ok)
 	}
 }
 
@@ -32,11 +35,13 @@ func TestReporterReachLiftsEarlyBand(t *testing.T) {
 }
 
 func TestReporterReachZeroIsPristine(t *testing.T) {
+	// Zero reach keeps the early band free of any player-facing notice; only the
+	// debug-only telemetry readout is posted.
 	o := hud.New()
 	r := New(o, NewTableSource(), WithReach(0))
 	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
-	if _, _, ok := o.Active(); ok {
-		t.Error("zero reach must not change the pristine early-band silence")
+	if _, ch, ok := o.Active(); ok && ch == hud.Notice {
+		t.Error("zero reach must not surface a player notice in the early band")
 	}
 }
 
