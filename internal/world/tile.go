@@ -1,43 +1,15 @@
 package world
 
-type TileType uint8
+import "github.com/danielriddell21/crucible/level"
+
+// TileType is the engine's spatial tile vocabulary from crucible/level.
+type TileType = level.Tile
 
 const (
-	TileFloor TileType = iota
-
-	TileWall
-
-	TileDoor
-
-	TileSpawn
-
-	TileExit
-
-	TileSwitch
+	TileFloor  = level.TileFloor
+	TileWall   = level.TileWall
+	TileDoor   = level.TileDoor
+	TileSpawn  = level.TileSpawn
+	TileExit   = level.TileExit
+	TileSwitch = level.TileSwitch
 )
-
-func (t TileType) Walkable() bool {
-	switch t {
-	case TileFloor, TileSpawn, TileExit, TileDoor:
-		return true
-	default:
-		return false
-	}
-}
-
-func (t TileType) Rune() rune {
-	switch t {
-	case TileWall:
-		return '#'
-	case TileDoor:
-		return '+'
-	case TileSpawn:
-		return 'S'
-	case TileExit:
-		return 'E'
-	case TileSwitch:
-		return '/'
-	default:
-		return '.'
-	}
-}

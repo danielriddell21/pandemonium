@@ -3,31 +3,25 @@ package render
 import (
 	"testing"
 
+	"github.com/danielriddell21/crucible/level"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
 func boxLevel(w, h int) *world.Level {
-	l := &world.Level{
-		Width:  w,
-		Height: h,
-		Tiles:  make([]world.TileType, w*h),
-		FloorH: make([]float64, w*h),
-		CeilH:  make([]float64, w*h),
-		Spawn:  world.Coord{X: 2, Y: h / 2},
-		Exit:   world.Coord{X: w - 2, Y: h - 2},
+	base := level.New(w, h, 0)
+	for i := range base.CeilH {
+		base.CeilH[i] = 1.5
 	}
-	for i := range l.CeilH {
-		l.CeilH[i] = 1.5
-	}
-	for y := range h {
-		for x := range w {
-			if x == 0 || y == 0 || x == w-1 || y == h-1 {
-				l.Tiles[y*w+x] = world.TileWall
-			}
+	for y := 1; y < h-1; y++ {
+		for x := 1; x < w-1; x++ {
+			base.Set(x, y, world.TileFloor)
 		}
 	}
-	return l
+	base.Spawn = world.Coord{X: 2, Y: h / 2}
+	base.Exit = world.Coord{X: w - 2, Y: h - 2}
+	return &world.Level{Level: base}
 }
 
 func sceneFor(l *world.Level, cfg Config) []byte {
@@ -40,7 +34,7 @@ func sceneFor(l *world.Level, cfg Config) []byte {
 	loZ := make([]float64, cfg.Width)
 	loH := make([]float64, cfg.Width)
 	loRow := make([]int, cfg.Width)
-	drawScene(fb, zbuf, loZ, loH, loRow, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
+	drawScene(fb, zbuf, loZ, loH, loRow, g, testCam(g, 0, cfg.FOV), cfg, defaultTextures(), 1)
 	return fb
 }
 
@@ -116,7 +110,7 @@ func TestSpriteStandsOnItsFloor(t *testing.T) {
 		loZ := make([]float64, cfg.Width)
 		loH := make([]float64, cfg.Width)
 		loRow := make([]int, cfg.Width)
-		cam := newCamera(0, cfg.FOV)
+		cam := testCam(g, 0, cfg.FOV)
 		drawScene(fb, zbuf, loZ, loH, loRow, g, cam, cfg, defaultTextures(), 1)
 		drawSprites(fb, zbuf, loZ, loH, loRow, g, cam, cfg, defaultTextures())
 		return fb

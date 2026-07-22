@@ -2,16 +2,18 @@ package audio
 
 import (
 	"math"
-	"math/rand/v2"
+
+	"github.com/danielriddell21/crucible/synth"
 
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
 const (
-	SampleRate      = 44100
-	ChannelCount    = 2
-	BitDepthInBytes = 2
-	bytesPerFrame   = ChannelCount * BitDepthInBytes
+	// SampleRate is the audio player's sample rate, re-exported from
+	// crucible/synth for the gui player.
+	SampleRate = synth.SampleRate
+	// bytesPerFrame is the size of one stereo 16-bit frame.
+	bytesPerFrame = synth.BytesPerFrame
 )
 
 type Cue int
@@ -49,18 +51,39 @@ func CueFor(k sim.ObservationKind) (Cue, bool) {
 func Synth() map[Cue][]byte {
 	return map[Cue][]byte{
 		CueFire:     synthFire(),
-		CueHit:      synthHit(),
-		CueDoorOpen: synthDoor(),
-		CuePickup:   synthPickup(),
-		CueSecret:   synthSecret(),
-		CueDeath:    synthDeath(),
+		CueHit:      synth.Thud(150, 0.10, 55, 3, 4),
+		CueDoorOpen: synth.Rumble(90, 40, 0.40, 5, 6),
+		CuePickup:   synth.TwoTone(660, 990, 0.08, 0.18, 22),
+		CueSecret:   synth.Arpeggio([]float64{523, 659, 784}, 0.15, 0.45, 10),
+		CueDeath:    synth.Slide(300, -360, 60, 0.6, 4),
 		CueExit:     synthExit(),
-		CueMenu:     synthMenu(),
+		CueMenu:     synth.Blip(880, 0.05, 60),
 	}
 }
 
+// synthFire is a noise-and-chirp burst with no shared shape; it stays local
+// on the crucible primitives.
+func synthFire() []byte {
+	noise := synth.Noise(1, 2)
+	return synth.Render(0.12, func(t float64) float64 {
+		e := synth.Env(t, 40)
+		chirp := synth.Sine(520-1500*t, t)
+		return (0.7*noise() + 0.5*chirp) * e
+	})
+}
+
+// synthExit is a rising perfect-fifth swell; it stays local on the crucible
+// primitives.
+func synthExit() []byte {
+	return synth.Render(0.5, func(t float64) float64 {
+		base := 0.4 * synth.Sine(330+220*t, t)
+		fifth := 0.25 * synth.Sine(495+330*t, t)
+		return (base + fifth) * synth.Attack(t, 6) * synth.Env(t, 3)
+	})
+}
+
 func Ambient() []byte {
-	return renderPCM(4.0, func(t float64) float64 {
+	return synth.Render(4.0, func(t float64) float64 {
 		lfo := 0.6 + 0.4*math.Sin(2*math.Pi*0.5*t)
 		v := 0.18*math.Sin(2*math.Pi*55*t) +
 			0.12*math.Sin(2*math.Pi*82.5*t) +
@@ -95,7 +118,7 @@ func Music(band int) []byte {
 	shimmerAmp := max(0, 1-0.3*float64(band))
 	thirdAmp := max(0, 1-0.2*float64(band))
 
-	return renderPCM(musicLoop, func(t float64) float64 {
+	return synth.Render(musicLoop, func(t float64) float64 {
 		// Amplitude pulse: an integer number of cycles over the loop.
 		pulse := 0.55 + 0.45*math.Sin(2*math.Pi*(pulses/musicLoop)*t-math.Pi/2)
 		low := 0.0
@@ -108,103 +131,5 @@ func Music(band int) []byte {
 		swell := 0.5 + 0.5*math.Sin(2*math.Pi*(1/musicLoop)*t-math.Pi/2)
 		hi := shimmerAmp * 0.05 * swell * math.Sin(2*math.Pi*shimmer*t)
 		return low*pulse + hi
-	})
-}
-
-func renderPCM(dur float64, gen func(t float64) float64) []byte {
-	n := int(dur * SampleRate)
-	buf := make([]byte, n*bytesPerFrame)
-	for i := range n {
-		v := gen(float64(i) / SampleRate)
-		if v > 1 {
-			v = 1
-		} else if v < -1 {
-			v = -1
-		}
-		s := int16(v * 32767)
-		lo, hi := byte(s), byte(s>>8)
-		off := i * bytesPerFrame
-		buf[off], buf[off+1] = lo, hi   // left
-		buf[off+2], buf[off+3] = lo, hi // right
-	}
-	return buf
-}
-
-func env(t, decay float64) float64 { return math.Exp(-t * decay) }
-
-func synthFire() []byte {
-	r := rand.New(rand.NewPCG(1, 2))
-	return renderPCM(0.12, func(t float64) float64 {
-		e := env(t, 40)
-		noise := r.Float64()*2 - 1
-		chirp := math.Sin(2 * math.Pi * (520 - 1500*t) * t)
-		return (0.7*noise + 0.5*chirp) * e
-	})
-}
-
-func synthHit() []byte {
-	r := rand.New(rand.NewPCG(3, 4))
-	return renderPCM(0.10, func(t float64) float64 {
-		e := env(t, 55)
-		thud := math.Sin(2 * math.Pi * 150 * t)
-		noise := r.Float64()*2 - 1
-		return (0.6*thud + 0.4*noise) * e
-	})
-}
-
-func synthDoor() []byte {
-	r := rand.New(rand.NewPCG(5, 6))
-	return renderPCM(0.40, func(t float64) float64 {
-		e := min(1, t*8) * env(t, 5) // brief rise, slow fall
-		rumble := math.Sin(2 * math.Pi * (90 + 40*t) * t)
-		grit := (r.Float64()*2 - 1) * 0.2
-		return (0.55*rumble + grit) * e
-	})
-}
-
-func synthPickup() []byte {
-	return renderPCM(0.18, func(t float64) float64 {
-		f := 660.0
-		local := t
-		if t > 0.08 {
-			f, local = 990.0, t-0.08
-		}
-		return 0.5 * math.Sin(2*math.Pi*f*t) * env(local, 22)
-	})
-}
-
-func synthSecret() []byte {
-	notes := []float64{523, 659, 784} // C5, E5, G5 arpeggio
-	return renderPCM(0.45, func(t float64) float64 {
-		idx := int(t / 0.15)
-		if idx >= len(notes) {
-			idx = len(notes) - 1
-		}
-		local := t - float64(idx)*0.15
-		return 0.45 * math.Sin(2*math.Pi*notes[idx]*t) * env(local, 10)
-	})
-}
-
-func synthDeath() []byte {
-	return renderPCM(0.6, func(t float64) float64 {
-		f := 300 - 360*t // slides down toward ~80Hz
-		if f < 60 {
-			f = 60
-		}
-		return 0.5 * math.Sin(2*math.Pi*f*t) * env(t, 4)
-	})
-}
-
-func synthMenu() []byte {
-	return renderPCM(0.05, func(t float64) float64 {
-		return 0.4 * math.Sin(2*math.Pi*880*t) * env(t, 60)
-	})
-}
-
-func synthExit() []byte {
-	return renderPCM(0.5, func(t float64) float64 {
-		base := 0.4 * math.Sin(2*math.Pi*(330+220*t)*t)
-		fifth := 0.25 * math.Sin(2*math.Pi*(495+330*t)*t)
-		return (base + fifth) * min(1, t*6) * env(t, 3)
 	})
 }

@@ -1,10 +1,9 @@
 package gui
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	"github.com/danielriddell21/crucible/store"
 )
 
 type Settings struct {
@@ -52,11 +51,11 @@ func (s Settings) clamped() Settings {
 func clampRange(v, lo, hi float64) float64 { return max(lo, min(hi, v)) }
 
 func settingsPath() (string, error) {
-	dir, err := os.UserConfigDir()
+	path, err := store.Path("pandemonium", "settings.json")
 	if err != nil {
-		return "", fmt.Errorf("locate user config dir: %w", err)
+		return "", fmt.Errorf("locate settings path: %w", err)
 	}
-	return filepath.Join(dir, "pandemonium", "settings.json"), nil
+	return path, nil
 }
 
 func LoadSettings() Settings {
@@ -68,15 +67,7 @@ func LoadSettings() Settings {
 }
 
 func loadSettingsFrom(path string) Settings {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return DefaultSettings()
-	}
-	s := DefaultSettings()
-	if err := json.Unmarshal(data, &s); err != nil {
-		return DefaultSettings()
-	}
-	return s.clamped()
+	return store.Load(path, DefaultSettings()).clamped()
 }
 
 func (s Settings) Save() error {
@@ -88,15 +79,8 @@ func (s Settings) Save() error {
 }
 
 func (s Settings) saveTo(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return fmt.Errorf("create config dir: %w", err)
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal settings: %w", err)
-	}
-	if err := os.WriteFile(path, append(data, '\n'), 0o600); err != nil {
-		return fmt.Errorf("write settings: %w", err)
+	if err := store.Save(path, s); err != nil {
+		return fmt.Errorf("save settings: %w", err)
 	}
 	return nil
 }

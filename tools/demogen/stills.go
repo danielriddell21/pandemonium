@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/danielriddell21/crucible/level"
+
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/world"
@@ -52,29 +54,17 @@ func recordStills() error {
 // far wall — a clean backdrop for posing demons, items and weapons without any
 // generated clutter. Interior cells are open floor (the tile zero value).
 func arena(w, h int) *world.Level {
-	l := &world.Level{
-		Width: w, Height: h,
-		Tiles:   make([]world.TileType, w*h),
-		FloorH:  make([]float64, w*h),
-		CeilH:   make([]float64, w*h),
-		Light:   make([]float64, w*h),
-		Theme:   make([]uint8, w*h),
-		WallTop: make([]float64, w*h),
-		Spawn:   world.Coord{X: w / 2, Y: h - 2},
-		Exit:    world.Coord{X: w / 2, Y: 1},
-	}
-	for i := range l.Tiles {
-		l.CeilH[i] = 1
-		l.Light[i] = 1
-	}
-	for y := range h {
-		for x := range w {
-			if x == 0 || y == 0 || x == w-1 || y == h-1 {
-				l.Tiles[y*w+x] = world.TileWall
-			}
+	base := level.New(w, h, 0)
+	base.Spawn = world.Coord{X: w / 2, Y: h - 2}
+	base.Exit = world.Coord{X: w / 2, Y: 1}
+	// level.New starts as solid rock; carve the interior open, leaving the
+	// one-cell border wall.
+	for y := 1; y < h-1; y++ {
+		for x := 1; x < w-1; x++ {
+			base.Set(x, y, world.TileFloor)
 		}
 	}
-	return l
+	return &world.Level{Level: base}
 }
 
 // arenaGame builds an arena simulation stripped of the demons, items and

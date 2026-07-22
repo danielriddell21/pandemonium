@@ -1,6 +1,9 @@
 package status
 
-import "github.com/danielriddell21/pandemonium/internal/hud"
+import (
+	"github.com/danielriddell21/crucible/hud"
+	cstatus "github.com/danielriddell21/crucible/status"
+)
 
 type CueKind uint8
 
@@ -36,15 +39,9 @@ type Cue struct {
 	Arrival bool
 }
 
-type Line struct {
-	Text    string
-	Channel hud.Channel
-	Frames  int
-}
-
-type Source interface {
-	Request(cue Cue, emit func(Line))
-}
+// Line is one status message ready for the overlay, shared with the family
+// through crucible/status.
+type Line = cstatus.Line
 
 const messageFrames = 150
 
@@ -52,7 +49,7 @@ const deepestBand = 4
 
 type tableSource struct{}
 
-func NewTableSource() Source { return tableSource{} }
+func NewTableSource() cstatus.Source[Cue] { return tableSource{} }
 
 func band(level int) int {
 	switch {

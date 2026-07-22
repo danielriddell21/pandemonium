@@ -3,7 +3,12 @@ package world
 import (
 	"math"
 	"testing"
+
+	"github.com/danielriddell21/crucible/level"
 )
+
+// stepHeight is the world-unit rise of one height level the engine assigns.
+var stepHeight = level.DefaultHeightsConfig().Step
 
 func ledgeCells(l *Level) map[Coord]bool {
 	out := make(map[Coord]bool)
@@ -24,8 +29,8 @@ func TestHeightsKeepSingleStepsAndHeadroom(t *testing.T) {
 			t.Fatal(err)
 		}
 		ledges := ledgeCells(l)
-		for y := range l.Height {
-			for x := range l.Width {
+		for y := range l.H {
+			for x := range l.W {
 				c := Coord{X: x, Y: y}
 				if !l.At(x, y).Walkable() {
 					continue
@@ -42,7 +47,7 @@ func TestHeightsKeepSingleStepsAndHeadroom(t *testing.T) {
 						continue
 					}
 					d := math.Abs(l.Floor(x, y) - l.Floor(n.X, n.Y))
-					if d > StepHeight+1e-9 {
+					if d > stepHeight+1e-9 {
 						t.Fatalf("seed %d: floors %v->%v jump %.2f (> one step)", seed, c, n, d)
 					}
 				}
@@ -69,7 +74,7 @@ func TestExitStandsOnDais(t *testing.T) {
 			d := ef - l.Floor(n.X, n.Y)
 			if d > 1e-9 {
 				raised = true
-				if d > StepHeight+1e-9 {
+				if d > stepHeight+1e-9 {
 					t.Fatalf("seed %d: dais ring %v is %.2f below the exit (> one step)", seed, n, d)
 				}
 			}

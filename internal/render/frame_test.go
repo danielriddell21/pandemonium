@@ -92,14 +92,3 @@ func TestIntermissionRenders(t *testing.T) {
 		}
 	}
 }
-
-func TestMenuRenders(t *testing.T) {
-	r := NewRenderer(DefaultConfig())
-	items := []MenuItem{{Label: "START"}, {Label: "QUIT"}}
-	fb := r.Menu("PANDEMONIUM", "1 run", items, 0, "Enter")
-	for i := 3; i < len(fb); i += 4 {
-		if fb[i] != 255 {
-			t.Fatalf("menu pixel %d not opaque", i/4)
-		}
-	}
-}

@@ -1,5 +1,7 @@
 package world
 
+import "github.com/danielriddell21/crucible/worldgen"
+
 type HazardKind uint8
 
 const (
@@ -18,8 +20,8 @@ const (
 	lavaRate   = 16.0
 )
 
-func placeHazards(l *Level, g *rng) {
-	if !g.chance(0.5) {
+func placeHazards(l *Level, g *worldgen.RNG) {
+	if !g.Chance(0.5) {
 		return // only some levels carry a pool
 	}
 	seeds := hazardSeeds(l)
@@ -29,16 +31,16 @@ func placeHazards(l *Level, g *rng) {
 
 	// Lava turns up on the minority of hazard levels; it is the nastier pool.
 	kind, rate := HazardNukage, float64(nukageRate)
-	if g.chance(0.35) {
+	if g.Chance(0.35) {
 		kind, rate = HazardLava, lavaRate
 	}
-	floodHazard(l, seeds[g.intn(len(seeds))], kind, rate)
+	floodHazard(l, seeds[g.IntN(len(seeds))], kind, rate)
 }
 
 func hazardSeeds(l *Level) []Coord {
 	var seeds []Coord
-	for y := range l.Height {
-		for x := range l.Width {
+	for y := range l.H {
+		for x := range l.W {
 			c := Coord{X: x, Y: y}
 			if l.At(x, y) == TileFloor && l.Floor(x, y) == 0 && c != l.Exit && cheby(c, l.Spawn) >= 4 {
 				seeds = append(seeds, c)

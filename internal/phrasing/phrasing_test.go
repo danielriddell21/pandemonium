@@ -1,13 +1,12 @@
 package phrasing
 
 import (
-	"context"
 	"strings"
 	"testing"
 
-	"github.com/danielriddell21/narrata"
+	"github.com/danielriddell21/crucible/hud"
+	"github.com/danielriddell21/crucible/narrate"
 
-	"github.com/danielriddell21/pandemonium/internal/hud"
 	"github.com/danielriddell21/pandemonium/internal/status"
 )
 
@@ -34,7 +33,7 @@ func TestEventForMapping(t *testing.T) {
 	}
 }
 
-func newSource(t *testing.T) *Source {
+func newSource(t *testing.T) *narrate.Source[status.Cue] {
 	t.Helper()
 	s, err := New()
 	if err != nil {
@@ -56,15 +55,6 @@ func TestNoticeIsGenerated(t *testing.T) {
 	}
 }
 
-func TestGenerateFallsBack(t *testing.T) {
-	s := newSource(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	if text, ok := s.generate(ctx, status.Cue{Kind: status.CueExit, Level: 6}); ok {
-		t.Errorf("cancelled context should yield no line, got %q", text)
-	}
-}
-
 func TestDiagnosticNotGenerated(t *testing.T) {
 	s := newSource(t)
 	var line status.Line
@@ -80,25 +70,5 @@ func TestSilentCueStaysSilent(t *testing.T) {
 	s.Request(status.Cue{Kind: status.CueFork, Level: 10}, func(status.Line) { emitted = true })
 	if emitted {
 		t.Error("a fork is silent to the player; nothing should be emitted")
-	}
-}
-
-func TestEngineNarratesEvent(t *testing.T) {
-	engine, err := narrata.New(narrata.Config{})
-	if err != nil {
-		t.Fatalf("narrata.New: %v", err)
-	}
-	defer func() { _ = engine.Close() }()
-
-	res, err := engine.Generate(context.Background(), narrata.Request{
-		Event:  eventFor(status.Cue{Kind: status.CueExit, Level: 6}),
-		Data:   dataFor(status.Cue{Kind: status.CueExit, Level: 6}),
-		Output: narrata.OutputText,
-	})
-	if err != nil {
-		t.Fatalf("Generate: %v", err)
-	}
-	if res.Silent || res.Text == "" {
-		t.Errorf("expected a non-empty line, got %q (silent=%v)", res.Text, res.Silent)
 	}
 }

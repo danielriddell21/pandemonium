@@ -54,8 +54,8 @@ func TestRemoteSwitchOpensDoor(t *testing.T) {
 	l := terrainLevel(8, 3)
 	door := world.Coord{X: 5, Y: 1}
 	sw := world.Coord{X: 3, Y: 0} // a wall cell on the top border
-	l.Tiles[door.Y*l.Width+door.X] = world.TileDoor
-	l.Tiles[sw.Y*l.Width+sw.X] = world.TileSwitch
+	l.Tiles[door.Y*l.W+door.X] = world.TileDoor
+	l.Tiles[sw.Y*l.W+sw.X] = world.TileSwitch
 	l.Switches = map[world.Coord]world.Switch{sw: {Action: world.SwitchDoor, Target: door}}
 	g := New(l)
 	g.Entities = nil

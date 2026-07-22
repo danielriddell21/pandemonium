@@ -3,38 +3,28 @@ package render
 import (
 	"testing"
 
+	"github.com/danielriddell21/crucible/level"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
 func twoRoomLevel(lowWall bool) *world.Level {
 	const w, h = 12, 8
-	l := &world.Level{
-		Width: w, Height: h,
-		Tiles:   make([]world.TileType, w*h),
-		FloorH:  make([]float64, w*h),
-		CeilH:   make([]float64, w*h),
-		Light:   make([]float64, w*h),
-		Theme:   make([]uint8, w*h),
-		WallTop: make([]float64, w*h),
-		Spawn:   world.Coord{X: 2, Y: 4},
-		Exit:    world.Coord{X: 9, Y: 4},
-	}
-	for i := range l.CeilH {
-		l.CeilH[i] = 1
-		l.Light[i] = 1
-	}
-	for y := range h {
-		for x := range w {
-			if x == 0 || y == 0 || x == w-1 || y == h-1 || x == 5 {
-				l.Tiles[y*w+x] = world.TileWall
+	base := level.New(w, h, 0)
+	for y := 1; y < h-1; y++ {
+		for x := 1; x < w-1; x++ {
+			if x != 5 {
+				base.Set(x, y, world.TileFloor)
 			}
 		}
 	}
+	base.Spawn = world.Coord{X: 2, Y: 4}
+	base.Exit = world.Coord{X: 9, Y: 4}
 	if lowWall {
-		l.WallTop[4*w+5] = 0.4
+		base.WallTopH[4*w+5] = 0.4
 	}
-	return l
+	return &world.Level{Level: base}
 }
 
 func renderEyeLine(l *world.Level) []byte {
@@ -48,7 +38,7 @@ func renderEyeLine(l *world.Level) []byte {
 	loZ := make([]float64, cfg.Width)
 	loH := make([]float64, cfg.Width)
 	loRow := make([]int, cfg.Width)
-	drawScene(fb, zb, loZ, loH, loRow, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
+	drawScene(fb, zb, loZ, loH, loRow, g, testCam(g, 0, cfg.FOV), cfg, defaultTextures(), 1)
 	return fb
 }
 

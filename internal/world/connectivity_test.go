@@ -17,17 +17,17 @@ func build(t *testing.T, rows []string) *Level {
 		for x, r := range row {
 			switch r {
 			case '#':
-				l.set(x, y, TileWall)
+				l.Set(x, y, TileWall)
 			case '.':
-				l.set(x, y, TileFloor)
+				l.Set(x, y, TileFloor)
 			case 'S':
-				l.set(x, y, TileSpawn)
-				l.Spawn = Coord{x, y}
+				l.Set(x, y, TileSpawn)
+				l.Spawn = Coord{X: x, Y: y}
 			case 'E':
-				l.set(x, y, TileExit)
-				l.Exit = Coord{x, y}
+				l.Set(x, y, TileExit)
+				l.Exit = Coord{X: x, Y: y}
 			case '+':
-				l.set(x, y, TileDoor)
+				l.Set(x, y, TileDoor)
 			default:
 				t.Fatalf("unknown rune %q", r)
 			}

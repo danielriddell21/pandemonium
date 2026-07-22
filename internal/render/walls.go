@@ -1,6 +1,10 @@
 package render
 
-import "image/color"
+import (
+	"image/color"
+
+	"github.com/danielriddell21/crucible/paint"
+)
 
 const (
 	shadeDecay  = 0.18
@@ -14,12 +18,7 @@ func shade(c color.RGBA, dist float64, side int) color.RGBA {
 		f *= sideFaceDim
 	}
 	f = max(shadeFloor, min(1, f))
-	return color.RGBA{
-		R: uint8(float64(c.R) * f),
-		G: uint8(float64(c.G) * f),
-		B: uint8(float64(c.B) * f),
-		A: 255,
-	}
+	return paint.Scale(c, f)
 }
 
 func fillRows(fb []byte, w, y0, y1 int, c color.RGBA) {

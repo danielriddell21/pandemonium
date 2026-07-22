@@ -44,7 +44,7 @@ func TestArenaIsOneOpenReachableRoom(t *testing.T) {
 	if !hasMega {
 		t.Error("arena should hold a megasphere cache")
 	}
-	if !l.SkyAt(l.Width/2, l.Height/2) {
+	if !l.SkyAt(l.W/2, l.H/2) {
 		t.Error("arena should be open to the sky")
 	}
 }

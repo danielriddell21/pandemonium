@@ -8,7 +8,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
-	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/crucible/canvas"
+	"github.com/danielriddell21/crucible/hud"
+	"github.com/danielriddell21/crucible/menu"
+
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/sim/bot"
@@ -57,9 +60,10 @@ type Game struct {
 
 	settings     Settings
 	records      *RecordKeeper
-	titleMenu    *menuModel
-	pauseMenu    *menuModel
-	settingsMenu *menuModel
+	canvas       *canvas.Canvas
+	titleMenu    *menu.Menu
+	pauseMenu    *menu.Menu
+	settingsMenu *menu.Menu
 
 	attractGen   func() *sim.Game
 	attract      *sim.Game
@@ -103,7 +107,11 @@ func (g *Game) titleSubtitle() string {
 }
 
 func New(start, next NextFunc, renderer *render.Renderer, opts ...Option) *Game {
-	game := &Game{start: start, next: next, renderer: renderer, state: stateTitle, settings: DefaultSettings()}
+	cfg := renderer.Config()
+	game := &Game{
+		start: start, next: next, renderer: renderer, state: stateTitle,
+		settings: DefaultSettings(), canvas: canvas.New(cfg.Width, cfg.Height),
+	}
 	for _, opt := range opts {
 		opt(game)
 	}
@@ -194,21 +202,6 @@ func (g *Game) menuNav() nav {
 	return n
 }
 
-func (m *menuModel) drive(n nav) {
-	switch {
-	case n.up:
-		m.move(-1)
-	case n.down:
-		m.move(1)
-	case n.left:
-		m.adjust(-1)
-	case n.right:
-		m.adjust(1)
-	case n.enter:
-		m.activate()
-	}
-}
-
 func (g *Game) updateTitle() {
 	n := g.menuNav()
 	if n.any() {
@@ -221,7 +214,7 @@ func (g *Game) updateTitle() {
 		g.quit = true
 		return
 	}
-	g.titleMenu.drive(n)
+	g.titleMenu.Update(n.input())
 }
 
 func (g *Game) startAttract() {
@@ -251,7 +244,7 @@ func (g *Game) updatePaused() {
 		g.resume()
 		return
 	}
-	g.pauseMenu.drive(n)
+	g.pauseMenu.Update(n.input())
 }
 
 func (g *Game) resume() {
@@ -265,7 +258,7 @@ func (g *Game) updateSettings() {
 		g.closeSettings()
 		return
 	}
-	g.settingsMenu.drive(n)
+	g.settingsMenu.Update(n.input())
 }
 
 func (g *Game) closeSettings() {
@@ -327,116 +320,81 @@ func (g *Game) updatePlaying() {
 }
 
 func (g *Game) buildMenus() {
-	g.titleMenu = &menuModel{entries: []menuEntry{
-		{label: "START", activate: func() {
-			g.sim = g.start() // build the first level now, with the chosen difficulty
-			g.state = statePlaying
-			g.haveMouse = false
-		}},
-		{label: "SETTINGS", activate: func() {
-			g.menuFrom = stateTitle
-			g.state = stateSettings
-		}},
-		{label: "QUIT", activate: func() { g.quit = true }},
-	}}
+	g.titleMenu = &menu.Menu{
+		Title:    "PANDEMONIUM",
+		Subtitle: []string{g.titleSubtitle(), "", "up/down select   enter confirm"},
+		Items: []menu.Item{
+			{Label: label("START"), Action: func() {
+				g.sim = g.start() // build the first level now, with the chosen difficulty
+				g.state = statePlaying
+				g.haveMouse = false
+			}},
+			{Label: label("SETTINGS"), Action: func() { g.menuFrom = stateTitle; g.state = stateSettings }},
+			{Label: label("QUIT"), Action: func() { g.quit = true }},
+		},
+	}
 
-	g.pauseMenu = &menuModel{entries: []menuEntry{
-		{label: "RESUME", activate: g.resume},
-		{label: "SETTINGS", activate: func() {
-			g.menuFrom = statePaused
-			g.state = stateSettings
-		}},
-		{label: "QUIT", activate: func() { g.quit = true }},
-	}}
+	g.pauseMenu = &menu.Menu{
+		Title:    "PAUSED",
+		Subtitle: []string{"esc resumes"},
+		Items: []menu.Item{
+			{Label: label("RESUME"), Action: g.resume},
+			{Label: label("SETTINGS"), Action: func() { g.menuFrom = statePaused; g.state = stateSettings }},
+			{Label: label("QUIT"), Action: func() { g.quit = true }},
+		},
+	}
 
-	g.settingsMenu = &menuModel{entries: []menuEntry{
-		{
-			label: "DIFFICULTY",
-			value: func() string { return sim.Skill(g.settings.Difficulty).String() },
-			adjust: func(dir int) {
-				g.settings.Difficulty = (g.settings.Difficulty + dir + skillCount) % skillCount
-				g.applySettings()
-			},
+	g.settingsMenu = &menu.Menu{
+		Title:    "SETTINGS",
+		Subtitle: []string{"left/right adjust   esc back"},
+		Items: []menu.Item{
+			adjustRow("DIFFICULTY", func() string { return sim.Skill(g.settings.Difficulty).String() },
+				func(dir int) {
+					g.settings.Difficulty = (g.settings.Difficulty + dir + skillCount) % skillCount
+					g.applySettings()
+				}),
+			adjustRow("SOUND", func() string { return onOff(g.settings.Sound) },
+				func(int) { g.settings.Sound = !g.settings.Sound; g.applySettings() }),
+			adjustRow("SFX VOLUME", func() string { return percent(g.settings.SFXVolume) },
+				func(dir int) {
+					g.settings.SFXVolume = clampRange(g.settings.SFXVolume+0.1*float64(dir), 0, 1)
+					g.applySettings()
+				}),
+			adjustRow("AMBIENT VOLUME", func() string { return percent(g.settings.AmbientVolume) },
+				func(dir int) {
+					g.settings.AmbientVolume = clampRange(g.settings.AmbientVolume+0.1*float64(dir), 0, 1)
+					g.applySettings()
+				}),
+			adjustRow("MOUSE SENSITIVITY", func() string { return times(g.settings.Sensitivity) },
+				func(dir int) {
+					g.settings.Sensitivity = clampRange(g.settings.Sensitivity+0.2*float64(dir), 0.2, 3)
+				}),
+			adjustRow("FIELD OF VIEW", func() string { return degrees(g.settings.FOV) },
+				func(dir int) {
+					step := 5 * math.Pi / 180
+					g.settings.FOV = clampRange(g.settings.FOV+step*float64(dir), 0.6, 1.8)
+					g.applySettings()
+				}),
+			adjustRow("CROSSHAIR", func() string { return onOff(g.settings.Crosshair) },
+				func(int) { g.settings.Crosshair = !g.settings.Crosshair; g.applySettings() }),
+			adjustRow("DEBUG MESSAGES", func() string { return onOff(g.settings.Debug) },
+				func(int) { g.settings.Debug = !g.settings.Debug; g.applySettings() }),
+			adjustRow("FULLSCREEN", func() string { return onOff(g.settings.Fullscreen) },
+				func(int) { g.settings.Fullscreen = !g.settings.Fullscreen; g.applySettings() }),
+			{Label: label("BACK"), Action: g.closeSettings},
 		},
-		{
-			label: "SOUND",
-			value: func() string { return onOff(g.settings.Sound) },
-			adjust: func(int) {
-				g.settings.Sound = !g.settings.Sound
-				g.applySettings()
-			},
-		},
-		{
-			label: "SFX VOLUME",
-			value: func() string { return percent(g.settings.SFXVolume) },
-			adjust: func(dir int) {
-				g.settings.SFXVolume = clampRange(g.settings.SFXVolume+0.1*float64(dir), 0, 1)
-				g.applySettings()
-			},
-		},
-		{
-			label: "AMBIENT VOLUME",
-			value: func() string { return percent(g.settings.AmbientVolume) },
-			adjust: func(dir int) {
-				g.settings.AmbientVolume = clampRange(g.settings.AmbientVolume+0.1*float64(dir), 0, 1)
-				g.applySettings()
-			},
-		},
-		{
-			label: "MOUSE SENSITIVITY",
-			value: func() string { return times(g.settings.Sensitivity) },
-			adjust: func(dir int) {
-				g.settings.Sensitivity = clampRange(g.settings.Sensitivity+0.2*float64(dir), 0.2, 3)
-			},
-		},
-		{
-			label: "FIELD OF VIEW",
-			value: func() string { return degrees(g.settings.FOV) },
-			adjust: func(dir int) {
-				step := 5 * math.Pi / 180
-				g.settings.FOV = clampRange(g.settings.FOV+step*float64(dir), 0.6, 1.8)
-				g.applySettings()
-			},
-		},
-		{
-			label: "CROSSHAIR",
-			value: func() string { return onOff(g.settings.Crosshair) },
-			adjust: func(int) {
-				g.settings.Crosshair = !g.settings.Crosshair
-				g.applySettings()
-			},
-		},
-		{
-			label: "DEBUG MESSAGES",
-			value: func() string { return onOff(g.settings.Debug) },
-			adjust: func(int) {
-				g.settings.Debug = !g.settings.Debug
-				g.applySettings()
-			},
-		},
-		{
-			label: "FULLSCREEN",
-			value: func() string { return onOff(g.settings.Fullscreen) },
-			adjust: func(int) {
-				g.settings.Fullscreen = !g.settings.Fullscreen
-				g.applySettings()
-			},
-		},
-		{label: "BACK", activate: func() { g.closeSettings() }},
-	}}
+	}
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case stateTitle:
-		screen.WritePixels(g.renderer.Menu("PANDEMONIUM", g.titleSubtitle(), g.titleMenu.items(), g.titleMenu.sel,
-			"Up/Down select   Enter confirm"))
+		g.titleMenu.Subtitle[0] = g.titleSubtitle() // keep the records line live
+		screen.WritePixels(g.drawMenu(g.titleMenu))
 	case statePaused:
-		screen.WritePixels(g.renderer.Menu("PAUSED", "", g.pauseMenu.items(), g.pauseMenu.sel,
-			"Esc resumes"))
+		screen.WritePixels(g.drawMenu(g.pauseMenu))
 	case stateSettings:
-		screen.WritePixels(g.renderer.Menu("SETTINGS", "", g.settingsMenu.items(), g.settingsMenu.sel,
-			"Left/Right adjust   Esc back"))
+		screen.WritePixels(g.drawMenu(g.settingsMenu))
 	case stateAttract:
 		screen.WritePixels(g.renderer.Frame(g.attract))
 	case stateIntermission:
@@ -444,6 +402,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	default:
 		screen.WritePixels(g.renderer.Frame(g.sim))
 	}
+}
+
+// drawMenu clears the canvas and renders a menu onto it, returning the
+// pixels for the screen.
+func (g *Game) drawMenu(m *menu.Menu) []byte {
+	g.canvas.Fill(menuBG)
+	m.Draw(g.canvas, menu.DefaultTheme())
+	return g.canvas.Pixels()
 }
 
 func (g *Game) Layout(_, _ int) (int, int) {

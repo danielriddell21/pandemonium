@@ -27,7 +27,7 @@ func FuzzGenerate(f *testing.F) {
 		}
 
 		if !l.InBounds(l.Spawn.X, l.Spawn.Y) || !l.InBounds(l.Exit.X, l.Exit.Y) {
-			t.Fatalf("spawn %v or exit %v out of bounds (%dx%d)", l.Spawn, l.Exit, l.Width, l.Height)
+			t.Fatalf("spawn %v or exit %v out of bounds (%dx%d)", l.Spawn, l.Exit, l.W, l.H)
 		}
 		if !reachable(l, l.Spawn, l.Exit, blocksWalls(l)) {
 			t.Fatal("exit not reachable from spawn once doors are open")
@@ -36,8 +36,8 @@ func FuzzGenerate(f *testing.F) {
 			t.Fatal("a keycard is locked behind the door it opens")
 		}
 		const eps = 1e-9
-		for y := range l.Height {
-			for x := range l.Width {
+		for y := range l.H {
+			for x := range l.W {
 				if l.At(x, y).Walkable() && l.Ceil(x, y)-l.Floor(x, y) < MinHeadroom-eps {
 					t.Fatalf("cell %d,%d lacks headroom: floor %.2f ceil %.2f", x, y, l.Floor(x, y), l.Ceil(x, y))
 				}

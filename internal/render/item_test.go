@@ -36,7 +36,7 @@ func TestItemBillboardIsDrawn(t *testing.T) {
 	}
 
 	tex := defaultTextures()
-	cam := newCamera(g.Player.Angle, cfg.FOV)
+	cam := testCam(g, g.Player.Angle, cfg.FOV)
 
 	// Render the scene, then draw sprites onto a copy: the item must change pixels.
 	base := make([]byte, cfg.Width*cfg.Height*4)

@@ -1,8 +1,12 @@
 package world
 
-import "slices"
+import (
+	"slices"
 
-func placeKeyGate(l *Level, _ *rng) {
+	"github.com/danielriddell21/crucible/worldgen"
+)
+
+func placeKeyGate(l *Level, _ *worldgen.RNG) {
 	path := pathToExit(l)
 	if len(path) == 0 {
 		return
@@ -28,7 +32,7 @@ func placeKeyGate(l *Level, _ *rng) {
 		if l.Locks == nil {
 			l.Locks = make(map[Coord]ItemKind)
 		}
-		l.set(neck.X, neck.Y, TileDoor)
+		l.Set(neck.X, neck.Y, TileDoor)
 		l.Locks[neck] = ItemKeyRed
 		l.Items = append(l.Items, Item{Kind: ItemKeyRed, At: keyCell})
 		return
@@ -41,10 +45,10 @@ func lockedSolid(l *Level, lock Coord) solidFn {
 
 func pathToExit(l *Level) []Coord {
 	solid := blocksWalls(l)
-	prev := make([]Coord, l.Width*l.Height)
-	seen := make([]bool, l.Width*l.Height)
+	prev := make([]Coord, l.W*l.H)
+	seen := make([]bool, l.W*l.H)
 	queue := []Coord{l.Spawn}
-	seen[l.Spawn.Y*l.Width+l.Spawn.X] = true
+	seen[l.Spawn.Y*l.W+l.Spawn.X] = true
 	for len(queue) > 0 {
 		c := queue[0]
 		queue = queue[1:]
@@ -55,7 +59,7 @@ func pathToExit(l *Level) []Coord {
 			if !l.InBounds(n.X, n.Y) || solid(n) {
 				continue
 			}
-			idx := n.Y*l.Width + n.X
+			idx := n.Y*l.W + n.X
 			if seen[idx] {
 				continue
 			}
@@ -69,7 +73,7 @@ func pathToExit(l *Level) []Coord {
 
 func tracePath(prev []Coord, l *Level, dst Coord) []Coord {
 	var rev []Coord
-	for c := dst; ; c = prev[c.Y*l.Width+c.X] {
+	for c := dst; ; c = prev[c.Y*l.W+c.X] {
 		rev = append(rev, c)
 		if c == l.Spawn {
 			break
@@ -90,10 +94,10 @@ func isNeck(l *Level, c Coord) bool {
 }
 
 func farthestReachableFloor(l *Level, solid solidFn) (Coord, bool) {
-	dist := floodDist(l, l.Spawn, solid)
+	dist := worldgen.FloodDist(l.W, l.H, l.Spawn, solid, climbable(l)).D
 	best, bestD := Coord{}, -1
-	for y := range l.Height {
-		for x := range l.Width {
+	for y := range l.H {
+		for x := range l.W {
 			if l.At(x, y) != TileFloor {
 				continue
 			}
@@ -101,7 +105,7 @@ func farthestReachableFloor(l *Level, solid solidFn) (Coord, bool) {
 			if c == l.Spawn || c == l.Exit || cheby(c, l.Spawn) < 3 {
 				continue
 			}
-			if d := dist[y*l.Width+x]; d > bestD {
+			if d := dist[y*l.W+x]; d > bestD {
 				best, bestD = c, d
 			}
 		}

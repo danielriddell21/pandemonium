@@ -4,36 +4,30 @@ import (
 	"math"
 	"testing"
 
+	"github.com/danielriddell21/crucible/level"
+
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
 func terrainLevel(w, h int) *world.Level {
-	l := &world.Level{
-		Width:  w,
-		Height: h,
-		Tiles:  make([]world.TileType, w*h),
-		FloorH: make([]float64, w*h),
-		CeilH:  make([]float64, w*h),
-		Spawn:  world.Coord{X: 1, Y: 1},
-		Exit:   world.Coord{X: w - 2, Y: h - 2},
+	base := level.New(w, h, 0)
+	for i := range base.CeilH {
+		base.CeilH[i] = 2 // generous headroom everywhere
 	}
-	for i := range l.CeilH {
-		l.CeilH[i] = 2 // generous headroom everywhere
-	}
-	for y := range h {
-		for x := range w {
-			if x == 0 || y == 0 || x == w-1 || y == h-1 {
-				l.Tiles[y*w+x] = world.TileWall
-			}
+	for y := 1; y < h-1; y++ {
+		for x := 1; x < w-1; x++ {
+			base.Set(x, y, world.TileFloor)
 		}
 	}
-	l.Tiles[l.Spawn.Y*w+l.Spawn.X] = world.TileSpawn
-	l.Tiles[l.Exit.Y*w+l.Exit.X] = world.TileExit
-	return l
+	base.Spawn = world.Coord{X: 1, Y: 1}
+	base.Exit = world.Coord{X: w - 2, Y: h - 2}
+	base.Set(base.Spawn.X, base.Spawn.Y, world.TileSpawn)
+	base.Set(base.Exit.X, base.Exit.Y, world.TileExit)
+	return &world.Level{Level: base}
 }
 
 func setFloor(l *world.Level, x, y int, f float64) {
-	l.FloorH[y*l.Width+x] = f
+	l.FloorH[y*l.W+x] = f
 }
 
 func TestClimbsOneStepButNotTwo(t *testing.T) {

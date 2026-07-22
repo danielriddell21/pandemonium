@@ -91,8 +91,8 @@ func TestGenerateNormalizesTinyDimensions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l.Width < minDimension || l.Height < minDimension {
-		t.Errorf("tiny dimensions not normalized: got %dx%d", l.Width, l.Height)
+	if l.W < minDimension || l.H < minDimension {
+		t.Errorf("tiny dimensions not normalized: got %dx%d", l.W, l.H)
 	}
 }
 

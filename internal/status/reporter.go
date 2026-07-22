@@ -1,7 +1,9 @@
 package status
 
 import (
-	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/crucible/hud"
+	cstatus "github.com/danielriddell21/crucible/status"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 	"github.com/danielriddell21/pandemonium/internal/world"
@@ -11,7 +13,7 @@ const rushThreshold = 0.5
 
 type Reporter struct {
 	overlay *hud.Overlay
-	src     Source
+	src     cstatus.Source[Cue]
 	profile telemetry.RunProfile
 
 	reach   int
@@ -33,7 +35,7 @@ func WithReach(level int) Option {
 	}
 }
 
-func New(overlay *hud.Overlay, src Source, opts ...Option) *Reporter {
+func New(overlay *hud.Overlay, src cstatus.Source[Cue], opts ...Option) *Reporter {
 	r := &Reporter{overlay: overlay, src: src}
 	for _, opt := range opts {
 		opt(r)
@@ -58,7 +60,7 @@ func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 			return
 		}
 	}
-	r.src.Request(cue, r.emit)
+	r.src.Request(cue, cstatus.Emit(r.overlay))
 }
 
 func (r *Reporter) enrich(c *Cue) {
@@ -71,10 +73,6 @@ func (r *Reporter) enrich(c *Cue) {
 	if r.reach > c.Level {
 		c.Level = r.reach
 	}
-}
-
-func (r *Reporter) emit(line Line) {
-	r.overlay.Post(line.Text, line.Frames, line.Channel)
 }
 
 func (r *Reporter) OnPathSummary(telemetry.PathSummary) {}

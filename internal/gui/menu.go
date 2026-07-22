@@ -2,63 +2,35 @@ package gui
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 
-	"github.com/danielriddell21/pandemonium/internal/render"
+	"github.com/danielriddell21/crucible/menu"
 )
 
-type menuEntry struct {
-	label    string
-	value    func() string
-	adjust   func(dir int)
-	activate func()
-}
+// menuBG is the backdrop the menu screens are cleared to before a menu is
+// drawn over it; crucible's menu.Theme covers the text colours.
+var menuBG = color.RGBA{R: 16, G: 12, B: 14, A: 255}
 
-type menuModel struct {
-	entries []menuEntry
-	sel     int
-}
+// label wraps a static string as a menu item label.
+func label(s string) func() string { return func() string { return s } }
 
-func (m *menuModel) move(dy int) {
-	n := len(m.entries)
-	if n == 0 {
-		return
-	}
-	m.sel = ((m.sel+dy)%n + n) % n
-}
-
-func (m *menuModel) adjust(dir int) {
-	if e := m.entries[m.sel]; e.adjust != nil {
-		e.adjust(dir)
+// adjustRow builds a settings row whose live value sits in a right-hand
+// column beside the padded label.
+func adjustRow(name string, value func() string, adjust func(int)) menu.Item {
+	return menu.Item{
+		Label:  func() string { return fmt.Sprintf("%-18s%s", name, value()) },
+		Adjust: adjust,
 	}
 }
 
-func (m *menuModel) activate() {
-	e := m.entries[m.sel]
-	switch {
-	case e.activate != nil:
-		e.activate()
-	case e.adjust != nil:
-		e.adjust(1)
-	}
+// input converts a navigation snapshot into a crucible/menu Input.
+func (n nav) input() menu.Input {
+	return menu.Input{Up: n.up, Down: n.down, Left: n.left, Right: n.right, Select: n.enter}
 }
 
-func (m *menuModel) items() []render.MenuItem {
-	out := make([]render.MenuItem, len(m.entries))
-	for i, e := range m.entries {
-		it := render.MenuItem{Label: e.label}
-		if e.value != nil {
-			it.Value = e.value()
-		}
-		out[i] = it
-	}
-	return out
-}
-
-func percent(v float64) string { return fmt.Sprintf("%d%%", int(math.Round(v*100))) }
-
-func times(v float64) string { return fmt.Sprintf("%.1fx", v) }
-
+func percent(v float64) string   { return fmt.Sprintf("%d%%", int(math.Round(v*100))) }
+func times(v float64) string     { return fmt.Sprintf("%.1fx", v) }
 func degrees(rad float64) string { return fmt.Sprintf("%d", int(math.Round(rad*180/math.Pi))) }
 
 func onOff(b bool) string {
