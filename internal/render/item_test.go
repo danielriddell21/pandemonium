@@ -41,11 +41,14 @@ func TestItemBillboardIsDrawn(t *testing.T) {
 	// Render the scene, then draw sprites onto a copy: the item must change pixels.
 	base := make([]byte, cfg.Width*cfg.Height*4)
 	zb := make([]float64, cfg.Width)
-	drawScene(base, zb, g, cam, cfg, tex, 1)
+	loZ := make([]float64, cfg.Width)
+	loH := make([]float64, cfg.Width)
+	loRow := make([]int, cfg.Width)
+	drawScene(base, zb, loZ, loH, loRow, g, cam, cfg, tex, 1)
 
 	withItem := make([]byte, len(base))
 	copy(withItem, base)
-	drawSprites(withItem, zb, g, cam, cfg, tex)
+	drawSprites(withItem, zb, loZ, loH, loRow, g, cam, cfg, tex)
 
 	changed := 0
 	for i := range base {

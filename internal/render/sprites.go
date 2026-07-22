@@ -28,7 +28,7 @@ type billboard struct {
 // drawSprites projects demons and projectiles into the view, sorts them
 // far-to-near, and draws them after the walls, hiding columns that fall behind
 // nearer geometry using the wall depth buffer.
-func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
+func drawSprites(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
 
@@ -97,7 +97,7 @@ func drawSprites(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config,
 		if !it.ground {
 			top = anchor - size/2
 		}
-		drawBillboard(fb, zbuf, cfg, screenX, top, size, depth, it.tex)
+		drawBillboard(fb, zbuf, loZ, loH, loRow, cfg, screenX, top, size, depth, it.z, it.tex)
 	}
 }
 
@@ -121,7 +121,7 @@ func demonTexture(tx *textureSet, e sim.Entity) *texture {
 // drawBillboard renders one textured sprite centred at screenX with its top at
 // the given row, skipping transparent texels and columns occluded by nearer
 // walls (via the depth buffer).
-func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, top, size int, depth float64, tex *texture) {
+func drawBillboard(fb []byte, zbuf, loZ, loH []float64, loRow []int, cfg Config, screenX, top, size int, depth, baseZ float64, tex *texture) {
 	w, h := cfg.Width, cfg.Height
 	left := screenX - size/2
 
@@ -132,8 +132,15 @@ func drawBillboard(fb []byte, zbuf []float64, cfg Config, screenX, top, size int
 		if depth >= zbuf[x] {
 			continue // hidden behind a nearer wall column
 		}
+		// Beyond a near lip (a low wall, stair, lift or ledge), a sprite that sits
+		// in the lower area behind it is blocked below the lip's top edge — but one
+		// standing at or above the lip is not.
+		behindLip := depth >= loZ[x] && baseZ < loH[x]
 		texX := int(float64(x-left) / float64(size) * float64(tex.w))
 		for y := max(top, 0); y < min(top+size, h); y++ {
+			if behindLip && y > loRow[x] {
+				continue
+			}
 			texY := int(float64(y-top) / float64(size) * float64(tex.h))
 			texel := tex.at(texX, texY)
 			if texel.A < 128 {
