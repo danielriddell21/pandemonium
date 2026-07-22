@@ -220,6 +220,16 @@ func readNav() nav {
 // any reports whether the tick carried any menu input at all.
 func (n nav) any() bool { return n.up || n.down || n.left || n.right || n.enter || n.back }
 
+// menuNav reads a tick of menu navigation and plays the UI blip when a key was
+// pressed, so moving through and selecting options gives audible feedback.
+func (g *Game) menuNav() nav {
+	n := readNav()
+	if n.any() && g.audio != nil {
+		g.audio.Menu()
+	}
+	return n
+}
+
 // drive applies one tick of navigation to a menu.
 func (m *menuModel) drive(n nav) {
 	switch {
@@ -237,7 +247,7 @@ func (m *menuModel) drive(n nav) {
 }
 
 func (g *Game) updateTitle() {
-	n := readNav()
+	n := g.menuNav()
 	if n.any() {
 		g.idle = 0
 	} else if g.idle++; g.idle > attractDelay && g.attractGen != nil {
@@ -274,7 +284,7 @@ func (g *Game) updateAttract() {
 }
 
 func (g *Game) updatePaused() {
-	n := readNav()
+	n := g.menuNav()
 	if n.back {
 		g.resume()
 		return
@@ -289,7 +299,7 @@ func (g *Game) resume() {
 }
 
 func (g *Game) updateSettings() {
-	n := readNav()
+	n := g.menuNav()
 	if n.back {
 		g.closeSettings()
 		return
