@@ -1,7 +1,5 @@
 package render
 
-// drawCrosshair paints a small four-armed cross at the centre of the world view
-// (which sits above the status bar unless the HUD is hidden).
 func drawCrosshair(fb []byte, cfg Config, bareView bool) {
 	viewH := cfg.Height
 	if !bareView {

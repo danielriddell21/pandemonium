@@ -1,10 +1,5 @@
 package world
 
-// annotate scans a generated level and records layout markers: fork points,
-// doors that lead only to dead ends, and tiles that resemble the exit. It runs
-// after spawn and exit are placed. Door placement here is deliberately confined
-// to dead-end necks so it can never sever the spawn-to-exit route; the
-// reachability check in Generate is the backstop.
 func annotate(l *Level) {
 	g := newRNG(l.Seed ^ 0x5bd1e995)
 	distExit := distanceField(l, l.Exit)
@@ -17,9 +12,6 @@ func annotate(l *Level) {
 	l.Markers = markers
 }
 
-// junctionMarkers tags every walkable cell with three or more walkable
-// neighbours as a fork, recording its branches and which branch is nearest the
-// exit along the floor graph.
 func junctionMarkers(l *Level, distExit []int) []Marker {
 	var markers []Marker
 	for y := range l.Height {
@@ -50,9 +42,6 @@ func junctionMarkers(l *Level, distExit []int) []Marker {
 	return markers
 }
 
-// deadEndDoorMarkers converts the neck of a few dead-end corridors into doors and
-// tags them. A neck is a degree-2 corridor cell whose only continuation is a
-// dead end, so sealing it isolates nothing but that dead end.
 func deadEndDoorMarkers(l *Level, g *rng) []Marker {
 	const maxDoors = 3
 	var markers []Marker
@@ -61,50 +50,53 @@ func deadEndDoorMarkers(l *Level, g *rng) []Marker {
 			if len(markers) >= maxDoors {
 				return markers
 			}
-			d := Coord{X: x, Y: y}
-			if l.At(x, y) != TileFloor {
-				continue
-			}
-			nb := walkableNeighbors(l, d)
-			if len(nb) != 1 { // not a dead end
-				continue
-			}
-			neck := nb[0]
-			if neck == l.Spawn || neck == l.Exit || l.At(neck.X, neck.Y) != TileFloor {
-				continue
-			}
-			nnb := walkableNeighbors(l, neck)
-			if len(nnb) != 2 { // neck must be a plain corridor cell
-				continue
-			}
-			if !g.chance(0.6) {
-				continue
-			}
-			// The branch that is not the dead end is the way back out.
-			optimal := nnb[0]
-			if optimal == d {
-				optimal = nnb[1]
-			}
-			l.set(neck.X, neck.Y, TileDoor)
-			markers = append(markers, Marker{
-				Kind:     MarkerDeadEndDoor,
-				At:       neck,
-				Branches: nnb,
-				Optimal:  optimal,
-			})
-			// The cell tucked behind the door is a natural hidden room: half the
-			// time, mark it a secret and stash a reward there.
-			if g.chance(0.5) {
-				l.Secrets = append(l.Secrets, d)
-				l.Items = append(l.Items, Item{Kind: secretReward(g), At: d})
+			if m, ok := tryDeadEndDoor(l, g, Coord{X: x, Y: y}); ok {
+				markers = append(markers, m)
 			}
 		}
 	}
 	return markers
 }
 
-// secretReward picks the prize tucked into a secret room, favouring the more
-// valuable armour and shells over a plain health top-up.
+func tryDeadEndDoor(l *Level, g *rng, d Coord) (Marker, bool) {
+	if l.At(d.X, d.Y) != TileFloor {
+		return Marker{}, false
+	}
+	nb := walkableNeighbors(l, d)
+	if len(nb) != 1 { // not a dead end
+		return Marker{}, false
+	}
+	neck := nb[0]
+	if neck == l.Spawn || neck == l.Exit || l.At(neck.X, neck.Y) != TileFloor {
+		return Marker{}, false
+	}
+	nnb := walkableNeighbors(l, neck)
+	if len(nnb) != 2 { // neck must be a plain corridor cell
+		return Marker{}, false
+	}
+	if !g.chance(0.6) {
+		return Marker{}, false
+	}
+	// The branch that is not the dead end is the way back out.
+	optimal := nnb[0]
+	if optimal == d {
+		optimal = nnb[1]
+	}
+	l.set(neck.X, neck.Y, TileDoor)
+	// The cell tucked behind the door is a natural hidden room: half the time,
+	// mark it a secret and stash a reward there.
+	if g.chance(0.5) {
+		l.Secrets = append(l.Secrets, d)
+		l.Items = append(l.Items, Item{Kind: secretReward(g), At: d})
+	}
+	return Marker{
+		Kind:     MarkerDeadEndDoor,
+		At:       neck,
+		Branches: nnb,
+		Optimal:  optimal,
+	}, true
+}
+
 func secretReward(g *rng) ItemKind {
 	switch g.intn(5) {
 	case 0, 1:
@@ -116,8 +108,6 @@ func secretReward(g *rng) ItemKind {
 	}
 }
 
-// decoyExitMarker tags a floor cell near the real exit that could be mistaken for
-// it. It searches outward in rings and returns the first suitable cell found.
 func decoyExitMarker(l *Level, g *rng) (Marker, bool) {
 	for radius := 2; radius <= 5; radius++ {
 		var ring []Coord
@@ -140,9 +130,6 @@ func decoyExitMarker(l *Level, g *rng) (Marker, bool) {
 	return Marker{}, false
 }
 
-// inOpenBlock reports whether c sits inside a fully walkable 2x2 quad, i.e. an
-// open room area rather than a narrow corridor cell. Junctions are only tagged
-// in corridor cells, so wide-open floors don't register as forks.
 func inOpenBlock(l *Level, c Coord) bool {
 	for _, corner := range [4]Coord{
 		{c.X - 1, c.Y - 1}, {c.X, c.Y - 1}, {c.X - 1, c.Y}, {c.X, c.Y},
@@ -157,8 +144,6 @@ func inOpenBlock(l *Level, c Coord) bool {
 	return false
 }
 
-// distanceField runs a breadth-first search from src over walkable tiles and
-// returns per-cell step distances (row-major), with -1 for unreachable cells.
 func distanceField(l *Level, src Coord) []int {
 	dist := make([]int, l.Width*l.Height)
 	for i := range dist {
@@ -188,7 +173,6 @@ func distanceField(l *Level, src Coord) []int {
 	return dist
 }
 
-// walkableNeighbors returns the walkable cardinal neighbours of c.
 func walkableNeighbors(l *Level, c Coord) []Coord {
 	var out []Coord
 	for _, n := range neighbors4(c) {
@@ -199,7 +183,6 @@ func walkableNeighbors(l *Level, c Coord) []Coord {
 	return out
 }
 
-// cheby returns the Chebyshev (chessboard) distance between two cells.
 func cheby(a, b Coord) int {
 	dx, dy := a.X-b.X, a.Y-b.Y
 	if dx < 0 {

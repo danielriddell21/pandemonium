@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
+	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
 func TestReporterImplementsSubscriber(_ *testing.T) {
@@ -16,7 +18,7 @@ func TestReporterDiagnosticFromStart(t *testing.T) {
 	// readout — never a player-facing notice (the narrator stays quiet early).
 	o := hud.New()
 	r := New(o, NewTableSource())
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 0})
 	_, ch, ok := o.Active()
 	if !ok || ch != hud.Diagnostic {
 		t.Errorf("early band should post a Diagnostic readout, got ch=%v ok=%v", ch, ok)
@@ -28,7 +30,7 @@ func TestReporterReachLiftsEarlyBand(t *testing.T) {
 	// that would otherwise be silent — the commentary resumes where it left off.
 	o := hud.New()
 	r := New(o, NewTableSource(), WithReach(7))
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 0})
 	if _, ch, ok := o.Active(); !ok || ch != hud.Notice {
 		t.Error("with reach carried, an early exit should post a Notice")
 	}
@@ -39,7 +41,7 @@ func TestReporterReachZeroIsPristine(t *testing.T) {
 	// debug-only telemetry readout is posted.
 	o := hud.New()
 	r := New(o, NewTableSource(), WithReach(0))
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 0})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 0})
 	if _, ch, ok := o.Active(); ok && ch == hud.Notice {
 		t.Error("zero reach must not surface a player notice in the early band")
 	}
@@ -48,7 +50,7 @@ func TestReporterReachZeroIsPristine(t *testing.T) {
 func TestReporterDiagnosticInMidBand(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 3})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 3})
 	msg, ch, ok := o.Active()
 	if !ok || ch != hud.Diagnostic {
 		t.Errorf("mid band exit: got %q ch=%v ok=%v; want a Diagnostic message", msg, ch, ok)
@@ -58,7 +60,7 @@ func TestReporterDiagnosticInMidBand(t *testing.T) {
 func TestReporterNoticeInLateBand(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 6})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 6})
 	msg, ch, ok := o.Active()
 	if !ok || ch != hud.Notice {
 		t.Errorf("late band exit: got %q ch=%v ok=%v; want a Notice message", msg, ch, ok)
@@ -69,7 +71,7 @@ func TestReporterWrongDoorNotice(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
 	r.OnEvent(telemetry.PlayerEvent{
-		Type:       "door",
+		Kind:       sim.ObsDoor,
 		LevelIndex: 7,
 		Marker:     &telemetry.MarkerInfo{Kind: "door", WrongDoor: true},
 	})
@@ -81,7 +83,7 @@ func TestReporterWrongDoorNotice(t *testing.T) {
 func TestReporterIgnoresMovement(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
-	r.OnEvent(telemetry.PlayerEvent{Type: "move", LevelIndex: 9})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsMove, LevelIndex: 9})
 	if _, _, ok := o.Active(); ok {
 		t.Error("movement events should not post messages")
 	}
@@ -92,7 +94,7 @@ func TestReporterReactsToRepeatedWrongDoors(t *testing.T) {
 	r := New(o, NewTableSource())
 	r.OnRunProfile(telemetry.RunProfile{LevelsCleared: 6, TotalWrongDoors: 4})
 	r.OnEvent(telemetry.PlayerEvent{
-		Type:       "door",
+		Kind:       sim.ObsDoor,
 		LevelIndex: 6,
 		Marker:     &telemetry.MarkerInfo{Kind: "door", WrongDoor: true},
 	})
@@ -106,7 +108,7 @@ func TestReporterReactsToRushing(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
 	r.OnRunProfile(telemetry.RunProfile{LevelsCleared: 6, ExploreScore: 0.2}) // low → rushing
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 6})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 6})
 	if msg, _, ok := o.Active(); !ok || msg != "Straight to the exit. Predictable." {
 		t.Errorf("got %q ok=%v; want the rushing exit notice", msg, ok)
 	}
@@ -117,7 +119,7 @@ func TestReporterLateBandIsMorePointed(t *testing.T) {
 	r := New(o, NewTableSource())
 	// No profile context; late band (>=9) should still shift the wording.
 	r.OnEvent(telemetry.PlayerEvent{
-		Type:       "door",
+		Kind:       sim.ObsDoor,
 		LevelIndex: 10,
 		Marker:     &telemetry.MarkerInfo{Kind: "door", WrongDoor: true},
 	})
@@ -129,9 +131,9 @@ func TestReporterLateBandIsMorePointed(t *testing.T) {
 func TestForkOptimalDetection(t *testing.T) {
 	r := New(hud.New(), NewTableSource())
 	cue, ok := r.cueFor(telemetry.PlayerEvent{
-		Type:       "marker",
+		Kind:       sim.ObsMarker,
 		LevelIndex: 4,
-		Marker:     &telemetry.MarkerInfo{Kind: "junction", TakenX: 3, TakenY: 5, OptimalX: 3, OptimalY: 5},
+		Marker:     &telemetry.MarkerInfo{KindEnum: world.MarkerJunction, TakenX: 3, TakenY: 5, OptimalX: 3, OptimalY: 5},
 	})
 	if !ok || cue.Kind != CueFork || !cue.OptimalChoice {
 		t.Errorf("expected optimal fork cue, got %+v ok=%v", cue, ok)

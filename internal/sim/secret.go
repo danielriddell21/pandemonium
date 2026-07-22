@@ -2,7 +2,6 @@ package sim
 
 import "github.com/danielriddell21/pandemonium/internal/world"
 
-// newSecrets builds the set of yet-undiscovered secret cells from a level.
 func newSecrets(l *world.Level) map[world.Coord]bool {
 	if len(l.Secrets) == 0 {
 		return nil
@@ -14,8 +13,6 @@ func newSecrets(l *world.Level) map[world.Coord]bool {
 	return m
 }
 
-// checkSecret announces and records a secret the first time the player steps
-// onto its cell.
 func (g *Game) checkSecret(cell world.Coord) {
 	if !g.secrets[cell] {
 		return

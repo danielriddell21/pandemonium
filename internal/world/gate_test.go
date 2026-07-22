@@ -2,8 +2,6 @@ package world
 
 import "testing"
 
-// firstGatedLevel returns a generated level that has at least one locked door,
-// scanning seeds until it finds one.
 func firstGatedLevel(t *testing.T) *Level {
 	t.Helper()
 	for seed := int64(0); seed < 200; seed++ {

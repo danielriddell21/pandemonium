@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// gatedGame returns a simulation for the first level that has a locked door,
-// along with that door's cell and required key.
 func gatedGame(t *testing.T) (*Game, world.Coord, world.ItemKind) {
 	t.Helper()
 	for seed := int64(0); seed < 200; seed++ {
@@ -24,7 +22,6 @@ func gatedGame(t *testing.T) (*Game, world.Coord, world.ItemKind) {
 	return nil, world.Coord{}, 0
 }
 
-// faceDoor positions the player one tile south of the door, looking north at it.
 func faceDoor(g *Game, door world.Coord) {
 	g.Player.Pos = Vec2{X: float64(door.X) + 0.5, Y: float64(door.Y) + 1.5}
 	g.Player.Angle = -math.Pi / 2

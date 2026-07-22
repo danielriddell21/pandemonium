@@ -1,9 +1,5 @@
 package world
 
-// placeItems scatters consumable pickups (health, armour, ammo) across the
-// level's floor, away from the spawn so the player has to explore to find them.
-// Placement is driven by the level's RNG, so a seed always yields the same
-// layout. Keycards and secret rewards are placed separately.
 func placeItems(l *Level, g *rng) {
 	floors := freeFloors(l)
 	shuffleCoords(g, floors)
@@ -31,8 +27,6 @@ func placeItems(l *Level, g *rng) {
 	}
 }
 
-// rollPowerup picks one of the DOOM-style powerups, weighted toward the more
-// common spheres.
 func rollPowerup(g *rng) ItemKind {
 	switch g.intn(5) {
 	case 0, 1:
@@ -50,8 +44,6 @@ func rollPowerup(g *rng) ItemKind {
 	}
 }
 
-// rollConsumable picks a consumable kind with health and ammo common and armour
-// and rockets rarer, roughly matching how often each turns up in a DOOM level.
 func rollConsumable(g *rng) ItemKind {
 	switch g.intn(12) {
 	case 0, 1, 2:
@@ -67,8 +59,6 @@ func rollConsumable(g *rng) ItemKind {
 	}
 }
 
-// freeFloors returns the plain floor cells that are clear of the spawn area, the
-// exit and any cell already holding an item, in row-major order.
 func freeFloors(l *Level) []Coord {
 	taken := make(map[Coord]bool, len(l.Items))
 	for _, it := range l.Items {
@@ -90,8 +80,6 @@ func freeFloors(l *Level) []Coord {
 	return out
 }
 
-// shuffleCoords does an in-place deterministic Fisher-Yates shuffle using the
-// level RNG, so callers can take the first N cells as a random selection.
 func shuffleCoords(g *rng, cs []Coord) {
 	for i := len(cs) - 1; i > 0; i-- {
 		j := g.intn(i + 1)

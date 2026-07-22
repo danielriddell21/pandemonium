@@ -1,7 +1,5 @@
 package render
 
-// countColored counts non-black pixels in a framebuffer; a small shared helper
-// for the render tests.
 func countColored(fb []byte, cfg Config) int {
 	n := 0
 	for i := 0; i+3 < len(fb); i += 4 {

@@ -31,7 +31,7 @@ column's ray boundary-by-boundary, painting floors, ceilings and textured step
 faces inside a shrinking clip window until a wall closes the column — so the
 vertical feel comes from the same single pass that draws the walls.
 
-The Ebiten front-end lives in `internal/app` — the only package that imports
+The Ebiten front-end lives in `internal/gui` — the only package that imports
 Ebiten — which drives the loop, reads input, and uploads each rendered frame. It
 is a small state machine: a **title** screen (which idles into a bot-driven
 attract demo), **play**, the between-levels **intermission** tally, a **pause**
@@ -50,7 +50,7 @@ A few supporting packages sit alongside these, all pure and observing inward:
 
 - **`internal/audio`** synthesises every sound effect and the ambient/music bed
   as raw PCM — no files, deterministic. The Ebiten playback that turns PCM into
-  sound lives in `internal/app`, which also pans and attenuates effects by
+  sound lives in `internal/gui`, which also pans and attenuates effects by
   distance and darkens the bed as the run deepens (see [audio.md](audio.md)).
 - **`internal/telemetry`** attaches to the simulation as an observer and turns its
   observations into a cumulative run profile and per-event stream.

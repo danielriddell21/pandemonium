@@ -1,12 +1,7 @@
 package world
 
-// placeKeyGate locks the route to the exit behind a keycard. It finds a narrow
-// corridor cell on the spawn→exit path that, if sealed, truly cuts the exit off,
-// turns it into a locked door, and drops the matching key somewhere the player
-// can reach without first crossing that door. The BSP layout's corridors are a
-// tree, so such cut points exist on every non-trivial level. Placement is
-// best-effort: a candidate that offers no valid spot is simply left ungated, and
-// Generate's reachability guarantee is the backstop.
+import "slices"
+
 func placeKeyGate(l *Level, _ *rng) {
 	path := pathToExit(l)
 	if len(path) == 0 {
@@ -40,14 +35,10 @@ func placeKeyGate(l *Level, _ *rng) {
 	}
 }
 
-// lockedSolid treats walls and the given cell as solid while leaving every door
-// passable — the world as seen by a player who lacks the key for that cell.
 func lockedSolid(l *Level, lock Coord) solidFn {
 	return func(c Coord) bool { return l.At(c.X, c.Y) == TileWall || c == lock }
 }
 
-// pathToExit reconstructs the spawn→exit route over the doors-open graph, or nil
-// if the exit is unreachable.
 func pathToExit(l *Level) []Coord {
 	solid := blocksWalls(l)
 	prev := make([]Coord, l.Width*l.Height)
@@ -76,8 +67,6 @@ func pathToExit(l *Level) []Coord {
 	return nil
 }
 
-// tracePath walks parent links from dst back to the spawn and returns the route
-// in spawn→dst order.
 func tracePath(prev []Coord, l *Level, dst Coord) []Coord {
 	var rev []Coord
 	for c := dst; ; c = prev[c.Y*l.Width+c.X] {
@@ -86,15 +75,10 @@ func tracePath(prev []Coord, l *Level, dst Coord) []Coord {
 			break
 		}
 	}
-	for i, j := 0, len(rev)-1; i < j; i, j = i+1, j-1 {
-		rev[i], rev[j] = rev[j], rev[i]
-	}
+	slices.Reverse(rev)
 	return rev
 }
 
-// isNeck reports whether c is a plain one-wide corridor cell (degree-2 floor, not
-// part of an open room and not the spawn or exit) — the kind of cell that gates
-// cleanly when sealed.
 func isNeck(l *Level, c Coord) bool {
 	if l.At(c.X, c.Y) != TileFloor || c == l.Spawn || c == l.Exit {
 		return false
@@ -105,9 +89,6 @@ func isNeck(l *Level, c Coord) bool {
 	return len(walkableNeighbors(l, c)) == 2
 }
 
-// farthestReachableFloor returns the floor cell, clear of the spawn area, that is
-// furthest from the spawn while the predicate holds, so the key sits deep in the
-// reachable region rather than next to the start.
 func farthestReachableFloor(l *Level, solid solidFn) (Coord, bool) {
 	dist := floodDist(l, l.Spawn, solid)
 	best, bestD := Coord{}, -1
@@ -128,9 +109,6 @@ func farthestReachableFloor(l *Level, solid solidFn) (Coord, bool) {
 	return best, bestD >= 0
 }
 
-// keysReachable reports whether every locked door's key can be reached from the
-// spawn without first crossing that door. It backs the generation guarantee for
-// gated levels.
 func keysReachable(l *Level) bool {
 	for lock, key := range l.Locks {
 		cell, ok := keyCell(l, key)
@@ -144,7 +122,6 @@ func keysReachable(l *Level) bool {
 	return true
 }
 
-// keyCell returns the location of the keycard item of the given kind.
 func keyCell(l *Level, key ItemKind) (Coord, bool) {
 	for _, it := range l.Items {
 		if it.Kind == key {

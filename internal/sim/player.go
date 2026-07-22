@@ -1,6 +1,3 @@
-// Package sim is the headless game simulation: it advances player movement,
-// collision, entities and interaction one fixed step at a time. It depends only
-// on the world package and knows nothing about how the game is drawn.
 package sim
 
 import (
@@ -9,71 +6,56 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// Vec2 is a 2D vector in world space, measured in tiles.
 type Vec2 struct {
 	X, Y float64
 }
 
 const (
-	// MaxHealth is the player's starting and maximum health.
 	MaxHealth = 100.0
-	// MaxArmor is the most armour the player can carry.
+
 	MaxArmor = 100.0
-	// armorAbsorb is the fraction of incoming damage soaked by armour while the
-	// player has any, matching DOOM's green-armour behaviour.
+
 	armorAbsorb = 1.0 / 3.0
 
-	// eyeHeight is how far the camera sits above the feet, in wall units. At the
-	// base floor this puts the horizon at mid-screen, as before heights existed.
 	eyeHeight = 0.5
-	// fallSpeed is how fast a body drops toward its floor, in wall units/second.
+
 	fallSpeed = 6.0
-	// viewRate is how quickly the camera height eases toward the body's height,
-	// so stairs read as steps rather than jolts.
+
 	viewRate = 5.0
 
-	// Base ammo capacities; a backpack doubles them (see Player.MaxBullets etc.).
 	baseMaxBullets = 200
 	baseMaxShells  = 50
 	baseMaxRockets = 50
 
-	// overHealMax is the ceiling a soul/megasphere can push health and armour to,
-	// above the normal MaxHealth/MaxArmor.
 	overHealMax = 200.0
-	// Powerup lifetimes, in seconds. Berserk instead lasts the whole level.
+
 	invulnDuration  = 20.0
 	radSuitDuration = 30.0
 
-	// hurtFaceDuration is how long the status-bar face keeps turning toward the
-	// source of a hit.
 	hurtFaceDuration = 0.6
 )
 
-// Player holds the camera-bearing actor's position, facing, height, health,
-// armour and arsenal, plus the keycards it has collected.
 type Player struct {
 	Pos      Vec2
-	Z        float64 // feet height above the base floor, in wall units
-	Angle    float64 // radians; 0 points along +X
+	Z        float64
+	Angle    float64
 	Health   float64
 	Armor    float64
 	Weapon   WeaponKind
 	Bullets  int
 	Shells   int
 	Rockets  int
-	Backpack bool // doubles ammo capacity once collected
+	Backpack bool
 	Keys     map[world.ItemKind]bool
 
-	Berserk    bool    // boosted fists for the rest of the level
-	InvulnTTL  float64 // seconds of invulnerability remaining
-	RadSuitTTL float64 // seconds of radiation immunity remaining
+	Berserk    bool
+	InvulnTTL  float64
+	RadSuitTTL float64
 
-	hurtDir int     // -1 left, 0 ahead, +1 right: where recent damage came from
-	hurtTTL float64 // how long the face keeps looking that way
+	hurtDir int
+	hurtTTL float64
 }
 
-// FaceDir reports which way the status-bar face should look in reaction to recent
-// damage (-1 left, 0 ahead, +1 right), settling back to ahead once it lapses.
 func (p Player) FaceDir() int {
 	if p.hurtTTL > 0 {
 		return p.hurtDir
@@ -81,19 +63,14 @@ func (p Player) FaceDir() int {
 	return 0
 }
 
-// Invulnerable reports whether the player currently takes no damage.
 func (p Player) Invulnerable() bool { return p.InvulnTTL > 0 }
 
-// RadSuited reports whether the player currently ignores damaging floors.
 func (p Player) RadSuited() bool { return p.RadSuitTTL > 0 }
 
-// MaxBullets is the player's current bullet capacity (doubled by a backpack).
 func (p Player) MaxBullets() int { return p.cap(baseMaxBullets) }
 
-// MaxShells is the player's current shell capacity (doubled by a backpack).
 func (p Player) MaxShells() int { return p.cap(baseMaxShells) }
 
-// MaxRockets is the player's current rocket capacity (doubled by a backpack).
 func (p Player) MaxRockets() int { return p.cap(baseMaxRockets) }
 
 func (p Player) cap(base int) int {
@@ -103,26 +80,21 @@ func (p Player) cap(base int) int {
 	return base
 }
 
-// HasKey reports whether the player holds the given keycard.
 func (p Player) HasKey(k world.ItemKind) bool {
 	return p.Keys[k]
 }
 
-// Dir returns the unit vector the player is facing.
 func (p Player) Dir() Vec2 {
 	return Vec2{X: math.Cos(p.Angle), Y: math.Sin(p.Angle)}
 }
 
-// Input is the per-tick set of movement intents, each normalised to roughly
-// [-1, 1]. It is produced by the front-end and consumed by Tick.
 type Input struct {
-	Forward   float64 // +forward / -backward
-	Strafe    float64 // +right / -left
-	Turn      float64 // rate-based turn: +clockwise / -counter-clockwise
-	TurnDelta float64 // direct turn applied this tick, in radians (mouse-look)
-	Interact  bool    // act on an adjacent door this tick
-	Attack    bool    // fire the current weapon this tick
-	// SelectWeapon switches weapon when non-zero: 1=fists, 2=pistol, 3=shotgun,
-	// 4=chaingun, 5=rocket launcher.
+	Forward   float64
+	Strafe    float64
+	Turn      float64
+	TurnDelta float64
+	Interact  bool
+	Attack    bool
+
 	SelectWeapon int
 }

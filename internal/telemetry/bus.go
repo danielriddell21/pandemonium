@@ -8,10 +8,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// Bus turns the simulation's observations into telemetry: it adapts each
-// observation into a PlayerEvent, maintains a rolling per-level PathSummary and a
-// cumulative RunProfile, and fans the results out to its subscribers. It
-// satisfies sim.Observer, so it can be attached to a game directly.
 type Bus struct {
 	subs    []Subscriber
 	profile RunProfile
@@ -25,10 +21,8 @@ type Bus struct {
 	now func() time.Time
 }
 
-// Compile-time check that Bus can be used as the simulation's observer.
 var _ sim.Observer = (*Bus)(nil)
 
-// NewBus creates a bus that dispatches to the given subscribers.
 func NewBus(subs ...Subscriber) *Bus {
 	now := time.Now
 	start := now()
@@ -43,8 +37,6 @@ func NewBus(subs ...Subscriber) *Bus {
 	}
 }
 
-// BeginLevel starts tracking a fresh level. Any in-progress level is finalised
-// first, so an abandoned level is still recorded.
 func (b *Bus) BeginLevel(seed int64, index int) {
 	if b.pathOpen {
 		b.finishPath()
@@ -55,63 +47,23 @@ func (b *Bus) BeginLevel(seed int64, index int) {
 	b.pathOpen = true
 }
 
-// Observe consumes one observation from the simulation.
 func (b *Bus) Observe(o sim.Observation) {
 	ev := PlayerEvent{
 		Tick:        o.Tick,
 		TimestampMS: b.now().Sub(b.start).Milliseconds(),
 		Type:        o.Kind.String(),
+		Kind:        o.Kind,
 		LevelSeed:   b.path.LevelSeed,
 		LevelIndex:  b.path.LevelIndex,
 		Cell:        [2]int{o.At.X, o.At.Y},
+		Marker:      markerFor(o),
 	}
 
-	switch o.Kind {
-	case sim.ObsMove:
-		if b.pathOpen {
-			b.path.Steps++
-			key := [2]int{o.At.X, o.At.Y}
-			if b.visited[key] {
-				b.path.BacktrackCount++
-			} else {
-				b.visited[key] = true
-				b.path.TilesVisited++
-			}
-		}
-	case sim.ObsMarker:
-		ev.Marker = markerInfo(o)
-		if b.pathOpen && o.Marker == world.MarkerJunction {
-			b.path.JunctionsSeen++
-			if o.Taken == o.Optimal {
-				b.path.OptimalChoices++
-			}
-		}
-	case sim.ObsDoor:
-		ev.Marker = &MarkerInfo{Kind: "door", X: o.At.X, Y: o.At.Y, WrongDoor: o.WrongDoor}
-		if b.pathOpen {
-			b.path.DoorsOpened++
-			if o.WrongDoor {
-				b.path.WrongDoors++
-			}
-		}
-	case sim.ObsKill:
-		if b.pathOpen {
-			b.path.Kills++
-		}
-	case sim.ObsItem:
-		if b.pathOpen {
-			b.path.ItemsTaken++
-		}
-	case sim.ObsSecret:
-		if b.pathOpen {
-			b.path.SecretsFound++
-		}
-	case sim.ObsDeath:
+	if o.Kind == sim.ObsDeath {
 		b.profile.Deaths++
-	case sim.ObsExit:
-		if b.pathOpen {
-			b.path.Completed = true
-		}
+	}
+	if b.pathOpen {
+		b.recordPath(o)
 	}
 
 	b.dispatchEvent(ev)
@@ -121,11 +73,52 @@ func (b *Bus) Observe(o sim.Observation) {
 	}
 }
 
-// Profile returns a snapshot of the current run profile.
+func markerFor(o sim.Observation) *MarkerInfo {
+	switch o.Kind {
+	case sim.ObsMarker:
+		return markerInfo(o)
+	case sim.ObsDoor:
+		return &MarkerInfo{Kind: "door", X: o.At.X, Y: o.At.Y, WrongDoor: o.WrongDoor}
+	}
+	return nil
+}
+
+func (b *Bus) recordPath(o sim.Observation) {
+	switch o.Kind {
+	case sim.ObsMove:
+		b.path.Steps++
+		key := [2]int{o.At.X, o.At.Y}
+		if b.visited[key] {
+			b.path.BacktrackCount++
+		} else {
+			b.visited[key] = true
+			b.path.TilesVisited++
+		}
+	case sim.ObsMarker:
+		if o.Marker == world.MarkerJunction {
+			b.path.JunctionsSeen++
+			if o.Taken == o.Optimal {
+				b.path.OptimalChoices++
+			}
+		}
+	case sim.ObsDoor:
+		b.path.DoorsOpened++
+		if o.WrongDoor {
+			b.path.WrongDoors++
+		}
+	case sim.ObsKill:
+		b.path.Kills++
+	case sim.ObsItem:
+		b.path.ItemsTaken++
+	case sim.ObsSecret:
+		b.path.SecretsFound++
+	case sim.ObsExit:
+		b.path.Completed = true
+	}
+}
+
 func (b *Bus) Profile() RunProfile { return b.profile }
 
-// finishPath closes the current level's summary, folds it into the run profile,
-// and notifies subscribers.
 func (b *Bus) finishPath() {
 	b.path.TimeSpentMS = b.now().Sub(b.levelStart).Milliseconds()
 	if b.path.Completed {
@@ -164,10 +157,10 @@ func (b *Bus) dispatchProfile(p RunProfile) {
 	}
 }
 
-// markerInfo builds the marker payload for a marker observation.
 func markerInfo(o sim.Observation) *MarkerInfo {
 	mi := &MarkerInfo{
 		Kind:      o.Marker.String(),
+		KindEnum:  o.Marker,
 		X:         o.At.X,
 		Y:         o.At.Y,
 		WrongDoor: o.WrongDoor,
@@ -182,9 +175,6 @@ func markerInfo(o sim.Observation) *MarkerInfo {
 	return mi
 }
 
-// exploreScore is a heuristic in [0,1]: the share of moves that reached a new
-// tile rather than retreading old ground. High means a thorough explorer; low
-// means a rusher who beelines and doubles back little.
 func exploreScore(p RunProfile) float64 {
 	visited := 0
 	for _, s := range p.Paths {

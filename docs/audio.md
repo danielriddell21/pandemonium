@@ -4,7 +4,7 @@ There are no sound files. Every effect and the musical backing are **synthesised
 in code** as raw PCM — 44.1 kHz, 16-bit, stereo — by `internal/audio`, which is
 pure and deterministic: the same build produces byte-identical samples. The
 Ebiten playback that turns PCM into sound is the only part that touches a device,
-and it lives in `internal/app`.
+and it lives in `internal/gui`.
 
 ## Sound effects
 

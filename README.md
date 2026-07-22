@@ -1,5 +1,7 @@
 # pandemonium
 
+> *The capital of Hell, rendered in software.*
+
 [![CI](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/danielriddell21/pandemonium/graph/badge.svg)](https://codecov.io/gh/danielriddell21/pandemonium)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danielriddell21_pandemonium&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielriddell21_pandemonium)
@@ -9,12 +11,10 @@
 A procedurally-generated, Wolfenstein-3D-style raycaster FPS written in Go with
 [Ebiten](https://ebitengine.org/) v2, in the visual spirit of the original DOOM.
 
-Every run drops you into a freshly generated maze of rooms and corridors — with
-staircases, raised platforms and lifts sculpted into the terrain, and the odd
-courtyard open to the sky. Walk it with
-`WASD`, look around with the mouse (or arrow keys), dodge the demons, and find
-the exit — which collapses the level and generates a brand new one. Levels are
-deterministic from a seed, so a given seed always produces the same world.
+Every run generates a fresh maze of rooms and corridors — staircases, lifts,
+raised platforms, the odd open-sky courtyard. Walk it with `WASD`, look with the
+mouse, dodge the demons, and reach the exit to collapse the level and spawn a new
+one. Levels are deterministic from their seed.
 
 ```
 go run ./cmd/pandemonium --seed 42
@@ -84,12 +84,9 @@ Ebiten front-end touches the screen.
 | `Enter` / `Space`  | Next level (on the tally screen) |
 | `Esc`              | Pause / back (quit from the menu) |
 
-The game runs fullscreen by default with the mouse captured for the view, so the
-cursor stays inside the game while you play; `F11` toggles fullscreen and the
-pause/menu screens release the cursor. The game opens on a title screen — which
-shows your run history (runs played and the deepest level reached) and, left
-idle, plays a short demo of itself. `Esc` during play opens a pause menu
-(resume, settings, quit) rather than quitting outright.
+Starts fullscreen with the mouse captured; `F11` toggles fullscreen and menus
+release the cursor. The title screen shows your run history and, left idle, plays
+a self-demo; `Esc` opens the pause menu (resume, settings, quit).
 
 ## CLI
 
@@ -106,16 +103,12 @@ whenever a new level is generated, so demos are reproducible.
 
 ## Settings
 
-Open the settings screen from the title or pause menu (`←` `→` adjust the
-highlighted row): difficulty (easy through nightmare — it scales how many demons
-spawn and how hard they hit, leaving the map itself unchanged), sound on/off,
-sound-effect and ambient volume, mouse sensitivity, field of view, a crosshair
-toggle, on-screen debug messages, and fullscreen.
-Changes are saved to a JSON file under your user config directory
-(`~/.config/pandemonium/settings.json` on Linux) and reloaded on the next run;
-your run history is kept alongside it in `records.json`.
-Turn **sound** off there to run silently on a machine with no audio device; the
-game also falls back to silence on its own if the audio engine can't start.
+Open settings from the title or pause menu (`←`/`→` adjust): difficulty (scales
+demon count and damage, not the map), sound on/off, SFX and ambient volume, mouse
+sensitivity, field of view, crosshair, debug messages, and fullscreen. Settings
+persist to `~/.config/pandemonium/settings.json` (run history in `records.json`
+alongside) and reload next run. The game runs silently if sound is off or no
+audio device is available.
 
 ## Development
 

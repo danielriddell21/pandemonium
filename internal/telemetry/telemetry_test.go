@@ -9,7 +9,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// capture is a test subscriber that records everything it receives.
 type capture struct {
 	events   []PlayerEvent
 	paths    []PathSummary
@@ -20,8 +19,6 @@ func (c *capture) OnEvent(e PlayerEvent)       { c.events = append(c.events, e) 
 func (c *capture) OnPathSummary(p PathSummary) { c.paths = append(c.paths, p) }
 func (c *capture) OnRunProfile(p RunProfile)   { c.profiles = append(c.profiles, p) }
 
-// fixedClock returns a clock that advances one second per call, for
-// deterministic timestamps.
 func fixedClock() func() time.Time {
 	base := time.Unix(1_000_000, 0)
 	n := 0

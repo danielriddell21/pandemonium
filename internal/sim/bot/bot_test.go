@@ -8,10 +8,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// TestRoamerCompletesLevels drives generated levels end to end: the pilot must
-// reach and throw the exit on a healthy majority of seeds within a generous tick
-// budget. (A rare stuck seed is tolerable for an attract loop; never finishing
-// anything is a regression.)
 func TestRoamerCompletesLevels(t *testing.T) {
 	const seeds = 8
 	const maxTicks = 6000 // 100 simulated seconds per level
@@ -36,8 +32,6 @@ func TestRoamerCompletesLevels(t *testing.T) {
 	}
 }
 
-// TestHunterKillsDemons lets the hunter loose and expects the demon count to
-// fall — it must find, route to and shoot at least one demon.
 func TestHunterKillsDemons(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 32, Height: 24, Seed: 5})
 	if err != nil {
@@ -67,10 +61,6 @@ func TestHunterKillsDemons(t *testing.T) {
 	t.Errorf("hunter killed nothing: %d demons before and after", start)
 }
 
-// TestRoamerCompletesArena drives the open set-piece arena to its exit switch,
-// confirming the pilot handles the single-room layout. Entities are cleared so
-// this isolates navigation and the exit switch from the arena's (deliberately
-// brutal) open fight.
 func TestRoamerCompletesArena(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 40, Height: 28, Seed: 5, Arena: true})
 	if err != nil {
@@ -88,8 +78,6 @@ func TestRoamerCompletesArena(t *testing.T) {
 	t.Error("roamer did not complete the arena")
 }
 
-// TestSteerTowardClosesDistance checks the steering produces input that moves
-// the player toward the target whichever way it faces.
 func TestSteerTowardClosesDistance(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 24, Height: 18, Seed: 3})
 	if err != nil {
@@ -110,8 +98,6 @@ func TestSteerTowardClosesDistance(t *testing.T) {
 	}
 }
 
-// TestBFSRouteIsWalkable checks every step of a planned route is between
-// adjacent, walkable cells.
 func TestBFSRouteIsWalkable(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 32, Height: 24, Seed: 7})
 	if err != nil {

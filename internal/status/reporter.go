@@ -2,35 +2,29 @@ package status
 
 import (
 	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
+	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// rushThreshold is the explore-score below which a run reads as beelining rather
-// than exploring.
 const rushThreshold = 0.5
 
-// Reporter is a telemetry subscriber that posts HUD messages chosen by a Source.
 type Reporter struct {
 	overlay *hud.Overlay
 	src     Source
-	profile telemetry.RunProfile // latest cumulative run profile
+	profile telemetry.RunProfile
 
-	reach   int  // a floor on the effective level, carried from past runs
-	level   int  // level index of the events seen so far
-	sawKill bool // a kill has been remarked on this level
-	sawItem bool // an item pickup has been remarked on this level
-	arrived bool // the run has reached the deepest band (its terminal beat fired)
+	reach   int
+	level   int
+	sawKill bool
+	sawItem bool
+	arrived bool
 }
 
-// Compile-time check that Reporter consumes telemetry.
 var _ telemetry.Subscriber = (*Reporter)(nil)
 
-// Option configures a Reporter.
 type Option func(*Reporter)
 
-// WithReach carries a floor on the effective level into a fresh run, so the
-// commentary resumes near how far earlier runs had gone rather than starting
-// over from the quietest band. A zero or negative reach changes nothing.
 func WithReach(level int) Option {
 	return func(r *Reporter) {
 		if level > 0 {
@@ -39,7 +33,6 @@ func WithReach(level int) Option {
 	}
 }
 
-// New builds a Reporter that posts to overlay using src.
 func New(overlay *hud.Overlay, src Source, opts ...Option) *Reporter {
 	r := &Reporter{overlay: overlay, src: src}
 	for _, opt := range opts {
@@ -48,8 +41,6 @@ func New(overlay *hud.Overlay, src Source, opts ...Option) *Reporter {
 	return r
 }
 
-// OnEvent maps a player event to a cue, folds in the run so far, and asks the
-// source for a line, which it delivers to the overlay via emit (now or later).
 func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 	cue, ok := r.cueFor(e)
 	if !ok {
@@ -70,9 +61,6 @@ func (r *Reporter) OnEvent(e telemetry.PlayerEvent) {
 	r.src.Request(cue, r.emit)
 }
 
-// enrich folds the cumulative run profile into a cue and lifts the effective
-// level to the carried reach, so a returning run picks up the register it had
-// drifted to before rather than resetting to the quietest band.
 func (r *Reporter) enrich(c *Cue) {
 	p := r.profile
 	c.LevelsCleared = p.LevelsCleared
@@ -85,60 +73,57 @@ func (r *Reporter) enrich(c *Cue) {
 	}
 }
 
-// emit posts a line to the overlay. It is safe to call from any goroutine.
 func (r *Reporter) emit(line Line) {
 	r.overlay.Post(line.Text, line.Frames, line.Channel)
 }
 
-// OnPathSummary is intentionally a no-op for now: it is reserved for lines that
-// react to route quality (backtracking, detours, optimal play), which the
-// per-event cues do not capture.
 func (r *Reporter) OnPathSummary(telemetry.PathSummary) {}
 
-// OnRunProfile records the latest cumulative profile so later cues can react to it.
 func (r *Reporter) OnRunProfile(p telemetry.RunProfile) { r.profile = p }
 
-// cueFor derives a cue from a player event, or reports false to ignore it. Kills
-// and item pickups happen constantly, so only the first of each per level is
-// remarked on; deaths and secret finds are rare enough to always surface.
 func (r *Reporter) cueFor(e telemetry.PlayerEvent) (Cue, bool) {
 	if e.LevelIndex != r.level {
 		r.level, r.sawKill, r.sawItem = e.LevelIndex, false, false
 	}
-	switch e.Type {
-	case "exit":
+	switch e.Kind {
+	case sim.ObsExit:
 		return Cue{Kind: CueExit, Level: e.LevelIndex}, true
-	case "death":
+	case sim.ObsDeath:
 		return Cue{Kind: CueDeath, Level: e.LevelIndex}, true
-	case "secret":
+	case sim.ObsSecret:
 		return Cue{Kind: CueSecret, Level: e.LevelIndex}, true
-	case "kill":
+	case sim.ObsKill:
 		if r.sawKill {
 			break
 		}
 		r.sawKill = true
 		return Cue{Kind: CueKill, Level: e.LevelIndex}, true
-	case "item":
+	case sim.ObsItem:
 		if r.sawItem {
 			break
 		}
 		r.sawItem = true
 		return Cue{Kind: CueItem, Level: e.LevelIndex}, true
-	case "door":
+	case sim.ObsDoor:
 		if e.Marker != nil && e.Marker.WrongDoor {
 			return Cue{Kind: CueWrongDoor, Level: e.LevelIndex}, true
 		}
-	case "marker":
-		if e.Marker == nil {
-			break
-		}
-		switch e.Marker.Kind {
-		case "decoy_exit":
-			return Cue{Kind: CueDecoy, Level: e.LevelIndex}, true
-		case "junction":
-			optimal := e.Marker.TakenX == e.Marker.OptimalX && e.Marker.TakenY == e.Marker.OptimalY
-			return Cue{Kind: CueFork, Level: e.LevelIndex, OptimalChoice: optimal}, true
-		}
+	case sim.ObsMarker:
+		return r.markerCue(e)
+	}
+	return Cue{}, false
+}
+
+func (r *Reporter) markerCue(e telemetry.PlayerEvent) (Cue, bool) {
+	if e.Marker == nil {
+		return Cue{}, false
+	}
+	switch e.Marker.KindEnum {
+	case world.MarkerDecoyExit:
+		return Cue{Kind: CueDecoy, Level: e.LevelIndex}, true
+	case world.MarkerJunction:
+		optimal := e.Marker.TakenX == e.Marker.OptimalX && e.Marker.TakenY == e.Marker.OptimalY
+		return Cue{Kind: CueFork, Level: e.LevelIndex, OptimalChoice: optimal}, true
 	}
 	return Cue{}, false
 }

@@ -8,24 +8,10 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// maxDDASteps bounds the boundary walk so a ray that somehow escapes the bounded
-// world can never loop forever.
 const maxDDASteps = 4096
 
-// ceilingDim darkens ceilings slightly relative to floors at the same distance.
 const ceilingDim = 0.85
 
-// drawScene renders the level geometry — walls, step faces, floors and ceilings
-// — in a single pass over the screen columns, honouring per-tile floor and
-// ceiling heights, and records each column's closing distance in zbuf for sprite
-// occlusion.
-//
-// Each column walks its ray boundary by boundary through the grid. A clip window
-// [yTop, yBot] tracks the rows still unpainted: at every boundary the surfaces of
-// the tile being left are filled up to their projected far edges, any rise in
-// floor (or drop in ceiling) across the boundary is drawn as a textured step
-// face, and the window tightens. A solid tile paints the remaining window as a
-// full wall and closes the column.
 func drawScene(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam camera, cfg Config, tx *textureSet, gloom float64) {
 	eyeZ := g.EyeZ()
 	for x := range cfg.Width {
@@ -33,12 +19,6 @@ func drawScene(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, ca
 	}
 }
 
-// drawColumn renders one screen column and returns the distance at which it
-// closed (its occlusion depth) plus, for sprite occlusion, the highest near "lip"
-// the ray crossed (a low wall, stair, lift or ledge): its distance (loZ, +Inf if
-// none), its world height (loH) and the screen row of its top edge (loRow). A
-// sprite beyond loZ whose base sits below loH is hidden below loRow. gloom scales
-// all surface lighting.
 func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, x int, eyeZ, gloom float64) (closeDist, loZ, loH float64, loRow int) {
 	loZ = math.Inf(1)
 	w, h := cfg.Width, cfg.Height
@@ -95,60 +75,23 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 			d = 1e-6
 		}
 
-		// Fill the departed tile's floor and ceiling up to this boundary. The
-		// spans self-clamp to empty when a surface is out of view (e.g. a floor
-		// above eye level, whose step face was drawn at the previous boundary).
-		aLight := g.World.Level.LightAt(aX, aY) * gloom
-		floorEdge := row(aFloor, d)
-		ftex := tx.floor
-		if g.World.HazardAt(aX, aY) > 0 {
-			ftex = tx.nukage
-			if g.World.Level.HazardKindAt(aX, aY) == world.HazardLava {
-				ftex = tx.lava
-			}
-		}
-		fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex, aLight)
-		ceilEdge := row(aCeil, d)
-		if g.World.Level.SkyAt(aX, aY) {
-			// Open air overhead: a bright, distance-independent sky rather than
-			// distance-shaded stone (still dimming with the run's gloom).
-			fillSkySpan(fb, cfg, x, yTop, min(yBot, ceilEdge), gloom)
-		} else {
-			fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
-		}
+		floorEdge, ceilEdge := fillDepartedSurfaces(fb, cfg, g, tx, x, aX, aY, yTop, yBot, aFloor, aCeil, d, eyeZ, gloom, px, py, dx, dy)
 
 		// The texture column for any face on this boundary, themed by the room
 		// it's seen from and lit by the cell it faces.
 		texX, tex := boundaryTexture(g, tx, mapX, mapY, side, d, px, py, dx, dy, g.World.Level.ThemeAt(aX, aY))
 		bLight := g.World.Level.LightAt(mapX, mapY) * gloom
 
-		bFloor := g.World.FloorAt(mapX, mapY)
-		bCeil := g.World.CeilAt(mapX, mapY)
-		if g.World.Solid(mapX, mapY) {
-			if top := g.World.Level.WallTopAt(mapX, mapY); top > 0 {
-				// A low wall: a solid block we can see over. Treat it like an
-				// unclimbable step up to its top, then keep walking the ray so the
-				// room beyond is drawn above it.
-				bFloor, bCeil = top, 1
-			} else {
-				drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
-				return d, loZ, loH, loRow
-			}
-		}
-		if bFloor > aFloor { // rising step face — a low wall, stair, lift or ledge
-			drawWallSpan(fb, cfg, x, max(yTop, row(bFloor, d)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
-			// Record the highest near lip so sprites in a lower area beyond it are
-			// clipped below its top edge (those standing at or above it are not).
-			if bFloor > loH {
-				loH, loZ, loRow = bFloor, d, row(bFloor, d)
-			}
-		}
-		if bCeil < aCeil { // dropping ceiling face
-			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, row(bCeil, d)), d, eyeZ, texX, tex, side, bLight)
+		bFloor, bCeil, opaque := blockFaces(g, mapX, mapY, g.World.FloorAt(mapX, mapY), g.World.CeilAt(mapX, mapY))
+		if opaque {
+			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
+			return d, loZ, loH, loRow
 		}
 
-		yBot = min(yBot, row(math.Max(aFloor, bFloor), d))
-		yTop = max(yTop, row(math.Min(aCeil, bCeil), d)+1)
+		loZ, loH, loRow = drawStepFaces(fb, cfg, x, yTop, yBot, floorEdge, ceilEdge, d, eyeZ, texX, tex, side, bLight, aFloor, aCeil, bFloor, bCeil, loZ, loH, loRow)
+
+		yBot = min(yBot, row(max(aFloor, bFloor), d))
+		yTop = max(yTop, row(min(aCeil, bCeil), d)+1)
 		if yTop > yBot {
 			return d, loZ, loH, loRow
 		}
@@ -158,9 +101,58 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 	return math.MaxFloat64, loZ, loH, loRow
 }
 
-// boundaryTexture picks the texture and texture column for a face crossed at
-// distance d, using where along the cell edge the ray landed (flipped so the
-// image faces the camera consistently).
+func fillDepartedSurfaces(fb []byte, cfg Config, g *sim.Game, tx *textureSet, x, aX, aY, yTop, yBot int, aFloor, aCeil, d, eyeZ, gloom, px, py, dx, dy float64) (floorEdge, ceilEdge int) {
+	fh := float64(cfg.Height)
+	row := func(z float64) int { return int(fh/2 + (eyeZ-z)*fh/d) }
+	aLight := g.World.Level.LightAt(aX, aY) * gloom
+	floorEdge = row(aFloor)
+	ftex := tx.floor
+	if g.World.HazardAt(aX, aY) > 0 {
+		ftex = tx.nukage
+		if g.World.Level.HazardKindAt(aX, aY) == world.HazardLava {
+			ftex = tx.lava
+		}
+	}
+	fillFloorSpan(fb, cfg, x, max(yTop, floorEdge+1), yBot, aFloor, eyeZ, px, py, dx, dy, ftex, aLight)
+	ceilEdge = row(aCeil)
+	if g.World.Level.SkyAt(aX, aY) {
+		// Open air overhead: a bright, distance-independent sky rather than
+		// distance-shaded stone (still dimming with the run's gloom).
+		fillSkySpan(fb, cfg, x, yTop, min(yBot, ceilEdge), gloom)
+	} else {
+		fillCeilSpan(fb, cfg, x, yTop, min(yBot, ceilEdge), aCeil, eyeZ, px, py, dx, dy, tx.ceiling, aLight)
+	}
+	return floorEdge, ceilEdge
+}
+
+func blockFaces(g *sim.Game, mapX, mapY int, bFloor, bCeil float64) (nf, nc float64, opaque bool) {
+	if !g.World.Solid(mapX, mapY) {
+		return bFloor, bCeil, false
+	}
+	if top := g.World.Level.WallTopAt(mapX, mapY); top > 0 {
+		// A low wall: a solid block we can see over. Treat it like an unclimbable
+		// step up to its top, then keep walking the ray so the room beyond is
+		// drawn above it.
+		return top, 1, false
+	}
+	return bFloor, bCeil, true
+}
+
+func drawStepFaces(fb []byte, cfg Config, x, yTop, yBot, floorEdge, ceilEdge int, d, eyeZ float64, texX int, tex *texture, side int, bLight, aFloor, aCeil, bFloor, bCeil, loZ, loH float64, loRow int) (float64, float64, int) {
+	fh := float64(cfg.Height)
+	row := func(z float64) int { return int(fh/2 + (eyeZ-z)*fh/d) }
+	if bFloor > aFloor { // rising step face — a low wall, stair, lift or ledge
+		drawWallSpan(fb, cfg, x, max(yTop, row(bFloor)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
+		if bFloor > loH {
+			loH, loZ, loRow = bFloor, d, row(bFloor)
+		}
+	}
+	if bCeil < aCeil { // dropping ceiling face
+		drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, row(bCeil)), d, eyeZ, texX, tex, side, bLight)
+	}
+	return loZ, loH, loRow
+}
+
 func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, py, dx, dy float64, theme uint8) (int, *texture) {
 	var wallX float64
 	if side == 0 {
@@ -187,8 +179,6 @@ func boundaryTexture(g *sim.Game, tx *textureSet, mapX, mapY, side int, d, px, p
 	return texX, tex
 }
 
-// drawWallSpan paints rows y0..y1 of a vertical face at distance d, mapping each
-// row to its world height so the texture tiles once per wall unit.
 func drawWallSpan(fb []byte, cfg Config, x, y0, y1 int, d, eyeZ float64, texX int, tex *texture, side int, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
@@ -198,9 +188,6 @@ func drawWallSpan(fb []byte, cfg Config, x, y0, y1 int, d, eyeZ float64, texX in
 	}
 }
 
-// fillFloorSpan paints rows y0..y1 of a horizontal floor surface at height z,
-// recovering each row's world position from its distance along the ray. light is
-// the surface tile's brightness.
 func fillFloorSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
@@ -213,7 +200,6 @@ func fillFloorSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy
 	}
 }
 
-// fillCeilSpan paints rows y0..y1 of a ceiling surface at height z.
 func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy float64, tex *texture, light float64) {
 	fh := float64(cfg.Height)
 	for y := y0; y <= y1; y++ {
@@ -226,10 +212,6 @@ func fillCeilSpan(fb []byte, cfg Config, x, y0, y1 int, z, eyeZ, px, py, dx, dy 
 	}
 }
 
-// fillSkySpan paints rows y0..y1 as open sky: a vertical gradient from the dusk
-// overhead down to a pale horizon at mid-screen, scaled only by gloom (the sky is
-// effectively infinitely far, so it takes no distance shading). It darkens with
-// the run like everything else.
 func fillSkySpan(fb []byte, cfg Config, x, y0, y1 int, gloom float64) {
 	half := float64(cfg.Height) / 2
 	for y := y0; y <= y1; y++ {
@@ -241,7 +223,6 @@ func fillSkySpan(fb []byte, cfg Config, x, y0, y1 int, gloom float64) {
 	}
 }
 
-// lerpColor linearly blends two opaque colours by t in [0, 1].
 func lerpColor(a, b color.RGBA, t float64) color.RGBA {
 	return color.RGBA{
 		R: uint8(float64(a.R) + (float64(b.R)-float64(a.R))*t),
@@ -251,8 +232,6 @@ func lerpColor(a, b color.RGBA, t float64) color.RGBA {
 	}
 }
 
-// sampleFlat samples a horizontal surface's texture at the world point rowDist
-// along this column's ray and writes the shaded pixel.
 func sampleFlat(fb []byte, cfg Config, x, y int, rowDist, px, py, dx, dy float64, tex *texture, f float64) {
 	wx := px + rowDist*dx
 	wy := py + rowDist*dy
@@ -261,13 +240,10 @@ func sampleFlat(fb []byte, cfg Config, x, y int, rowDist, px, py, dx, dy float64
 	setPixel(fb, cfg.Width, x, y, scaleColor(tex.at(tcx, tcy), f))
 }
 
-// shadeFactor is the distance-dimming multiplier used for flat surfaces, matching
-// the wall shading curve (see shade) for a north/south face.
 func shadeFactor(dist float64) float64 {
-	return math.Max(shadeFloor, math.Min(1, 1.0/(1.0+dist*shadeDecay)))
+	return max(shadeFloor, min(1, 1.0/(1.0+dist*shadeDecay)))
 }
 
-// scaleColor multiplies an RGB colour by f, keeping it opaque.
 func scaleColor(c color.RGBA, f float64) color.RGBA {
 	return color.RGBA{
 		R: uint8(float64(c.R) * f),

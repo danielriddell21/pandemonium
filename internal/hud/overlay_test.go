@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// TestOverlayConcurrentAccess exercises Post from many goroutines while the loop
-// Ticks and reads, so `go test -race` can catch unguarded access.
 func TestOverlayConcurrentAccess(_ *testing.T) {
 	o := New()
 	var wg sync.WaitGroup

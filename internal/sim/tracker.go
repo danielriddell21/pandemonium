@@ -2,9 +2,6 @@ package sim
 
 import "github.com/danielriddell21/pandemonium/internal/world"
 
-// tracker watches the player's progress through a level and decides when the
-// simulation should emit an observation: on entering a new tile, on crossing a
-// tagged structure, and on reaching the exit (once).
 type tracker struct {
 	markers     map[world.Coord]world.Marker
 	lastCell    world.Coord
@@ -20,14 +17,11 @@ func newTracker(l *world.Level) tracker {
 	return tracker{markers: m}
 }
 
-// markerAt returns the marker tagged at c, if any.
 func (t *tracker) markerAt(c world.Coord) (world.Marker, bool) {
 	mk, ok := t.markers[c]
 	return mk, ok
 }
 
-// splitBranches decides which branch of a junction the player took — the one
-// best aligned with their facing — and returns the rest as ignored.
 func splitBranches(mk world.Marker, dir Vec2, cell world.Coord) (taken world.Coord, ignored []world.Coord) {
 	taken = mk.Optimal
 	best := -2.0

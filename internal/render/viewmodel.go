@@ -2,9 +2,6 @@ package render
 
 import "math"
 
-// drawViewmodel blits the current weapon so it rests on the given bottom baseline
-// (the top of the status bar) with a gentle bob, plus a muzzle flash at the barrel
-// tip while firing. tick drives the bob.
 func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, tick float64, bottom int) {
 	if weapon == nil {
 		return
@@ -25,8 +22,6 @@ func drawViewmodel(fb []byte, cfg Config, weapon, flash *texture, firing bool, t
 	}
 }
 
-// blitTexture nearest-samples tex into the screen rect (dx,dy,dw,dh), skipping
-// transparent texels.
 func blitTexture(fb []byte, cfg Config, tex *texture, dx, dy, dw, dh int) {
 	for y := range dh {
 		sy := y * tex.h / dh

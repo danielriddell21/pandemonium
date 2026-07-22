@@ -6,10 +6,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// This file holds the procedural generators for the billboarded sprites and HUD
-// art: collectibles, demons, projectiles, props and the status-bar faces.
-
-// defaultItemTextures builds the collectible sprites indexed by world.ItemKind.
 func defaultItemTextures() []*texture {
 	items := make([]*texture, world.ItemKeyYellow+1)
 	items[world.ItemHealth] = genMedkit()
@@ -29,7 +25,6 @@ func defaultItemTextures() []*texture {
 	return items
 }
 
-// genMedkit draws a white box with a red cross on a transparent background.
 func genMedkit() *texture {
 	t := newTexture(texSize, texSize)
 	box := color.RGBA{R: 230, G: 230, B: 224, A: 255}
@@ -41,7 +36,6 @@ func genMedkit() *texture {
 	return t
 }
 
-// genArmor draws a simple green chest-plate on a transparent background.
 func genArmor() *texture {
 	t := newTexture(texSize, texSize)
 	green := color.RGBA{R: 60, G: 170, B: 70, A: 255}
@@ -54,7 +48,6 @@ func genArmor() *texture {
 	return t
 }
 
-// genAmmoBox draws a small ammo container tinted by the round it holds.
 func genAmmoBox(c color.RGBA) *texture {
 	t := newTexture(texSize, texSize)
 	fillRect(t, 20, 30, 44, 46, adjust(c, -50))
@@ -63,7 +56,6 @@ func genAmmoBox(c color.RGBA) *texture {
 	return t
 }
 
-// genKey draws a keycard in the given colour on a transparent background.
 func genKey(c color.RGBA) *texture {
 	t := newTexture(texSize, texSize)
 	fillRect(t, 26, 22, 38, 48, adjust(c, -50))
@@ -72,8 +64,6 @@ func genKey(c color.RGBA) *texture {
 	return t
 }
 
-// genSphere draws a glowing orb (soulsphere/megasphere/invulnerability) with a
-// bright core fading to the given hue, on a transparent background.
 func genSphere(hue color.RGBA) *texture {
 	t := newTexture(texSize, texSize)
 	cx, cy := 32.0, 34.0
@@ -94,7 +84,6 @@ func genSphere(hue color.RGBA) *texture {
 	return t
 }
 
-// genBackpack draws a brown satchel with straps on a transparent background.
 func genBackpack() *texture {
 	t := newTexture(texSize, texSize)
 	canvas := color.RGBA{R: 120, G: 86, B: 50, A: 255}
@@ -106,7 +95,6 @@ func genBackpack() *texture {
 	return t
 }
 
-// genRocket draws the player's in-flight rocket: a metal slug with a flame tail.
 func genRocket() *texture {
 	t := newTexture(texSize, texSize)
 	body := color.RGBA{R: 150, G: 150, B: 160, A: 255}
@@ -117,8 +105,6 @@ func genRocket() *texture {
 	return t
 }
 
-// buildDemons makes the animation sets for every demon variant, one per palette
-// sprite colour (melee, ranged, gunner, pinky, baron).
 func buildDemons() []demonArt {
 	arts := make([]demonArt, len(palette.sprite))
 	for i, c := range palette.sprite {
@@ -127,7 +113,6 @@ func buildDemons() []demonArt {
 	return arts
 }
 
-// buildDemon makes a variant's walk and death frames.
 func buildDemon(c color.RGBA) demonArt {
 	return demonArt{
 		walk: []*texture{genDemonWalk(c, 0), genDemonWalk(c, 1)},
@@ -135,8 +120,6 @@ func buildDemon(c color.RGBA) demonArt {
 	}
 }
 
-// drawBody paints an elliptical demon body (transparent outside) with an edge
-// shade and, optionally, two eyes.
 func drawBody(t *texture, body color.RGBA, cx, cy, rx, ry float64, eyes bool) {
 	edge := adjust(body, -50)
 	for y := range texSize {
@@ -155,22 +138,24 @@ func drawBody(t *texture, body color.RGBA, cx, cy, rx, ry float64, eyes bool) {
 		}
 	}
 	if eyes {
-		eye := color.RGBA{R: 240, G: 220, B: 60, A: 255}
-		ey := int(cy - 8)
-		for _, ex := range []int{int(cx - 7), int(cx + 7)} {
-			for dy := -2; dy <= 2; dy++ {
-				for dx := -2; dx <= 2; dx++ {
-					if ex+dx >= 0 && ex+dx < texSize && ey+dy >= 0 && ey+dy < texSize {
-						t.set(ex+dx, ey+dy, eye)
-					}
+		drawEyes(t, cx, cy)
+	}
+}
+
+func drawEyes(t *texture, cx, cy float64) {
+	eye := color.RGBA{R: 240, G: 220, B: 60, A: 255}
+	ey := int(cy - 8)
+	for _, ex := range []int{int(cx - 7), int(cx + 7)} {
+		for dy := -2; dy <= 2; dy++ {
+			for dx := -2; dx <= 2; dx++ {
+				if ex+dx >= 0 && ex+dx < texSize && ey+dy >= 0 && ey+dy < texSize {
+					t.set(ex+dx, ey+dy, eye)
 				}
 			}
 		}
 	}
 }
 
-// genDemonWalk draws one walk-cycle frame (step 0 or 1) with a slight bob and
-// swapping legs.
 func genDemonWalk(body color.RGBA, step int) *texture {
 	t := newTexture(texSize, texSize)
 	drawBody(t, body, 32, 38+float64(step)*2, 20, 24, true)
@@ -187,8 +172,6 @@ func genDemonWalk(body color.RGBA, step int) *texture {
 	return t
 }
 
-// genDemonDead draws death frame k of n: the body squashes toward the floor,
-// darkens, and loses its eyes.
 func genDemonDead(body color.RGBA, k, n int) *texture {
 	t := newTexture(texSize, texSize)
 	prog := float64(k) / float64(n-1)
@@ -198,8 +181,6 @@ func genDemonDead(body color.RGBA, k, n int) *texture {
 	return t
 }
 
-// genBarrel draws a stout metal barrel with banding, on a transparent
-// background, sitting in the lower-centre so it reads as a short floor prop.
 func genBarrel() *texture {
 	t := newTexture(texSize, texSize)
 	metal := color.RGBA{R: 120, G: 96, B: 48, A: 255}
@@ -222,7 +203,6 @@ func genBarrel() *texture {
 	return t
 }
 
-// genFireball draws a glowing projectile with a transparent background.
 func genFireball() *texture {
 	t := newTexture(texSize, texSize)
 	cx, cy := 32.0, 32.0
@@ -247,8 +227,6 @@ func genFireball() *texture {
 	return t
 }
 
-// buildFaces makes the status-bar mugshots: one per health band (0 healthy ..
-// 3 dead) and gaze direction (-1 left, 0 ahead, +1 right), indexed band*3+dir+1.
 func buildFaces() []*texture {
 	const bands, dirs = 4, 3
 	faces := make([]*texture, bands*dirs)
@@ -260,13 +238,8 @@ func buildFaces() []*texture {
 	return faces
 }
 
-// faceIndex maps a health band and gaze direction to its buildFaces slot.
 func faceIndex(band, dir int) int { return band*3 + dir + 1 }
 
-// genFace draws the status-bar mugshot for a health band and gaze direction: a
-// skin disc with eyes (shifted by gaze), a brow that lowers and a mouth that
-// turns from a faint smile to a pained grimace as the band rises. The background
-// stays transparent so the bar panel shows through.
 func genFace(band, gaze int) *texture {
 	t := newTexture(texSize, texSize)
 	skins := []color.RGBA{

@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// skyBox builds a single open room. With sky set, every interior cell is flagged
-// open-air, so the ceiling renders as sky instead of stone.
 func skyBox(sky bool) *world.Level {
 	const w, h = 10, 9
 	l := &world.Level{

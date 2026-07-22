@@ -1,23 +1,22 @@
 package sim
 
 import (
+	"cmp"
 	"math"
-	"sort"
+	"slices"
 )
 
-// WeaponKind identifies the player's selectable weapons.
 type WeaponKind uint8
 
 const (
-	// Fists are the melee fallback; short reach, no ammo.
 	Fists WeaponKind = iota
-	// Pistol is a precise single-target hitscan.
+
 	Pistol
-	// Shotgun sprays several pellets across a wide arc.
+
 	Shotgun
-	// Chaingun is a rapid single-target hitscan that chews through bullets.
+
 	Chaingun
-	// RocketLauncher fires a slow rocket that bursts for splash damage on impact.
+
 	RocketLauncher
 )
 
@@ -30,15 +29,14 @@ const (
 	ammoRockets
 )
 
-// weaponSpec describes how a weapon fires.
 type weaponSpec struct {
-	rng      float64 // reach in tiles (hitscan weapons)
-	arcCos   float64 // cosine of the half-angle it can hit within
-	damage   float64 // damage per pellet/shot (or splash damage for rockets)
-	targets  int     // how many demons a single shot can hit (spread)
+	rng      float64
+	arcCos   float64
+	damage   float64
+	targets  int
 	ammo     ammoKind
-	cooldown float64 // seconds between shots
-	rocket   bool    // fires a splash projectile instead of a hitscan
+	cooldown float64
+	rocket   bool
 }
 
 var weapons = map[WeaponKind]weaponSpec{
@@ -49,12 +47,8 @@ var weapons = map[WeaponKind]weaponSpec{
 	RocketLauncher: {damage: 70, ammo: ammoRockets, cooldown: 0.85, rocket: true},
 }
 
-// muzzleFlashTicks is how many ticks the muzzle flash shows after firing.
 const muzzleFlashTicks = 5
 
-// fire discharges the current weapon: it spends ammo, records the shot for the
-// muzzle flash, and wounds up to the weapon's target count of demons ahead. It
-// reports whether a shot actually went off (false when out of ammo).
 func (g *Game) fire() bool {
 	w := weapons[g.Player.Weapon]
 	if !g.spendAmmo(w.ammo) {
@@ -75,10 +69,8 @@ func (g *Game) fire() bool {
 	return true
 }
 
-// berserkFistDamage is the punishing fist damage while berserk is active.
 const berserkFistDamage = 200.0
 
-// spendAmmo consumes one round of the given kind, reporting success.
 func (g *Game) spendAmmo(a ammoKind) bool {
 	switch a {
 	case ammoBullets:
@@ -100,8 +92,6 @@ func (g *Game) spendAmmo(a ammoKind) bool {
 	return true
 }
 
-// ammoCount returns how many rounds of the given kind the player holds. Weapons
-// that need no ammo (the fists) always report a usable count.
 func (g *Game) ammoCount(a ammoKind) int {
 	switch a {
 	case ammoBullets:
@@ -115,10 +105,6 @@ func (g *Game) ammoCount(a ammoKind) int {
 	}
 }
 
-// autoSwitchIfEmpty drops to the best still-usable weapon when the current one
-// runs dry, the way DOOM falls back after you fire your last round. The rocket
-// launcher is never auto-selected (its ammo is too precious to spend by reflex),
-// so the fists are the final fallback.
 func (g *Game) autoSwitchIfEmpty() {
 	w := weapons[g.Player.Weapon]
 	if w.ammo == ammoNone || g.ammoCount(w.ammo) > 0 {
@@ -132,8 +118,6 @@ func (g *Game) autoSwitchIfEmpty() {
 	}
 }
 
-// hitscanMulti returns up to n nearest living demons within range, inside the
-// facing arc, and in clear line of sight, nearest first.
 func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
 	type cand struct {
 		i int
@@ -159,7 +143,7 @@ func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
 		}
 		cs = append(cs, cand{i, d})
 	}
-	sort.Slice(cs, func(a, b int) bool { return cs[a].d < cs[b].d })
+	slices.SortFunc(cs, func(a, b cand) int { return cmp.Compare(a.d, b.d) })
 	if len(cs) > n {
 		cs = cs[:n]
 	}
@@ -170,8 +154,6 @@ func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
 	return out
 }
 
-// switchWeapon selects a weapon by slot (1=fists, 2=pistol, 3=shotgun,
-// 4=chaingun, 5=rocket launcher).
 func (g *Game) switchWeapon(sel int) {
 	switch sel {
 	case 1:
@@ -187,7 +169,6 @@ func (g *Game) switchWeapon(sel int) {
 	}
 }
 
-// MuzzleFlash reports whether the weapon fired recently enough to show a flash.
 func (g *Game) MuzzleFlash() bool {
 	return g.flash > 0
 }

@@ -2,8 +2,6 @@ package world
 
 import "testing"
 
-// build constructs a Level from an ASCII map for testing. '#' is wall, '.' is
-// floor, 'S' spawn, 'E' exit, '+' door. All rows must be equal length.
 func build(t *testing.T, rows []string) *Level {
 	t.Helper()
 	h := len(rows)

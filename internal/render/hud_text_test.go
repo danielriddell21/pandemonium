@@ -8,7 +8,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// changedPixels counts framebuffer differences split by the top HUD band.
 func changedPixels(cfg Config, before, after []byte) (band, below int) {
 	for y := range cfg.Height {
 		for x := range cfg.Width {

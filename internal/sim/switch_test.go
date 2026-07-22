@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// gatedExitGame returns a game whose level ends via an exit switch, plus the
-// player angle that faces that switch from the exit tile.
 func gatedExitGame(t *testing.T) (*Game, float64) {
 	t.Helper()
 	for seed := int64(0); seed < 60; seed++ {

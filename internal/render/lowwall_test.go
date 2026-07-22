@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// twoRoomLevel builds two rooms split by a wall column at x=5, with the divider
-// cell on the player's eye line either full-height or a low wall.
 func twoRoomLevel(lowWall bool) *world.Level {
 	const w, h = 12, 8
 	l := &world.Level{

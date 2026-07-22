@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// renderFrame runs the full CPU draw pipeline into a fresh buffer, the same way
-// the Ebiten layer does, so the renderer can be exercised without a GPU.
 func renderFrame(t *testing.T, seed int64, cfg Config) ([]byte, []float64) {
 	t.Helper()
 	l, err := world.Generate(world.Config{Width: 48, Height: 32, Seed: seed})

@@ -2,10 +2,6 @@ package render
 
 import "image/color"
 
-// This file holds the procedural generators for the first-person weapon
-// viewmodels and the muzzle flash. Each draws into the lower-centre of a
-// transparent texture; the renderer scales them to the screen.
-
 func genFists() *texture {
 	t := newTexture(texSize, texSize)
 	flesh := color.RGBA{R: 150, G: 96, B: 74, A: 255}
@@ -61,7 +57,6 @@ func genRocketLauncher() *texture {
 	return t
 }
 
-// genFlash draws a bright muzzle-flash blob with a transparent background.
 func genFlash() *texture {
 	t := newTexture(texSize, texSize)
 	cx, cy := 32.0, 32.0

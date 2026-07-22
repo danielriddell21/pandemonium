@@ -12,13 +12,10 @@ import (
 )
 
 const (
-	hudMarginX  = 4  // left inset of the message line, in pixels
-	hudBaseline = 13 // text baseline from the top, in pixels
+	hudMarginX  = 4
+	hudBaseline = 13
 )
 
-// drawMessage renders a single message into the framebuffer at the top left, with
-// a one-pixel drop shadow so it stays legible over any background. The colour
-// depends on the channel.
 func drawMessage(fb []byte, cfg Config, msg string, ch hud.Channel) {
 	if msg == "" {
 		return
@@ -36,7 +33,6 @@ func drawMessage(fb []byte, cfg Config, msg string, ch hud.Channel) {
 	drawText(dst, hudMarginX, hudBaseline, msg, fg)
 }
 
-// glyphWidth is the fixed advance of basicfont.Face7x13, used to centre text.
 const glyphWidth = 7
 
 func drawText(dst *image.RGBA, x, y int, s string, c color.RGBA) {
@@ -49,8 +45,6 @@ func drawText(dst *image.RGBA, x, y int, s string, c color.RGBA) {
 	d.DrawString(s)
 }
 
-// drawTextCentered draws s horizontally centred on the framebuffer at baseline y,
-// with a one-pixel drop shadow for legibility.
 func drawTextCentered(fb []byte, cfg Config, y int, s string, c color.RGBA) {
 	dst := framebufferImage(fb, cfg)
 	x := (cfg.Width - len(s)*glyphWidth) / 2
@@ -58,8 +52,6 @@ func drawTextCentered(fb []byte, cfg Config, y int, s string, c color.RGBA) {
 	drawText(dst, x, y, s, c)
 }
 
-// drawNotice shows a transient gameplay message (pickups, keys, secrets) centred
-// low on the screen, above the weapon.
 func drawNotice(fb []byte, cfg Config, msg string) {
 	if msg == "" {
 		return
@@ -67,7 +59,6 @@ func drawNotice(fb []byte, cfg Config, msg string) {
 	drawTextCentered(fb, cfg, cfg.Height*3/4, msg, palette.hudText)
 }
 
-// framebufferImage wraps a framebuffer slice as an image.RGBA for font drawing.
 func framebufferImage(fb []byte, cfg Config) *image.RGBA {
 	return &image.RGBA{
 		Pix:    fb,
