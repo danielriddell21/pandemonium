@@ -1,10 +1,9 @@
 package gui
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+
+	"github.com/danielriddell21/crucible/store"
 
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
@@ -38,11 +37,11 @@ func (r Records) Summary() string {
 }
 
 func recordsPath() (string, error) {
-	dir, err := os.UserConfigDir()
+	path, err := store.Path("pandemonium", "records.json")
 	if err != nil {
-		return "", fmt.Errorf("locate user config dir: %w", err)
+		return "", fmt.Errorf("locate records path: %w", err)
 	}
-	return filepath.Join(dir, "pandemonium", "records.json"), nil
+	return path, nil
 }
 
 func LoadRecords() Records {
@@ -54,30 +53,12 @@ func LoadRecords() Records {
 }
 
 func loadRecordsFrom(path string) Records {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return Records{}
-	}
-	var r Records
-	if err := json.Unmarshal(data, &r); err != nil {
-		return Records{}
-	}
-	return r
+	return store.Load(path, Records{})
 }
 
 func (r Records) saveTo(path string) error {
-	if path == "" {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return fmt.Errorf("create config dir: %w", err)
-	}
-	data, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal records: %w", err)
-	}
-	if err := os.WriteFile(path, append(data, '\n'), 0o600); err != nil {
-		return fmt.Errorf("write records: %w", err)
+	if err := store.Save(path, r); err != nil {
+		return fmt.Errorf("save records: %w", err)
 	}
 	return nil
 }

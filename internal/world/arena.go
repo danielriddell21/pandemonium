@@ -1,6 +1,11 @@
 package world
 
+import "github.com/danielriddell21/crucible/worldgen"
+
 const arenaEvery = 5
+
+// arenaSkyHeadroom is the tall open-air ceiling the arena floor is given.
+const arenaSkyHeadroom = 3.0
 
 func IsArenaLevel(levelNumber int) bool {
 	return levelNumber > 0 && levelNumber%arenaEvery == 0
@@ -8,7 +13,7 @@ func IsArenaLevel(levelNumber int) bool {
 
 func generateArena(width, height int, seed int64) *Level {
 	l := newLevel(width, height, seed)
-	g := newRNG(seed)
+	g := worldgen.NewRNG(seed)
 
 	// Carve one big rectangle inside the border and open it to the sky.
 	x0, y0, x1, y1 := 2, 2, width-3, height-3
@@ -18,15 +23,15 @@ func generateArena(width, height int, seed int64) *Level {
 			l.Tiles[i] = TileFloor
 			l.Sky[i] = true
 			l.Light[i] = 1
-			l.CeilH[i] = skyHeadroom
+			l.CeilH[i] = arenaSkyHeadroom
 		}
 	}
 
 	midY := (y0 + y1) / 2
 	l.Spawn = Coord{X: x0, Y: midY}
-	l.set(l.Spawn.X, l.Spawn.Y, TileSpawn)
+	l.Set(l.Spawn.X, l.Spawn.Y, TileSpawn)
 	l.Exit = Coord{X: x1, Y: midY}
-	l.set(l.Exit.X, l.Exit.Y, TileExit)
+	l.Set(l.Exit.X, l.Exit.Y, TileExit)
 	placeExitSwitch(l)
 
 	placeArenaCache(l)
@@ -36,7 +41,7 @@ func generateArena(width, height int, seed int64) *Level {
 }
 
 func placeArenaCache(l *Level) {
-	cx, cy := l.Width/2, l.Height/2
+	cx, cy := l.W/2, l.H/2
 	cache := []struct {
 		kind ItemKind
 		dx   int

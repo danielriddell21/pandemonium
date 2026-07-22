@@ -1,7 +1,10 @@
 package gui
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/danielriddell21/crucible/menu"
 
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
@@ -25,6 +28,18 @@ func newApp(t *testing.T) *Game {
 	return New(start, next, r, WithAttract(func() *sim.Game { return newTestGame(t) }))
 }
 
+// settingRow finds the settings item whose label starts with name.
+func settingRow(t *testing.T, g *Game, name string) menu.Item {
+	t.Helper()
+	for _, it := range g.settingsMenu.Items {
+		if strings.HasPrefix(it.Label(), name) {
+			return it
+		}
+	}
+	t.Fatalf("no settings row %q", name)
+	return menu.Item{}
+}
+
 func TestStartsOnTitle(t *testing.T) {
 	if got := newApp(t).state; got != stateTitle {
 		t.Errorf("new game state = %d, want stateTitle", got)
@@ -33,7 +48,7 @@ func TestStartsOnTitle(t *testing.T) {
 
 func TestTitleStartEntersPlaying(t *testing.T) {
 	g := newApp(t)
-	g.titleMenu.activate() // START is first
+	g.titleMenu.Items[0].Action() // START is first
 	if g.state != statePlaying {
 		t.Errorf("after START, state = %d, want statePlaying", g.state)
 	}
@@ -41,8 +56,7 @@ func TestTitleStartEntersPlaying(t *testing.T) {
 
 func TestTitleSettingsAndBack(t *testing.T) {
 	g := newApp(t)
-	g.titleMenu.move(1) // SETTINGS
-	g.titleMenu.activate()
+	g.titleMenu.Items[1].Action() // SETTINGS
 	if g.state != stateSettings {
 		t.Fatalf("state = %d, want stateSettings", g.state)
 	}
@@ -64,13 +78,9 @@ func TestPauseResumeReturnsToOrigin(t *testing.T) {
 
 func TestSettingsAdjustAppliesToRenderer(t *testing.T) {
 	g := newApp(t)
-	// Find the FOV entry and nudge it up; the renderer config must follow.
+	// Nudge the FOV up; the renderer config must follow.
 	before := g.renderer.Config().FOV
-	for _, e := range g.settingsMenu.entries {
-		if e.label == "FIELD OF VIEW" {
-			e.adjust(1)
-		}
-	}
+	settingRow(t, g, "FIELD OF VIEW").Adjust(1)
 	after := g.renderer.Config().FOV
 	if after <= before {
 		t.Errorf("FOV did not increase: %.3f -> %.3f", before, after)
@@ -83,11 +93,7 @@ func TestSettingsAdjustAppliesToRenderer(t *testing.T) {
 func TestCrosshairToggle(t *testing.T) {
 	g := newApp(t)
 	start := g.settings.Crosshair
-	for _, e := range g.settingsMenu.entries {
-		if e.label == "CROSSHAIR" {
-			e.adjust(1)
-		}
-	}
+	settingRow(t, g, "CROSSHAIR").Adjust(1)
 	if g.settings.Crosshair == start {
 		t.Error("crosshair setting did not toggle")
 	}
@@ -95,13 +101,8 @@ func TestCrosshairToggle(t *testing.T) {
 
 func TestSoundAndDebugToggle(t *testing.T) {
 	g := newApp(t)
-	for _, name := range []string{"SOUND", "DEBUG MESSAGES"} {
-		for _, e := range g.settingsMenu.entries {
-			if e.label == name {
-				e.adjust(1) // must flip and apply without panicking (audio is nil)
-			}
-		}
-	}
+	settingRow(t, g, "SOUND").Adjust(1)
+	settingRow(t, g, "DEBUG MESSAGES").Adjust(1)
 	if g.settings.Sound { // default true, toggled once
 		t.Error("SOUND did not toggle off")
 	}
@@ -119,11 +120,7 @@ func TestDifficultyCyclesAndReachesSink(t *testing.T) {
 	if got != defaultDifficulty {
 		t.Fatalf("sink got %d on construction, want %d", got, defaultDifficulty)
 	}
-	for _, e := range g.settingsMenu.entries {
-		if e.label == "DIFFICULTY" {
-			e.adjust(1) // normal -> hard
-		}
-	}
+	settingRow(t, g, "DIFFICULTY").Adjust(1) // normal -> hard
 	if g.settings.Difficulty != defaultDifficulty+1 {
 		t.Errorf("difficulty = %d, want %d", g.settings.Difficulty, defaultDifficulty+1)
 	}
@@ -134,14 +131,10 @@ func TestDifficultyCyclesAndReachesSink(t *testing.T) {
 
 func TestDifficultyWrapsAtEnds(t *testing.T) {
 	g := newApp(t)
-	g.settings.Difficulty = 0 // easiest
-	for _, e := range g.settingsMenu.entries {
-		if e.label == "DIFFICULTY" {
-			e.adjust(-1) // wrap down to the hardest
-			if g.settings.Difficulty != skillCount-1 {
-				t.Errorf("wrap down = %d, want %d", g.settings.Difficulty, skillCount-1)
-			}
-		}
+	g.settings.Difficulty = 0                 // easiest
+	settingRow(t, g, "DIFFICULTY").Adjust(-1) // wrap down to the hardest
+	if g.settings.Difficulty != skillCount-1 {
+		t.Errorf("wrap down = %d, want %d", g.settings.Difficulty, skillCount-1)
 	}
 }
 
@@ -150,7 +143,7 @@ func TestStartBuildsTheFirstLevel(t *testing.T) {
 	if g.sim != nil {
 		t.Fatal("sim should be nil before START")
 	}
-	g.titleMenu.activate() // START
+	g.titleMenu.Items[0].Action() // START
 	if g.sim == nil || g.state != statePlaying {
 		t.Error("START should build the first level and enter play")
 	}
@@ -169,13 +162,15 @@ func TestStartAttractBuildsLevel(t *testing.T) {
 
 func TestSettingsValuesRender(t *testing.T) {
 	g := newApp(t)
-	items := g.settingsMenu.items()
+	items := g.settingsMenu.Items
 	if len(items) == 0 {
 		t.Fatal("no settings items")
 	}
 	for _, it := range items[:len(items)-1] { // last entry is BACK, no value
-		if it.Value == "" {
-			t.Errorf("settings row %q has no value", it.Label)
+		// Each adjustable row pads its name into an 18-column field before the
+		// value, so a valued row is longer than the padding alone.
+		if len(it.Label()) <= 18 {
+			t.Errorf("settings row %q has no value", it.Label())
 		}
 	}
 }

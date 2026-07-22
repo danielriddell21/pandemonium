@@ -5,7 +5,9 @@ import (
 	"math/rand/v2"
 	"os"
 
-	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/crucible/hud"
+	cstatus "github.com/danielriddell21/crucible/status"
+
 	"github.com/danielriddell21/pandemonium/internal/phrasing"
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/status"
@@ -61,7 +63,7 @@ func Run(cfg Config) error {
 	return nil
 }
 
-func noticeSource() (status.Source, func()) {
+func noticeSource() (cstatus.Source[status.Cue], func()) {
 	v, err := phrasing.New()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "notice phrasing disabled:", err)

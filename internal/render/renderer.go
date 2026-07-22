@@ -1,7 +1,10 @@
 package render
 
 import (
-	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/hud"
+	"github.com/danielriddell21/crucible/raycast"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
@@ -77,7 +80,7 @@ func (r *Renderer) SetGloom(g float64) {
 }
 
 func (r *Renderer) Frame(g *sim.Game) []byte {
-	cam := newCamera(g.Player.Angle, r.cfg.FOV)
+	cam := raycast.NewCamera(geom.Vec2{X: g.Player.Pos.X, Y: g.Player.Pos.Y}, g.Player.Angle, r.cfg.FOV)
 	drawScene(r.fb, r.zbuf, r.loZ, r.loH, r.loRow, g, cam, r.cfg, r.tex, r.gloom)
 	drawSprites(r.fb, r.zbuf, r.loZ, r.loH, r.loRow, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)

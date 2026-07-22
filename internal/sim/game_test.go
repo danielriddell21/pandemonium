@@ -102,8 +102,8 @@ func TestTickDeterminism(t *testing.T) {
 }
 
 func firstDoor(l *world.Level) (world.Coord, bool) {
-	for y := range l.Height {
-		for x := range l.Width {
+	for y := range l.H {
+		for x := range l.W {
 			c := world.Coord{X: x, Y: y}
 			if l.At(x, y) != world.TileDoor {
 				continue

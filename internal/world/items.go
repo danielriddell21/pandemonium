@@ -1,6 +1,8 @@
 package world
 
-func placeItems(l *Level, g *rng) {
+import "github.com/danielriddell21/crucible/worldgen"
+
+func placeItems(l *Level, g *worldgen.RNG) {
 	floors := freeFloors(l)
 	shuffleCoords(g, floors)
 
@@ -18,17 +20,17 @@ func placeItems(l *Level, g *rng) {
 	for i, c := range floors[:n] {
 		kind := rollConsumable(g)
 		switch {
-		case i == 0 && g.chance(0.25): // an occasional backpack, never more than one
+		case i == 0 && g.Chance(0.25): // an occasional backpack, never more than one
 			kind = ItemBackpack
-		case i == 1 && g.chance(0.4): // and sometimes a single powerup
+		case i == 1 && g.Chance(0.4): // and sometimes a single powerup
 			kind = rollPowerup(g)
 		}
 		l.Items = append(l.Items, Item{Kind: kind, At: c})
 	}
 }
 
-func rollPowerup(g *rng) ItemKind {
-	switch g.intn(5) {
+func rollPowerup(g *worldgen.RNG) ItemKind {
+	switch g.IntN(5) {
 	case 0, 1:
 		return ItemSoul
 	case 2:
@@ -37,15 +39,15 @@ func rollPowerup(g *rng) ItemKind {
 		return ItemRadSuit
 	default:
 		// The megasphere and invulnerability are the rarest finds.
-		if g.chance(0.5) {
+		if g.Chance(0.5) {
 			return ItemMega
 		}
 		return ItemInvuln
 	}
 }
 
-func rollConsumable(g *rng) ItemKind {
-	switch g.intn(12) {
+func rollConsumable(g *worldgen.RNG) ItemKind {
+	switch g.IntN(12) {
 	case 0, 1, 2:
 		return ItemHealth
 	case 3, 4, 5:
@@ -65,8 +67,8 @@ func freeFloors(l *Level) []Coord {
 		taken[it.At] = true
 	}
 	var out []Coord
-	for y := range l.Height {
-		for x := range l.Width {
+	for y := range l.H {
+		for x := range l.W {
 			if l.At(x, y) != TileFloor {
 				continue
 			}
@@ -80,9 +82,9 @@ func freeFloors(l *Level) []Coord {
 	return out
 }
 
-func shuffleCoords(g *rng, cs []Coord) {
+func shuffleCoords(g *worldgen.RNG, cs []Coord) {
 	for i := len(cs) - 1; i > 0; i-- {
-		j := g.intn(i + 1)
+		j := g.IntN(i + 1)
 		cs[i], cs[j] = cs[j], cs[i]
 	}
 }

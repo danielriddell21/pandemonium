@@ -24,11 +24,11 @@ var (
 
 func drawAutomap(fb []byte, cfg Config, g *sim.Game) {
 	l := g.World.Level
-	cell := min(automapMaxW/l.Width, automapMaxH/l.Height)
+	cell := min(automapMaxW/l.W, automapMaxH/l.H)
 	if cell < 2 {
 		cell = 2
 	}
-	mapW, mapH := cell*l.Width, cell*l.Height
+	mapW, mapH := cell*l.W, cell*l.H
 	ox := cfg.Width - mapW - automapInset
 	oy := automapInset
 
@@ -52,8 +52,8 @@ func revealedCell(visited map[world.Coord]bool, c world.Coord) bool {
 }
 
 func drawMapTiles(fb []byte, cfg Config, l *world.Level, visited map[world.Coord]bool, ox, oy, cell int) {
-	for ty := range l.Height {
-		for tx := range l.Width {
+	for ty := range l.H {
+		for tx := range l.W {
 			c := world.Coord{X: tx, Y: ty}
 			if !revealedCell(visited, c) {
 				continue

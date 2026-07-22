@@ -2,6 +2,10 @@ package world
 
 import "testing"
 
+// skyHeadroom is the open-air ceiling gap crucible/level's AssignSky gives
+// sky cells (its DefaultSkyConfig headroom).
+const skyHeadroom = 3.0
+
 func TestSkyAppearsAndIsWellFormed(t *testing.T) {
 	skySeen := false
 	for seed := int64(0); seed < 40; seed++ {
@@ -9,8 +13,8 @@ func TestSkyAppearsAndIsWellFormed(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for y := range l.Height {
-			for x := range l.Width {
+		for y := range l.H {
+			for x := range l.W {
 				if !l.SkyAt(x, y) {
 					continue
 				}
@@ -44,8 +48,8 @@ func TestSkyDeterministic(t *testing.T) {
 }
 
 func TestSkyAtNilSafe(t *testing.T) {
-	l := &Level{Width: 4, Height: 4} // no Sky layer allocated
+	l := newLevel(4, 4, 0) // a fresh level opens no sky
 	if l.SkyAt(1, 1) {
-		t.Error("a level with no sky layer should report no sky")
+		t.Error("a fresh level should report no sky")
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"image/color"
 
+	"github.com/danielriddell21/crucible/paint"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
@@ -92,7 +94,7 @@ func drawKeyPip(fb []byte, cfg Config, x0, y0 int, on color.RGBA, held bool) {
 		}
 		return
 	}
-	dim := scaleColor(on, 0.28)
+	dim := paint.Scale(on, 0.28)
 	for x := x0; x < x0+pw; x++ {
 		setPixel(fb, cfg.Width, x, y0, dim)
 		setPixel(fb, cfg.Width, x, y0+ph-1, dim)

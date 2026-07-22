@@ -1,28 +1,30 @@
 package world
 
-func assignLight(l *Level, g *rng, rooms []rect) {
+import "github.com/danielriddell21/crucible/worldgen"
+
+func assignLight(l *Level, g *worldgen.RNG, rooms []rect) {
 	for _, r := range rooms {
-		level := roomBrightness(g)
-		if r.contains(l.Spawn) {
-			level = 1.0
+		bright := roomBrightness(g)
+		if r.Contains(l.Spawn) {
+			bright = 1.0
 		}
-		for y := r.y; y < r.y+r.h; y++ {
-			for x := r.x; x < r.x+r.w; x++ {
+		for y := r.Y; y < r.Y+r.H; y++ {
+			for x := r.X; x < r.X+r.W; x++ {
 				if l.At(x, y).Walkable() {
-					l.Light[y*l.Width+x] = level
+					l.Light[y*l.W+x] = bright
 				}
 			}
 		}
 	}
 	for c := range l.Hazard {
 		if l.InBounds(c.X, c.Y) {
-			l.Light[c.Y*l.Width+c.X] = 0.85 // slime is faintly self-lit
+			l.Light[c.Y*l.W+c.X] = 0.85 // slime is faintly self-lit
 		}
 	}
 }
 
-func roomBrightness(g *rng) float64 {
-	switch g.intn(5) {
+func roomBrightness(g *worldgen.RNG) float64 {
+	switch g.IntN(5) {
 	case 0:
 		return 0.55 // dim
 	case 1:

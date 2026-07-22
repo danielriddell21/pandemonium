@@ -18,7 +18,7 @@ func placeExitSwitch(l *Level) {
 		if l.At(n.X, n.Y) != TileWall {
 			continue
 		}
-		l.set(n.X, n.Y, TileSwitch)
+		l.Set(n.X, n.Y, TileSwitch)
 		if l.Switches == nil {
 			l.Switches = make(map[Coord]Switch)
 		}

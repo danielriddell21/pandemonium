@@ -11,7 +11,7 @@ func TestCanDescendIntoLowerCeilingCell(t *testing.T) {
 	// A ledge at 0.5 stepping down to a corridor-height cell at 0.25.
 	setFloor(l, 4, 1, 0.5)
 	setFloor(l, 5, 1, 0.25)
-	l.CeilH[1*l.Width+5] = 1.15 // ~corridor headroom above the 0.25 floor (0.9)
+	l.CeilH[1*l.W+5] = 1.15 // ~corridor headroom above the 0.25 floor (0.9)
 
 	g := New(l)
 	g.Entities = nil
@@ -29,7 +29,7 @@ func TestCanDescendIntoLowerCeilingCell(t *testing.T) {
 
 func TestCannotEnterTrulyCrampedCell(t *testing.T) {
 	l := terrainLevel(8, 3)
-	l.CeilH[1*l.Width+5] = world.MinHeadroom - 0.2 // ceiling below standing height
+	l.CeilH[1*l.W+5] = world.MinHeadroom - 0.2 // ceiling below standing height
 	g := New(l)
 	g.Entities = nil
 	g.Player.Pos = Vec2{X: 4.5, Y: 1.5}

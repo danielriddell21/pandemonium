@@ -4,7 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/crucible/hud"
+
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )

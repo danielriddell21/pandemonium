@@ -1,9 +1,11 @@
 package render
 
 import (
-	"cmp"
 	"image/color"
-	"slices"
+
+	"github.com/danielriddell21/crucible/geom"
+	"github.com/danielriddell21/crucible/paint"
+	"github.com/danielriddell21/crucible/raycast"
 
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
@@ -22,43 +24,28 @@ type billboard struct {
 	ground bool
 }
 
-func drawSprites(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam camera, cfg Config, tx *textureSet) {
+func drawSprites(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam raycast.Camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
 
 	items := collectBillboards(g, tx)
 
 	// Order by descending distance so nearer sprites overdraw farther ones.
-	slices.SortFunc(items, func(a, b billboard) int {
-		da := (a.pos.X-px)*(a.pos.X-px) + (a.pos.Y-py)*(a.pos.Y-py)
-		db := (b.pos.X-px)*(b.pos.X-px) + (b.pos.Y-py)*(b.pos.Y-py)
-		return cmp.Compare(db, da)
+	raycast.SortFarToNear(items, func(b billboard) float64 {
+		dx, dy := b.pos.X-px, b.pos.Y-py
+		return dx*dx + dy*dy
 	})
 
-	// Inverse of the [plane | dir] matrix maps world offsets into camera space.
-	invDet := 1.0 / (cam.planeX*cam.dirY - cam.dirX*cam.planeY)
+	// Each sprite is anchored on its own world height (grounded sprites stand
+	// on it, floating projectiles are centred on it), so it projects through
+	// the engine's height-aware ProjectAt.
 	eyeZ := g.EyeZ()
-
 	for _, it := range items {
-		relX, relY := it.pos.X-px, it.pos.Y-py
-		transformX := invDet * (cam.dirY*relX - cam.dirX*relY)
-		depth := invDet * (-cam.planeY*relX + cam.planeX*relY)
-		if depth <= 0.01 {
-			continue // behind the camera
-		}
-		screenX := int(float64(w) / 2 * (1 + transformX/depth))
-		size := int(float64(h) / depth * it.scale)
-		if size <= 0 {
+		pl, ok := cam.ProjectAt(geom.Vec2{X: it.pos.X, Y: it.pos.Y}, it.z, eyeZ, w, h, it.scale, it.ground)
+		if !ok {
 			continue
 		}
-		// Project the sprite's world height: grounded sprites stand on it,
-		// floating ones (projectiles) are centred on it.
-		anchor := int(float64(h)/2 + (eyeZ-it.z)*float64(h)/depth)
-		top := anchor - size
-		if !it.ground {
-			top = anchor - size/2
-		}
-		drawBillboard(fb, zbuf, loZ, loH, loRow, cfg, screenX, top, size, depth, it.z, it.tex)
+		drawBillboard(fb, zbuf, loZ, loH, loRow, cfg, pl.ScreenX, pl.Top, pl.Size, pl.Depth, it.z, it.tex)
 	}
 }
 
@@ -148,10 +135,5 @@ func drawBillboard(fb []byte, zbuf, loZ, loH []float64, loRow []int, cfg Config,
 
 func shadeRGBA(base color.RGBA, depth float64) color.RGBA {
 	f := max(0.1, min(1, 1.0/(1.0+depth*0.18)))
-	return color.RGBA{
-		R: uint8(float64(base.R) * f),
-		G: uint8(float64(base.G) * f),
-		B: uint8(float64(base.B) * f),
-		A: 255,
-	}
+	return paint.Scale(base, f)
 }

@@ -47,8 +47,8 @@ func TestProjectileStopsAtWall(t *testing.T) {
 	var from, vel Vec2
 	placed := false
 	dirs := []world.Coord{{X: 1}, {X: -1}, {Y: 1}, {Y: -1}}
-	for y := 0; y < l.Height && !placed; y++ {
-		for x := 0; x < l.Width && !placed; x++ {
+	for y := 0; y < l.H && !placed; y++ {
+		for x := 0; x < l.W && !placed; x++ {
 			if l.At(x, y) != world.TileFloor {
 				continue
 			}

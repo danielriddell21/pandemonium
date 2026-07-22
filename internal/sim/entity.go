@@ -64,8 +64,8 @@ func (g *Game) spawnEntities() []Entity {
 	r := rand.New(rand.NewPCG(uint64(l.Seed), 0xA5A5A5A5))
 
 	var floors []world.Coord
-	for y := range l.Height {
-		for x := range l.Width {
+	for y := range l.H {
+		for x := range l.W {
 			if l.At(x, y) != world.TileFloor {
 				continue
 			}

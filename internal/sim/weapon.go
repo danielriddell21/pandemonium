@@ -123,7 +123,7 @@ func (g *Game) hitscanMulti(maxRange, arcCos float64, n int) []int {
 		i int
 		d float64
 	}
-	var cs []cand
+	cs := make([]cand, 0, len(g.Entities))
 	dir := g.Player.Dir()
 	for i := range g.Entities {
 		e := g.Entities[i]

@@ -3,10 +3,14 @@ package world
 import (
 	"errors"
 	"fmt"
+
+	"github.com/danielriddell21/crucible/level"
+	"github.com/danielriddell21/crucible/worldgen"
 )
 
 const minDimension = 16
 
+// ErrUnreachable reports that no attempt produced a connected, playable level.
 var ErrUnreachable = errors.New("world: exhausted attempts producing a connected level")
 
 type Config struct {
@@ -32,68 +36,69 @@ func (c Config) normalized() Config {
 	return c
 }
 
+// Generate digs a level: crucible/level runs the room-and-corridor pipeline,
+// the heights, low walls, room themes, and open sky; pandemonium's passes
+// then mount the exit switch, annotate junctions, gate the exit behind a
+// keycard, and scatter items, barrels, and hazards. It retries with derived
+// seeds until the exit and every keycard are reachable.
 func Generate(cfg Config) (*Level, error) {
 	cfg = cfg.normalized()
-	for attempt := range cfg.MaxAttempts {
-		// Derive a per-attempt seed deterministically from the base seed.
-		sub := cfg.Seed + int64(attempt)*0x100000001b3
-		l := generateOnce(cfg.Width, cfg.Height, sub, cfg.Arena)
-		l.Seed = cfg.Seed
-		// The exit must be reachable once doors are open, and every keycard must
-		// be obtainable without first crossing the door it unlocks.
-		if reachable(l, l.Spawn, l.Exit, blocksWalls(l)) && keysReachable(l) {
-			return l, nil
-		}
+	if cfg.Arena {
+		return generateArena(cfg.Width, cfg.Height, cfg.Seed), nil
 	}
-	return nil, fmt.Errorf("%w: %dx%d seed=%d", ErrUnreachable, cfg.Width, cfg.Height, cfg.Seed)
+	deck := &Level{}
+	furnish := func(l *level.Level, g *worldgen.RNG, rooms []rect) {
+		deck.reset(l)
+		placeExitSwitch(deck)
+		annotate(deck)
+		placeKeyGate(deck, g)
+		placeItems(deck, g)
+		placeBarrels(deck, g)
+		level.AssignHeights(l, g, rooms, level.HeightsConfig{})
+		placeLift(deck, g)
+		placeHazards(deck, g)
+		assignLight(deck, g, rooms)
+		level.AssignThemes(l, g, rooms, NumThemes)
+		level.PlaceLowWalls(l, g, level.LowWallConfig{})
+		level.AssignSky(l, g, rooms, level.SkyConfig{}) // last: purely additive
+	}
+	validate := func(*level.Level) bool {
+		return reachable(deck, deck.Spawn, deck.Exit, blocksWalls(deck)) && keysReachable(deck)
+	}
+	base, _, err := level.Generate(level.GenerateConfig{
+		Width:  cfg.Width,
+		Height: cfg.Height,
+		Seed:   cfg.Seed,
+	}, []level.Pass{furnish}, validate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %dx%d seed=%d", ErrUnreachable, cfg.Width, cfg.Height, cfg.Seed)
+	}
+	deck.Level = base
+	return deck, nil
 }
 
-func generateOnce(width, height int, seed int64, arena bool) *Level {
-	if arena {
-		return generateArena(width, height, seed)
+// reset points the aggregate at a freshly dug level and clears the gameplay
+// layer, so each generation attempt starts clean.
+func (l *Level) reset(base *level.Level) {
+	*l = Level{
+		Level:    base,
+		Locks:    map[Coord]ItemKind{},
+		Hazard:   map[Coord]HazardCell{},
+		Switches: map[Coord]Switch{},
 	}
-	l := newLevel(width, height, seed)
-	g := newRNG(seed)
-
-	root := &bspNode{bounds: rect{x: 1, y: 1, w: width - 2, h: height - 2}}
-	g.split(root, 0)
-	g.carveRooms(root, l)
-	g.connect(root, l)
-	g.carveStubs(l)
-
-	rooms := collectRooms(root)
-	placeSpawnAndExit(l, rooms)
-	placeExitSwitch(l)
-	annotate(l)
-	placeKeyGate(l, g)
-	placeItems(l, g)
-	placeBarrels(l, g)
-	assignHeights(l, g, rooms)
-	placeHazards(l, g)
-	assignLight(l, g, rooms)
-	assignThemes(l, g, rooms)
-	placeLowWalls(l, g)
-	assignSky(l, g, rooms) // last: purely additive, leaves earlier stages untouched
-	return l
 }
 
-func placeSpawnAndExit(l *Level, rooms []rect) {
-	if len(rooms) == 0 {
-		return
+// placeLift raises one dead-end ledge onto a lift and drops a secret reward
+// on it, keeping clear of the cells items and secrets already claim.
+func placeLift(l *Level, g *worldgen.RNG) {
+	taken := make(map[Coord]bool, len(l.Items)+len(l.Secrets))
+	for _, it := range l.Items {
+		taken[it.At] = true
 	}
-	spawn := rooms[0].center()
-	dist := distanceField(l, spawn)
-	exit, best := spawn, 0
-	for i, d := range dist {
-		if d > best {
-			best = d
-			exit = Coord{X: i % l.Width, Y: i / l.Width}
-		}
+	for _, s := range l.Secrets {
+		taken[s] = true
 	}
-	l.Spawn = spawn
-	l.set(spawn.X, spawn.Y, TileSpawn)
-	if exit != spawn {
-		l.Exit = exit
-		l.set(exit.X, exit.Y, TileExit)
+	if ledge, ok := level.PlaceLiftLedge(l.Level, g, level.LiftConfig{}, func(c Coord) bool { return taken[c] }); ok {
+		l.Items = append(l.Items, Item{Kind: secretReward(g), At: ledge})
 	}
 }
