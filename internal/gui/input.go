@@ -1,4 +1,4 @@
-package app
+package gui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
@@ -7,11 +7,8 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// mouseSensitivity converts horizontal cursor motion (pixels) into turn radians.
 const mouseSensitivity = 0.0035
 
-// readInput samples keyboard and mouse into a simulation input for this tick:
-// WASD/arrows move and turn, the mouse turns, and E or Space interacts.
 func (g *Game) readInput() sim.Input {
 	var in sim.Input
 
@@ -48,9 +45,6 @@ func (g *Game) readInput() sim.Input {
 	return in
 }
 
-// weaponSelect maps number keys and the mouse wheel to a weapon slot (1=fists,
-// 2=pistol, 3=shotgun, 4=chaingun, 5=rocket launcher), or 0 to keep the current
-// weapon. Number keys win.
 func (g *Game) weaponSelect() int {
 	const slots = 5
 	if _, wy := ebiten.Wheel(); wy != 0 {
@@ -75,8 +69,6 @@ func (g *Game) weaponSelect() int {
 	return 0
 }
 
-// mouseTurn returns the turn delta from horizontal cursor movement since the
-// last frame, ignoring the first frame's jump.
 func (g *Game) mouseTurn() float64 {
 	mx, _ := ebiten.CursorPosition()
 	if !g.haveMouse {

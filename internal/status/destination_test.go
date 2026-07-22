@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
 
@@ -13,7 +14,7 @@ func TestArrivalFiresOnceThenVoiceGoesSparse(t *testing.T) {
 	r := New(o, NewTableSource())
 
 	// First event in the deepest band (level >= 15): the terminal beat.
-	r.OnEvent(telemetry.PlayerEvent{Type: "kill", LevelIndex: 16})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsKill, LevelIndex: 16})
 	msg, ch, ok := o.Active()
 	if !ok || ch != hud.Notice || !strings.Contains(msg, "deep as it goes") {
 		t.Fatalf("first deep-band event should fire the arrival line, got %q ok=%v", msg, ok)
@@ -21,12 +22,12 @@ func TestArrivalFiresOnceThenVoiceGoesSparse(t *testing.T) {
 	o.Post("", 0, hud.Notice) // clear
 
 	// Afterwards the chatty cues fall silent...
-	r.OnEvent(telemetry.PlayerEvent{Type: "item", LevelIndex: 16})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsItem, LevelIndex: 16})
 	if _, _, ok := o.Active(); ok {
 		t.Error("after arrival, item pickups should no longer speak")
 	}
 	// ...but the big beats still land.
-	r.OnEvent(telemetry.PlayerEvent{Type: "exit", LevelIndex: 16})
+	r.OnEvent(telemetry.PlayerEvent{Kind: sim.ObsExit, LevelIndex: 16})
 	if msg, _, ok := o.Active(); !ok || !strings.Contains(msg, "exactly like this one") {
 		t.Errorf("after arrival, the exit should still draw a resigned line, got %q ok=%v", msg, ok)
 	}

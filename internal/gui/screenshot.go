@@ -1,4 +1,4 @@
-package app
+package gui
 
 import (
 	"fmt"
@@ -10,8 +10,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// activeWorld returns the simulation currently being drawn as a world view, or
-// nil when a menu or the tally screen is showing (nothing to photograph).
 func (g *Game) activeWorld() *sim.Game {
 	switch g.state {
 	case statePlaying:
@@ -22,9 +20,6 @@ func (g *Game) activeWorld() *sim.Game {
 	return nil
 }
 
-// screenshot renders the current world view without the HUD chrome and writes it
-// to a timestamped PNG in the working directory, returning the path. It is a
-// no-op (empty path) when no world view is showing.
 func (g *Game) screenshot() (string, error) {
 	w := g.activeWorld()
 	if w == nil {
@@ -43,11 +38,11 @@ func (g *Game) screenshot() (string, error) {
 	name := fmt.Sprintf("pandemonium-%d.png", time.Now().UnixMilli())
 	f, err := os.Create(name)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("create screenshot: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, img); err != nil {
-		return "", err
+		return "", fmt.Errorf("encode screenshot: %w", err)
 	}
 	return name, nil
 }

@@ -6,10 +6,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// TestCanDescendIntoLowerCeilingCell guards a movement bug: stepping down from a
-// raised floor into a lower cell whose ceiling clears its own floor must be
-// allowed, even though the ceiling is closer than the headroom margin to the
-// mover's (higher) starting height.
 func TestCanDescendIntoLowerCeilingCell(t *testing.T) {
 	l := terrainLevel(8, 3)
 	// A ledge at 0.5 stepping down to a corridor-height cell at 0.25.
@@ -31,8 +27,6 @@ func TestCanDescendIntoLowerCeilingCell(t *testing.T) {
 	}
 }
 
-// TestCannotEnterTrulyCrampedCell confirms the headroom rule still blocks cells
-// that are too short to stand in on their own terms.
 func TestCannotEnterTrulyCrampedCell(t *testing.T) {
 	l := terrainLevel(8, 3)
 	l.CeilH[1*l.Width+5] = world.MinHeadroom - 0.2 // ceiling below standing height

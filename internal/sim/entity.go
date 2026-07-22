@@ -7,57 +7,47 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// EntityKind distinguishes demon behaviours.
 type EntityKind uint8
 
 const (
-	// Melee demons only harm the player on contact.
 	Melee EntityKind = iota
-	// Ranged demons hurl projectiles from a distance.
+
 	Ranged
-	// Gunner demons fire instantly (hitscan) on a cooldown, the way DOOM's
-	// zombiemen and shotgun guys do — no projectile to dodge.
+
 	Gunner
-	// Barrel is a static explosive: it doesn't move or attack, but bursts when
-	// destroyed, splashing damage onto whatever is near (chaining other barrels).
+
 	Barrel
-	// Pinky is a fast, low-health melee charger.
+
 	Pinky
-	// Baron is a slow, heavily-armoured demon that hurls big, slow fireballs.
+
 	Baron
 )
 
-// EntityState is a demon's lifecycle phase, used for behaviour and animation.
 type EntityState uint8
 
 const (
-	// Active demons chase and threaten the player.
 	Active EntityState = iota
-	// Dying demons are playing their death animation.
+
 	Dying
-	// Dead demons are settled corpses.
+
 	Dead
 )
 
-// Entity is a billboarded actor in the world — a demon, drawn as a flat sprite
-// that always faces the camera.
 type Entity struct {
 	Pos    Vec2
-	Z      float64 // feet height above the base floor, in wall units
-	Sprite int     // visual variant
+	Z      float64
+	Sprite int
 	Kind   EntityKind
 	State  EntityState
 	Health float64
-	Alive  bool // true while Active (targetable, can move and harm)
-	Frame  int  // animation frame index for the current state (set by the sim)
+	Alive  bool
+	Frame  int
 
-	hurt float64 // remaining stagger time after taking a hit, in seconds
-	fire float64 // remaining cooldown before a ranged demon shoots again
-	anim float64 // animation clock, in seconds
+	hurt float64
+	fire float64
+	anim float64
 }
 
-// entityCount scales the number of demons with the floor area of the level and
-// the skill: harder skills pack more demons in (and allow a higher ceiling).
 func entityCount(l *world.Level, skill Skill) int {
 	floors := 0
 	for _, t := range l.Tiles {
@@ -69,9 +59,6 @@ func entityCount(l *world.Level, skill Skill) int {
 	return min(max(n, 1), 24)
 }
 
-// spawnEntities deterministically scatters demons across walkable tiles, keeping
-// them clear of the immediate spawn area. Derived from the level seed, so a seed
-// always produces the same encounter layout (the count scaled by the skill).
 func (g *Game) spawnEntities() []Entity {
 	l := g.World.Level
 	r := rand.New(rand.NewPCG(uint64(l.Seed), 0xA5A5A5A5))
@@ -125,13 +112,10 @@ func (g *Game) spawnEntities() []Entity {
 	return ents
 }
 
-// newBarrel builds a static explosive barrel.
 func newBarrel(pos Vec2) Entity {
 	return Entity{Pos: pos, Sprite: 0, Kind: Barrel, State: Active, Health: barrelHealth, Alive: true}
 }
 
-// newDemon builds a fresh demon of the given kind. The visual variant tracks the
-// kind so each behaviour reads as a distinct silhouette.
 func newDemon(pos Vec2, kind EntityKind) Entity {
 	hp, sprite := meleeHealth, 0
 	switch kind {
@@ -147,7 +131,6 @@ func newDemon(pos Vec2, kind EntityKind) Entity {
 	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
 }
 
-// demonSpeed returns a demon's chase speed; pinkies rush, barons lumber.
 func demonSpeedFor(kind EntityKind) float64 {
 	switch kind {
 	case Pinky:
@@ -159,11 +142,8 @@ func demonSpeedFor(kind EntityKind) float64 {
 	}
 }
 
-// ranges reports whether a kind attacks with projectiles.
 func ranges(kind EntityKind) bool { return kind == Ranged || kind == Baron }
 
-// countDemons counts the entities that are actual demons (excluding barrels), so
-// the kill tally's denominator isn't inflated by explosive props.
 func countDemons(ents []Entity) int {
 	n := 0
 	for _, e := range ents {

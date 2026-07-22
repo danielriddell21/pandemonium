@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// boxLevel hand-builds a walled arena with a flat base floor and generous
-// ceiling, for sculpting exact test terrain.
 func boxLevel(w, h int) *world.Level {
 	l := &world.Level{
 		Width:  w,
@@ -32,7 +30,6 @@ func boxLevel(w, h int) *world.Level {
 	return l
 }
 
-// sceneFor renders the level geometry from its spawn, facing +X.
 func sceneFor(l *world.Level, cfg Config) []byte {
 	g := sim.New(l)
 	g.Entities = nil

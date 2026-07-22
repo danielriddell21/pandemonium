@@ -7,9 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// drawIntermission paints the between-levels summary: a dark backdrop with the
-// level's kill, item and secret percentages and the time taken, plus a prompt to
-// continue.
 func drawIntermission(fb []byte, cfg Config, s sim.LevelStats) {
 	fillBackground(fb, palette.ceiling)
 
@@ -37,13 +34,11 @@ func drawIntermission(fb []byte, cfg Config, s sim.LevelStats) {
 	drawTextCentered(fb, cfg, cfg.Height-24, "Press Enter to continue", palette.hudDiag)
 }
 
-// formatTime renders a duration in seconds as m:ss.
 func formatTime(secs float64) string {
 	total := int(secs)
 	return fmt.Sprintf("%d:%02d", total/60, total%60)
 }
 
-// fillBackground floods the whole framebuffer with a single colour.
 func fillBackground(fb []byte, c color.RGBA) {
 	for i := 0; i < len(fb); i += 4 {
 		fb[i], fb[i+1], fb[i+2], fb[i+3] = c.R, c.G, c.B, 255

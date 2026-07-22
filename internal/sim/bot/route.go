@@ -2,14 +2,12 @@ package bot
 
 import (
 	"math"
+	"slices"
 
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// planRoute builds the cells to walk: detour through the exit's keycard first (so
-// the locked door will open when reached), then on to the exit. Doors are treated
-// as passable for routing; the pilot opens them as it arrives.
 func planRoute(g *sim.Game) []world.Coord {
 	l := g.World.Level
 	start := g.PlayerCell()
@@ -29,7 +27,6 @@ func planRoute(g *sim.Game) []world.Coord {
 	return route
 }
 
-// firstKeyCell returns the location of the first keycard item on the level.
 func firstKeyCell(l *world.Level) (world.Coord, bool) {
 	for _, it := range l.Items {
 		if it.Kind.IsKey() {
@@ -39,7 +36,6 @@ func firstKeyCell(l *world.Level) (world.Coord, bool) {
 	return world.Coord{}, false
 }
 
-// exitSwitchCell returns the cell of the level's exit switch, if it has one.
 func exitSwitchCell(l *world.Level) (world.Coord, bool) {
 	for c, s := range l.Switches {
 		if s.Action == world.SwitchExit {
@@ -49,9 +45,6 @@ func exitSwitchCell(l *world.Level) (world.Coord, bool) {
 	return world.Coord{}, false
 }
 
-// openDoorAhead issues Interact when an unopened door or a switch sits directly
-// in front of the player, mirroring how the simulation decides what the player
-// can act on.
 func openDoorAhead(g *sim.Game, in *sim.Input) {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*0.9))
@@ -64,9 +57,6 @@ func openDoorAhead(g *sim.Game, in *sim.Input) {
 	}
 }
 
-// steerToward turns to face a target and moves toward it on both the forward and
-// strafe axes, so the pilot slides around corners and up stepped corridors
-// instead of stalling when it can't walk in a dead-straight line.
 func steerToward(g *sim.Game, target sim.Vec2) sim.Input {
 	toX, toY := target.X-g.Player.Pos.X, target.Y-g.Player.Pos.Y
 	desired := math.Atan2(toY, toX)
@@ -80,9 +70,6 @@ func steerToward(g *sim.Game, target sim.Vec2) sim.Input {
 	return in
 }
 
-// bfsOpen finds the shortest cell path from src to dst over a level, treating
-// every door as passable (walls and the world edge are the only obstacles), so
-// the pilot routes through locked doors it intends to open.
 func bfsOpen(l *world.Level, src, dst world.Coord) []world.Coord {
 	passable := func(c world.Coord) bool {
 		return l.InBounds(c.X, c.Y) && l.At(c.X, c.Y).Walkable()
@@ -123,15 +110,15 @@ func bfsOpen(l *world.Level, src, dst world.Coord) []world.Coord {
 		rev = append(rev, c)
 	}
 	rev = append(rev, src)
-	for i, j := 0, len(rev)-1; i < j; i, j = i+1, j-1 {
-		rev[i], rev[j] = rev[j], rev[i]
-	}
+	slices.Reverse(rev)
 	return rev
 }
 
 func neighbours(c world.Coord) [4]world.Coord {
 	return [4]world.Coord{
-		{X: c.X + 1, Y: c.Y}, {X: c.X - 1, Y: c.Y},
-		{X: c.X, Y: c.Y + 1}, {X: c.X, Y: c.Y - 1},
+		{X: c.X + 1, Y: c.Y},
+		{X: c.X - 1, Y: c.Y},
+		{X: c.X, Y: c.Y + 1},
+		{X: c.X, Y: c.Y - 1},
 	}
 }

@@ -1,4 +1,4 @@
-package app
+package gui
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// newTestGame builds a Game wired to a real (headless) renderer and a trivial
-// level, with no audio. It exercises the state machine without a display.
 func newTestGame(t *testing.T) *sim.Game {
 	t.Helper()
 	l, err := world.Generate(world.Config{Width: 24, Height: 18, Seed: 1})

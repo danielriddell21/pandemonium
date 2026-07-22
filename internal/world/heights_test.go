@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-// ledgeCells returns the lift-served ledge cells of a level (the high side of
-// each lift), which are exempt from the single-step invariant.
 func ledgeCells(l *Level) map[Coord]bool {
 	out := make(map[Coord]bool)
 	for neck, lift := range l.Lifts {

@@ -101,8 +101,6 @@ func TestTickDeterminism(t *testing.T) {
 	}
 }
 
-// firstDoor returns the first unlocked door on the level, so the interact test
-// exercises an ordinary door rather than a keycard-gated one.
 func firstDoor(l *world.Level) (world.Coord, bool) {
 	for y := range l.Height {
 		for x := range l.Width {

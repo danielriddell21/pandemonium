@@ -2,17 +2,11 @@ package render
 
 import "image/color"
 
-// MenuItem is one selectable row of a menu screen: a label and an optional value
-// shown beside it (e.g. a setting and its current state).
 type MenuItem struct {
 	Label string
 	Value string
 }
 
-// Menu renders a full-screen menu — a title, an optional subtitle, the items
-// with the selected one highlighted, and a footer hint — and returns the RGBA
-// buffer (owned by the Renderer, overwritten on the next call). The app drives
-// selection; this only draws.
 func (r *Renderer) Menu(title, subtitle string, items []MenuItem, selected int, footer string) []byte {
 	fillBackground(r.fb, palette.ceiling)
 

@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-// FuzzGenerate throws odd dimensions, seeds and the arena flag at the generator,
-// asserting it never panics and that every level it returns upholds the core
-// invariants. The seed corpus also runs as ordinary subtests under `go test`, so
-// CI exercises these cases for free; run a real campaign with `just fuzz`.
 func FuzzGenerate(f *testing.F) {
 	f.Add(48, 32, int64(1), false)
 	f.Add(16, 16, int64(2), false)

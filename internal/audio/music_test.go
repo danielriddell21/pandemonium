@@ -16,8 +16,6 @@ func TestMusicLengthAndDeterminism(t *testing.T) {
 	}
 }
 
-// TestMusicLoopsSeamlessly checks the first and last frames are close, so the
-// infinite loop has no audible click.
 func TestMusicLoopsSeamlessly(t *testing.T) {
 	for band := 0; band <= maxMusicBand; band++ {
 		pcm := Music(band)
@@ -29,8 +27,6 @@ func TestMusicLoopsSeamlessly(t *testing.T) {
 	}
 }
 
-// TestMusicBandProgression checks the band rises with depth and then holds at
-// the floor.
 func TestMusicBandProgression(t *testing.T) {
 	if MusicBand(0) != 0 {
 		t.Error("a fresh run should start at band 0")
@@ -43,8 +39,6 @@ func TestMusicBandProgression(t *testing.T) {
 	}
 }
 
-// TestMusicDarkensWithBand checks deeper bands differ from shallow ones (the bed
-// actually changes, not just plays the same loop).
 func TestMusicDarkensWithBand(t *testing.T) {
 	shallow, deep := Music(0), Music(maxMusicBand)
 	same := true
@@ -59,7 +53,6 @@ func TestMusicDarkensWithBand(t *testing.T) {
 	}
 }
 
-// TestMusicBandClamps checks out-of-range bands do not panic and clamp.
 func TestMusicBandClamps(t *testing.T) {
 	if len(Music(-5)) != len(Music(0)) {
 		t.Error("negative band should clamp to 0")

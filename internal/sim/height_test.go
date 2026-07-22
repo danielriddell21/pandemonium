@@ -7,8 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// terrainLevel hand-builds a small walled arena with a flat base floor, so tests
-// can sculpt exact heights onto it.
 func terrainLevel(w, h int) *world.Level {
 	l := &world.Level{
 		Width:  w,

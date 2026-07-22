@@ -2,45 +2,35 @@ package world
 
 import "strings"
 
-// Coord is an integer grid coordinate.
 type Coord struct {
 	X, Y int
 }
 
-// Level is a generated map: a row-major grid of tiles plus the points of
-// interest needed to play and to reason about it. A Level is produced
-// deterministically from Seed (see Generate).
 type Level struct {
 	Width, Height int
-	Tiles         []TileType // row-major: index = y*Width + x, len == Width*Height
-	FloorH        []float64  // per-tile floor height in wall units (base 0)
-	CeilH         []float64  // per-tile ceiling height in wall units (base 1)
+	Tiles         []TileType
+	FloorH        []float64
+	CeilH         []float64
 	Spawn, Exit   Coord
 	Markers       []Marker
-	Items         []Item               // collectibles scattered across the level
-	Locks         map[Coord]ItemKind   // door cell -> keycard required to open it
-	Secrets       []Coord              // cells that count as a hidden find
-	Lifts         map[Coord]Lift       // platform tiles that travel between two floors
-	Barrels       []Coord              // explosive barrels scattered across the floor
-	Hazard        map[Coord]HazardCell // damaging floor tiles -> drain rate and kind
-	Switches      map[Coord]Switch     // wall switches the player presses with use
-	Light         []float64            // per-tile brightness multiplier (1 = full)
-	Theme         []uint8              // per-tile wall theme index
-	WallTop       []float64            // solid-tile height; 0 = full wall, >0 = low wall
-	Sky           []bool               // per-tile: ceiling open to the sky (rendered as open air)
+	Items         []Item
+	Locks         map[Coord]ItemKind
+	Secrets       []Coord
+	Lifts         map[Coord]Lift
+	Barrels       []Coord
+	Hazard        map[Coord]HazardCell
+	Switches      map[Coord]Switch
+	Light         []float64
+	Theme         []uint8
+	WallTop       []float64
+	Sky           []bool
 	Seed          int64
 }
 
-// Lift describes a platform tile that cycles between a low and a high floor,
-// serving ledges that plain steps cannot reach. Its tile's static FloorH is Low;
-// the simulation animates the platform between the two.
 type Lift struct {
 	Low, High float64
 }
 
-// newLevel allocates a Level of the given size filled entirely with walls, on a
-// flat base floor under a flat base ceiling. Generation then carves floors out of
-// the solid mass and sculpts the heights.
 func newLevel(width, height int, seed int64) *Level {
 	tiles := make([]TileType, width*height)
 	floors := make([]float64, width*height)
@@ -66,13 +56,10 @@ func newLevel(width, height int, seed int64) *Level {
 	}
 }
 
-// InBounds reports whether (x, y) lies inside the grid.
 func (l *Level) InBounds(x, y int) bool {
 	return x >= 0 && y >= 0 && x < l.Width && y < l.Height
 }
 
-// At returns the tile at (x, y). Out-of-bounds reads return TileWall so callers
-// can treat the world edge as solid without bounds-checking everywhere.
 func (l *Level) At(x, y int) TileType {
 	if !l.InBounds(x, y) {
 		return TileWall
@@ -80,8 +67,6 @@ func (l *Level) At(x, y int) TileType {
 	return l.Tiles[y*l.Width+x]
 }
 
-// Floor returns the floor height at (x, y) in wall units. Out-of-bounds reads
-// return 0, matching the solid world edge.
 func (l *Level) Floor(x, y int) float64 {
 	if !l.InBounds(x, y) {
 		return 0
@@ -89,8 +74,6 @@ func (l *Level) Floor(x, y int) float64 {
 	return l.FloorH[y*l.Width+x]
 }
 
-// Ceil returns the ceiling height at (x, y) in wall units. Out-of-bounds reads
-// return 0 so the world edge has no gap to slip through.
 func (l *Level) Ceil(x, y int) float64 {
 	if !l.InBounds(x, y) {
 		return 0
@@ -98,19 +81,14 @@ func (l *Level) Ceil(x, y int) float64 {
 	return l.CeilH[y*l.Width+x]
 }
 
-// HazardAt returns the health-per-second a tile drains, or 0 if it is safe.
 func (l *Level) HazardAt(x, y int) float64 {
 	return l.Hazard[Coord{X: x, Y: y}].Rate
 }
 
-// HazardKindAt returns the kind of hazard on a tile (meaningful only where
-// HazardAt is positive); safe tiles report HazardNukage by default.
 func (l *Level) HazardKindAt(x, y int) HazardKind {
 	return l.Hazard[Coord{X: x, Y: y}].Kind
 }
 
-// WallTopAt returns a solid tile's height: 0 means a full-height wall, a positive
-// value a low wall you can see over.
 func (l *Level) WallTopAt(x, y int) float64 {
 	if !l.InBounds(x, y) || len(l.WallTop) == 0 {
 		return 0
@@ -118,7 +96,6 @@ func (l *Level) WallTopAt(x, y int) float64 {
 	return l.WallTop[y*l.Width+x]
 }
 
-// LightAt returns the brightness multiplier at (x, y); out of bounds is full.
 func (l *Level) LightAt(x, y int) float64 {
 	if !l.InBounds(x, y) || len(l.Light) == 0 {
 		return 1
@@ -126,8 +103,6 @@ func (l *Level) LightAt(x, y int) float64 {
 	return l.Light[y*l.Width+x]
 }
 
-// SkyAt reports whether the cell at (x, y) is open to the sky, so its ceiling is
-// drawn as open air. Nil-safe for hand-built levels that omit the sky layer.
 func (l *Level) SkyAt(x, y int) bool {
 	if !l.InBounds(x, y) || len(l.Sky) == 0 {
 		return false
@@ -135,7 +110,6 @@ func (l *Level) SkyAt(x, y int) bool {
 	return l.Sky[y*l.Width+x]
 }
 
-// setFloor / setCeil write heights at (x, y) if in bounds.
 func (l *Level) setFloor(x, y int, h float64) {
 	if l.InBounds(x, y) {
 		l.FloorH[y*l.Width+x] = h
@@ -148,16 +122,12 @@ func (l *Level) setCeil(x, y int, h float64) {
 	}
 }
 
-// set writes a tile at (x, y) if in bounds.
 func (l *Level) set(x, y int, t TileType) {
 	if l.InBounds(x, y) {
 		l.Tiles[y*l.Width+x] = t
 	}
 }
 
-// Solid reports whether (x, y) blocks movement and sight. Walls and the world
-// edge are solid; doors are treated as solid here (the simulation decides when a
-// specific door has been opened).
 func (l *Level) Solid(x, y int) bool {
 	switch l.At(x, y) {
 	case TileWall, TileDoor, TileSwitch:
@@ -167,8 +137,6 @@ func (l *Level) Solid(x, y int) bool {
 	}
 }
 
-// String renders the grid as ASCII, one row per line. Useful for tests and
-// debugging.
 func (l *Level) String() string {
 	var b strings.Builder
 	b.Grow((l.Width + 1) * l.Height)

@@ -1,9 +1,5 @@
 package world
 
-// assignLight gives each room its own brightness so the level reads as a series
-// of differently-lit spaces rather than one evenly-shaded maze. Corridors take a
-// middling light, and hazard pools glow a little so slime stays visible. The
-// spawn room stays bright so a run never opens in gloom.
 func assignLight(l *Level, g *rng, rooms []rect) {
 	for _, r := range rooms {
 		level := roomBrightness(g)
@@ -25,8 +21,6 @@ func assignLight(l *Level, g *rng, rooms []rect) {
 	}
 }
 
-// roomBrightness picks a per-room light level, biased toward well-lit rooms with
-// the occasional gloomy one.
 func roomBrightness(g *rng) float64 {
 	switch g.intn(5) {
 	case 0:

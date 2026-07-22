@@ -10,6 +10,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
@@ -36,8 +37,8 @@ func main() {
 }
 
 func run() error {
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return err
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
 	}
 	for _, c := range defaultClips() {
 		path := filepath.Join(outDir, c.name+c.ext())
@@ -84,13 +85,9 @@ func (c clip) ext() string {
 
 func (c clip) record(path string) (int, error) {
 	pal := demoPalette()
-	level, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: c.seed, Arena: c.arena})
+	g, err := c.newLevel(c.seed)
 	if err != nil {
 		return 0, err
-	}
-	g := sim.New(level)
-	if c.setup != nil {
-		c.setup(g)
 	}
 	r := render.NewRenderer(c.rcfg)
 	r.SetAutomap(c.automap)
@@ -107,6 +104,16 @@ func (c clip) record(path string) (int, error) {
 		anim.Image = append(anim.Image, toPaletted(rgba, c.rcfg, pal))
 		anim.Delay = append(anim.Delay, c.delayCs)
 	}
+	// Hold on the level-complete tally before moving on, when asked.
+	emitTally := func(g *sim.Game) {
+		if !c.tally {
+			return
+		}
+		stats := g.LevelStats()
+		for range 18 {
+			emit(r.Intermission(stats))
+		}
+	}
 
 	seen := map[world.Coord]bool{}
 	nextSeed := c.seed
@@ -114,31 +121,14 @@ func (c clip) record(path string) (int, error) {
 	subSteps := max(c.subSteps, 1)
 
 	for i := range c.frames {
-		reached := false
-		for range subSteps {
-			g.Tick(c.input(i, g), dt)
-			if g.LevelComplete() {
-				reached = true
-				break
-			}
-		}
-		if reached {
-			// Hold on the level-complete tally before moving on, when asked.
-			if c.tally {
-				stats := g.LevelStats()
-				for range 18 {
-					emit(r.Intermission(stats))
-				}
-			}
+		if c.runSubSteps(g, i, subSteps, dt) {
+			emitTally(g)
 			nextSeed++
-			nl, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: nextSeed, Arena: c.arena})
+			ng, err := c.newLevel(nextSeed)
 			if err != nil {
 				return 0, err
 			}
-			g = sim.New(nl)
-			if c.setup != nil {
-				c.setup(g) // keep the clip's staging (e.g. no demons) across levels
-			}
+			g = ng
 		}
 		seen[g.PlayerCell()] = true
 		emit(r.Frame(g))
@@ -147,16 +137,49 @@ func (c clip) record(path string) (int, error) {
 	if c.video {
 		return len(seen), encodeMP4(path, raw, c.rcfg, c.delayCs)
 	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = f.Close() }()
-	if err := gif.EncodeAll(f, anim); err != nil {
+	if err := writeGIF(path, anim); err != nil {
 		return 0, err
 	}
 	return len(seen), nil
+}
+
+// newLevel generates a fresh level for the clip and applies its staging (e.g. no
+// demons), so that staging carries across level transitions.
+func (c clip) newLevel(seed int64) (*sim.Game, error) {
+	l, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: seed, Arena: c.arena})
+	if err != nil {
+		return nil, fmt.Errorf("generate level: %w", err)
+	}
+	g := sim.New(l)
+	if c.setup != nil {
+		c.setup(g)
+	}
+	return g, nil
+}
+
+// runSubSteps advances the game by the clip's sub-steps for frame i, reporting
+// whether the level was completed during them.
+func (c clip) runSubSteps(g *sim.Game, i, subSteps int, dt float64) bool {
+	for range subSteps {
+		g.Tick(c.input(i, g), dt)
+		if g.LevelComplete() {
+			return true
+		}
+	}
+	return false
+}
+
+// writeGIF encodes the animation to path as a GIF.
+func writeGIF(path string, anim *gif.GIF) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("create gif: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	if err := gif.EncodeAll(f, anim); err != nil {
+		return fmt.Errorf("encode gif: %w", err)
+	}
+	return nil
 }
 
 // encodeMP4 pipes raw RGBA frames to ffmpeg and writes an H.264 MP4. The frame
@@ -167,7 +190,7 @@ func encodeMP4(path string, frames [][]byte, rcfg render.Config, delayCs int) er
 		return fmt.Errorf("no frames to encode")
 	}
 	fps := 100.0 / float64(delayCs)
-	cmd := exec.Command("ffmpeg",
+	cmd := exec.CommandContext(context.Background(), "ffmpeg",
 		"-y", "-loglevel", "error",
 		"-f", "rawvideo", "-pixel_format", "rgba",
 		"-video_size", fmt.Sprintf("%dx%d", rcfg.Width, rcfg.Height),
@@ -182,7 +205,10 @@ func encodeMP4(path string, frames [][]byte, rcfg render.Config, delayCs int) er
 	}
 	cmd.Stdin = &buf
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("run ffmpeg: %w", err)
+	}
+	return nil
 }
 
 func defaultClips() []clip {
@@ -200,42 +226,7 @@ func defaultClips() []clip {
 // the stepped floors, the raised landing and the varied ceilings.
 func terrainClip(cfg render.Config) clip {
 	const w, h = 32, 24
-	type spot struct {
-		seed int64
-		x, y int
-		dir  world.Coord
-	}
-	var best spot
-	bestRise := 0.0
-	dirs := []world.Coord{{X: 1}, {X: -1}, {Y: 1}, {Y: -1}}
-	for seed := int64(0); seed < 80; seed++ {
-		l, err := world.Generate(world.Config{Width: w, Height: h, Seed: seed})
-		if err != nil {
-			continue
-		}
-		for y := 1; y < h-1; y++ {
-			for x := 1; x < w-1; x++ {
-				if !l.At(x, y).Walkable() {
-					continue
-				}
-				for _, d := range dirs {
-					rise, ok := 0.0, true
-					for k := 1; k <= 4; k++ {
-						nx, ny := x+d.X*k, y+d.Y*k
-						if !l.At(nx, ny).Walkable() {
-							ok = false
-							break
-						}
-						rise = l.Floor(nx, ny) - l.Floor(x, y)
-					}
-					if ok && rise > bestRise {
-						bestRise = rise
-						best = spot{seed: seed, x: x, y: y, dir: d}
-					}
-				}
-			}
-		}
-	}
+	best := findStaircase(w, h)
 	angle := math.Atan2(float64(best.dir.Y), float64(best.dir.X))
 	return clip{
 		name: "terrain", seed: best.seed, mapW: w, mapH: h, rcfg: cfg,
@@ -253,6 +244,67 @@ func terrainClip(cfg render.Config) clip {
 			return sim.Input{Forward: 0.6}
 		},
 	}
+}
+
+// stairSpot marks where a climbable staircase was found: the level seed, the
+// start cell, and the direction the steps rise.
+type stairSpot struct {
+	seed int64
+	x, y int
+	dir  world.Coord
+}
+
+// findStaircase searches the first levels for the one with the longest rising run
+// of steps, returning where it starts.
+func findStaircase(w, h int) stairSpot {
+	dirs := []world.Coord{{X: 1}, {X: -1}, {Y: 1}, {Y: -1}}
+	var best stairSpot
+	bestRise := 0.0
+	for seed := int64(0); seed < 80; seed++ {
+		l, err := world.Generate(world.Config{Width: w, Height: h, Seed: seed})
+		if err != nil {
+			continue
+		}
+		if spot, rise := bestStairInLevel(l, seed, w, h, dirs); rise > bestRise {
+			best, bestRise = spot, rise
+		}
+	}
+	return best
+}
+
+// bestStairInLevel returns the start cell of the steepest four-step rise in the
+// level and that rise.
+func bestStairInLevel(l *world.Level, seed int64, w, h int, dirs []world.Coord) (stairSpot, float64) {
+	var best stairSpot
+	bestRise := 0.0
+	for y := 1; y < h-1; y++ {
+		for x := 1; x < w-1; x++ {
+			if !l.At(x, y).Walkable() {
+				continue
+			}
+			for _, d := range dirs {
+				if rise, ok := stairRise(l, x, y, d); ok && rise > bestRise {
+					bestRise = rise
+					best = stairSpot{seed: seed, x: x, y: y, dir: d}
+				}
+			}
+		}
+	}
+	return best, bestRise
+}
+
+// stairRise measures the floor rise over four steps from (x, y) in direction d,
+// reporting false if the run leaves walkable floor.
+func stairRise(l *world.Level, x, y int, d world.Coord) (float64, bool) {
+	rise := 0.0
+	for k := 1; k <= 4; k++ {
+		nx, ny := x+d.X*k, y+d.Y*k
+		if !l.At(nx, ny).Walkable() {
+			return 0, false
+		}
+		rise = l.Floor(nx, ny) - l.Floor(x, y)
+	}
+	return rise, true
 }
 
 // --- inputs ---------------------------------------------------------------
@@ -299,8 +351,9 @@ func demoPalette() color.Palette {
 		{R: 60, G: 220, B: 50, A: 255},   // health (full)
 		{R: 240, G: 40, B: 50, A: 255},   // health (low)
 	}
-	pal := color.Palette{color.RGBA{A: 255}}
 	const steps = 18
+	pal := make(color.Palette, 1, 1+steps*len(bases))
+	pal[0] = color.RGBA{A: 255}
 	for _, b := range bases {
 		for s := range steps {
 			f := 0.1 + 0.9*float64(s)/float64(steps-1)

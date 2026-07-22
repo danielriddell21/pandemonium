@@ -8,12 +8,8 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// StatusBarH is the height in pixels of the bottom status panel. It is exported
-// so out-of-package tooling (the demo capture tool) can crop or align against
-// the panel without duplicating the value.
 const StatusBarH = 38
 
-// statusbar colours.
 var (
 	barBG     = color.RGBA{R: 30, G: 26, B: 24, A: 255}
 	barBorder = color.RGBA{R: 84, G: 70, B: 56, A: 255}
@@ -21,7 +17,6 @@ var (
 	armorText = color.RGBA{R: 150, G: 190, B: 220, A: 255}
 )
 
-// keyColors mirror the keycard sprites, indexed for red/blue/yellow.
 var keyColors = [...]struct {
 	kind world.ItemKind
 	on   color.RGBA
@@ -31,8 +26,6 @@ var keyColors = [...]struct {
 	{world.ItemKeyYellow, color.RGBA{R: 220, G: 200, B: 60, A: 255}},
 }
 
-// drawStatusBar paints the bottom HUD panel: the player's face, health, armour,
-// current-weapon ammo and the keycards held. It replaces the minimal health bar.
 func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
 	top := h - StatusBarH
@@ -76,7 +69,6 @@ func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 	}
 }
 
-// ammoText renders the current weapon's ammo count, or a dash for the fists.
 func ammoText(p sim.Player) string {
 	switch p.Weapon {
 	case sim.Pistol, sim.Chaingun:
@@ -90,7 +82,6 @@ func ammoText(p sim.Player) string {
 	}
 }
 
-// drawKeyPip draws a small keycard indicator: filled if held, a dim outline if not.
 func drawKeyPip(fb []byte, cfg Config, x0, y0 int, on color.RGBA, held bool) {
 	const pw, ph = 9, 14
 	if held {
@@ -112,7 +103,6 @@ func drawKeyPip(fb []byte, cfg Config, x0, y0 int, on color.RGBA, held bool) {
 	}
 }
 
-// faceBand maps a health fraction to a face index (0 healthy .. 3 dead).
 func faceBand(frac float64) int {
 	switch {
 	case frac > 0.66:

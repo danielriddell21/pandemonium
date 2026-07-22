@@ -1,4 +1,4 @@
-package app
+package gui
 
 import (
 	"image/png"
@@ -33,7 +33,7 @@ func TestScreenshotWritesPNGWhilePlaying(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := png.Decode(f); err != nil {
 		t.Errorf("screenshot is not a valid PNG: %v", err)
 	}

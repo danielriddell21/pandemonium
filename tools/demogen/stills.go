@@ -237,8 +237,11 @@ func hazardsShot(cfg render.Config) image.Image {
 func savePNG(path string, img image.Image) error {
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("create %s: %w", path, err)
 	}
 	defer func() { _ = f.Close() }()
-	return png.Encode(f, img)
+	if err := png.Encode(f, img); err != nil {
+		return fmt.Errorf("encode png: %w", err)
+	}
+	return nil
 }

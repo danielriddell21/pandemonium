@@ -1,7 +1,4 @@
-// Package app is the Ebiten application: it owns the window, the game loop and
-// input, and draws each frame using the render package. It is the only place
-// that imports Ebiten. Dependency direction: app -> render -> sim -> world.
-package app
+package gui
 
 import (
 	"fmt"
@@ -17,51 +14,43 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim/bot"
 )
 
-// state is the app's top-level mode.
 type state int
 
 const (
-	// stateTitle is the opening menu; idling here starts the attract loop.
 	stateTitle state = iota
-	// statePlaying is a live level.
+
 	statePlaying
-	// stateIntermission is the tally screen between levels.
+
 	stateIntermission
-	// statePaused is the in-run menu over a suspended game.
+
 	statePaused
-	// stateSettings is the options list, reachable from title and pause.
+
 	stateSettings
-	// stateAttract is the bot-driven demo that plays when the title idles.
+
 	stateAttract
 )
 
-// attractDelay is how many ticks the title sits unattended before the demo
-// loop starts (~10 seconds at 60 TPS).
 const attractDelay = 600
 
-// NextFunc produces the simulation for the next level. The app calls it when the
-// player reaches an exit, so level progression and per-level wiring stay outside
-// the app.
 type NextFunc func() *sim.Game
 
-// Game implements ebiten.Game, driving the current simulation and rendering it.
 type Game struct {
 	sim      *sim.Game
 	renderer *render.Renderer
 	overlay  *hud.Overlay
-	start    NextFunc        // builds the run's first level, lazily on START
-	next     NextFunc        // advances to the following level
-	setSkill func(skill int) // pushes the chosen difficulty to the level builder
+	start    NextFunc
+	next     NextFunc
+	setSkill func(skill int)
 
 	audio     *Audio
-	wasFiring bool // muzzle-flash state last tick, for one shot-sound per shot
+	wasFiring bool
 
 	state      state
-	resumeTo   state          // what closing the pause menu returns to
-	menuFrom   state          // what closing the settings menu returns to
-	tally      sim.LevelStats // captured stats shown on the intermission screen
-	showMap    bool           // automap overlay toggled with Tab
-	depth      int            // levels advanced into the run, dimming the world
+	resumeTo   state
+	menuFrom   state
+	tally      sim.LevelStats
+	showMap    bool
+	depth      int
 	haveMouse  bool
 	lastMouseX int
 	quit       bool
@@ -72,51 +61,40 @@ type Game struct {
 	pauseMenu    *menuModel
 	settingsMenu *menuModel
 
-	attractGen   func() *sim.Game // builds a fresh level for the demo loop
+	attractGen   func() *sim.Game
 	attract      *sim.Game
 	attractPilot *bot.Pilot
-	idle         int // ticks the title has sat without input
+	idle         int
 }
 
 var _ ebiten.Game = (*Game)(nil)
 
-// Option configures a Game.
 type Option func(*Game)
 
-// WithOverlay attaches a HUD overlay that the loop advances each frame.
 func WithOverlay(o *hud.Overlay) Option {
 	return func(g *Game) { g.overlay = o }
 }
 
-// WithAudio attaches the sound engine. A nil engine leaves the game silent.
 func WithAudio(a *Audio) Option {
 	return func(g *Game) { g.audio = a }
 }
 
-// WithSettings applies persisted player options.
 func WithSettings(s Settings) Option {
 	return func(g *Game) { g.settings = s.clamped() }
 }
 
-// WithAttract supplies a generator for the title screen's demo loop: a fresh,
-// unobserved simulation the bot can play while the menu idles.
 func WithAttract(gen func() *sim.Game) Option {
 	return func(g *Game) { g.attractGen = gen }
 }
 
-// WithRecords attaches the cross-run history shown on the title screen.
 func WithRecords(k *RecordKeeper) Option {
 	return func(g *Game) { g.records = k }
 }
 
-// WithDifficulty supplies a sink that receives the chosen difficulty (0-based
-// skill index) so the level builder can use it. It is called whenever the
-// setting changes, before the next level is built.
 func WithDifficulty(set func(skill int)) Option {
 	return func(g *Game) { g.setSkill = set }
 }
 
-// titleSubtitle is the records readout under the title, if any history exists.
 func (g *Game) titleSubtitle() string {
 	if g.records == nil {
 		return ""
@@ -124,9 +102,6 @@ func (g *Game) titleSubtitle() string {
 	return g.records.Current().Summary()
 }
 
-// New builds the application around the level builders. start builds the run's
-// first level when the player chooses START (so a difficulty picked on the title
-// takes effect); next advances to a fresh level when the player reaches an exit.
 func New(start, next NextFunc, renderer *render.Renderer, opts ...Option) *Game {
 	game := &Game{start: start, next: next, renderer: renderer, state: stateTitle, settings: DefaultSettings()}
 	for _, opt := range opts {
@@ -137,10 +112,6 @@ func New(start, next NextFunc, renderer *render.Renderer, opts ...Option) *Game 
 	return game
 }
 
-// applySettings pushes the current options into the engine pieces that consume
-// them. It is cheap and safe to call after every change. Muting (sound off, or
-// a zero volume) is applied live; the engine itself is only created at launch
-// when sound is enabled.
 func (g *Game) applySettings() {
 	sfx, ambient := g.settings.SFXVolume, g.settings.AmbientVolume
 	if !g.settings.Sound {
@@ -156,8 +127,6 @@ func (g *Game) applySettings() {
 	}
 }
 
-// applyCursor captures the mouse during play so it stays inside the view, and
-// frees it on the menus and tally screen where it isn't steering the camera.
 func (g *Game) applyCursor() {
 	if g.state == statePlaying {
 		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
@@ -166,7 +135,6 @@ func (g *Game) applyCursor() {
 	}
 }
 
-// Update advances whichever mode the app is in.
 func (g *Game) Update() error {
 	if g.quit {
 		return ebiten.Termination
@@ -201,7 +169,6 @@ func (g *Game) Update() error {
 	return nil
 }
 
-// nav is one tick's worth of menu input.
 type nav struct {
 	up, down, left, right, enter, back bool
 }
@@ -217,11 +184,8 @@ func readNav() nav {
 	}
 }
 
-// any reports whether the tick carried any menu input at all.
 func (n nav) any() bool { return n.up || n.down || n.left || n.right || n.enter || n.back }
 
-// menuNav reads a tick of menu navigation and plays the UI blip when a key was
-// pressed, so moving through and selecting options gives audible feedback.
 func (g *Game) menuNav() nav {
 	n := readNav()
 	if n.any() && g.audio != nil {
@@ -230,7 +194,6 @@ func (g *Game) menuNav() nav {
 	return n
 }
 
-// drive applies one tick of navigation to a menu.
 func (m *menuModel) drive(n nav) {
 	switch {
 	case n.up:
@@ -261,7 +224,6 @@ func (g *Game) updateTitle() {
 	g.titleMenu.drive(n)
 }
 
-// startAttract builds a fresh unobserved level and hands it to the bot.
 func (g *Game) startAttract() {
 	g.attract = g.attractGen()
 	g.attractPilot = bot.Roamer(true)
@@ -292,7 +254,6 @@ func (g *Game) updatePaused() {
 	g.pauseMenu.drive(n)
 }
 
-// resume leaves the pause menu for whatever it interrupted.
 func (g *Game) resume() {
 	g.state = g.resumeTo
 	g.haveMouse = false // swallow the cursor jump accumulated while paused
@@ -307,7 +268,6 @@ func (g *Game) updateSettings() {
 	g.settingsMenu.drive(n)
 }
 
-// closeSettings persists the options and returns to the invoking screen.
 func (g *Game) closeSettings() {
 	_ = g.settings.Save() // keep the in-memory values even if the disk write fails
 	g.state = g.menuFrom
@@ -366,7 +326,6 @@ func (g *Game) updatePlaying() {
 	}
 }
 
-// buildMenus wires the title, pause and settings screens.
 func (g *Game) buildMenus() {
 	g.titleMenu = &menuModel{entries: []menuEntry{
 		{label: "START", activate: func() {
@@ -467,7 +426,6 @@ func (g *Game) buildMenus() {
 	}}
 }
 
-// Draw renders whichever screen the app is on.
 func (g *Game) Draw(screen *ebiten.Image) {
 	switch g.state {
 	case stateTitle:
@@ -488,16 +446,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 }
 
-// Layout fixes the internal resolution; Ebiten scales it to the window.
 func (g *Game) Layout(_, _ int) (int, int) {
 	cfg := g.renderer.Config()
 	return cfg.Width, cfg.Height
 }
 
-// windowScale enlarges the internal resolution to a comfortable window size.
 const windowScale = 2
 
-// Run opens the window and runs the game loop until the player quits. It blocks.
 func (g *Game) Run() error {
 	cfg := g.renderer.Config()
 	ebiten.SetWindowSize(cfg.Width*windowScale, cfg.Height*windowScale)

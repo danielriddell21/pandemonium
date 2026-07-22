@@ -10,17 +10,8 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// This file holds the texture core: the texture type, the texture set and its
-// loading, and the small drawing helpers shared by the generators. The procedural
-// generators themselves live in texture_world.go (walls, floors, hazards),
-// texture_sprites.go (demons, items, faces, props) and texture_weapons.go (the
-// first-person viewmodels).
-
-// texSize is the edge length of the procedurally generated textures.
 const texSize = 64
 
-// texture is a small RGBA image sampled by the renderer. Alpha 0 marks
-// transparent texels (used for sprite cut-outs).
 type texture struct {
 	w, h int
 	pix  []color.RGBA
@@ -32,7 +23,6 @@ func newTexture(w, h int) *texture {
 
 func (t *texture) set(x, y int, c color.RGBA) { t.pix[y*t.w+x] = c }
 
-// at returns the texel at (u, v), wrapping out-of-range coordinates.
 func (t *texture) at(u, v int) color.RGBA {
 	if t.w == 0 || t.h == 0 {
 		return color.RGBA{}
@@ -48,24 +38,20 @@ func (t *texture) at(u, v int) color.RGBA {
 	return t.pix[v*t.w+u]
 }
 
-// demonArt holds a demon variant's animation frames.
 type demonArt struct {
-	walk []*texture // walk cycle
-	dead []*texture // death sequence (last frame is the settled corpse)
+	walk []*texture
+	dead []*texture
 }
 
-// wallThemes tints the brick texture per world theme, so different rooms read as
-// different stone. Index 0 is the base theme used by corridors.
 var wallThemes = [world.NumThemes]color.RGBA{
-	palette.wall,                    // warm brown
-	{R: 96, G: 104, B: 130, A: 255}, // cold blue-grey
-	{R: 150, G: 78, B: 70, A: 255},  // red rock
+	palette.wall,
+	{R: 96, G: 104, B: 130, A: 255},
+	{R: 150, G: 78, B: 70, A: 255},
 }
 
-// textureSet holds the textures the renderer draws with.
 type textureSet struct {
 	wall      *texture
-	walls     [world.NumThemes]*texture // themed wall variants, by Level theme
+	walls     [world.NumThemes]*texture
 	door      *texture
 	floor     *texture
 	ceiling   *texture
@@ -76,13 +62,12 @@ type textureSet struct {
 	fireball  *texture
 	rocket    *texture
 	barrel    *texture
-	weapon    []*texture // indexed by sim.WeaponKind: fists, pistol, shotgun
-	flash     *texture   // muzzle flash
-	face      []*texture // status-bar face, by health band (0 healthy .. 3 dead)
-	item      []*texture // indexed by world.ItemKind
+	weapon    []*texture
+	flash     *texture
+	face      []*texture
+	item      []*texture
 }
 
-// itemTexture returns the sprite for a collectible kind.
 func (ts *textureSet) itemTexture(k world.ItemKind) *texture {
 	if int(k) < len(ts.item) {
 		return ts.item[k]
@@ -90,9 +75,6 @@ func (ts *textureSet) itemTexture(k world.ItemKind) *texture {
 	return nil
 }
 
-// loadTextures returns the procedural texture set, overriding any individual
-// texture with a PNG found in dir (wall.png, door.png, demon0.png, demon1.png).
-// Missing or unreadable files leave the procedural default in place.
 func loadTextures(dir string) *textureSet {
 	ts := defaultTextures()
 	if dir == "" {
@@ -118,7 +100,6 @@ func loadTextures(dir string) *textureSet {
 	return ts
 }
 
-// assetDir is where override textures are looked for.
 func assetDir() string {
 	if d := os.Getenv("PANDEMONIUM_ASSETS"); d != "" {
 		return d
@@ -151,7 +132,6 @@ func loadPNG(path string) (*texture, bool) {
 	return t, true
 }
 
-// defaultTextures generates the built-in placeholder textures from the palette.
 func defaultTextures() *textureSet {
 	return &textureSet{
 		wall:      genBrick(palette.wall),
@@ -173,7 +153,6 @@ func defaultTextures() *textureSet {
 	}
 }
 
-// fillRect paints a solid rectangle, clipped to the texture bounds.
 func fillRect(t *texture, x0, y0, x1, y1 int, c color.RGBA) {
 	for y := y0; y < y1; y++ {
 		for x := x0; x < x1; x++ {
@@ -184,7 +163,6 @@ func fillRect(t *texture, x0, y0, x1, y1 int, c color.RGBA) {
 	}
 }
 
-// adjust brightens (d>0) or darkens (d<0) a colour, keeping its alpha.
 func adjust(c color.RGBA, d int) color.RGBA {
 	return color.RGBA{R: clampByte(int(c.R) + d), G: clampByte(int(c.G) + d), B: clampByte(int(c.B) + d), A: c.A}
 }

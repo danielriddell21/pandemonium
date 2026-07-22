@@ -16,8 +16,6 @@ func demonCount(g *Game) int {
 	return n
 }
 
-// TestSkillScalesDemonCount checks harder skills field at least as many demons
-// as easier ones on the same seed, and nightmare strictly more than easy.
 func TestSkillScalesDemonCount(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 48, Height: 32, Seed: 11})
 	if err != nil {
@@ -36,8 +34,6 @@ func TestSkillScalesDemonCount(t *testing.T) {
 	}
 }
 
-// TestDefaultSkillIsNormal checks the zero-option game matches an explicit
-// normal one (so existing behaviour is unchanged).
 func TestDefaultSkillIsNormal(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 48, Height: 32, Seed: 11})
 	if err != nil {
@@ -48,8 +44,6 @@ func TestDefaultSkillIsNormal(t *testing.T) {
 	}
 }
 
-// TestSkillScalesDamage checks the same raw hit costs the player more health on
-// a harder skill.
 func TestSkillScalesDamage(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 32, Height: 24, Seed: 4})
 	if err != nil {
@@ -68,8 +62,6 @@ func TestSkillScalesDamage(t *testing.T) {
 	}
 }
 
-// TestSkillKeepsGeometry checks difficulty does not change the generated map:
-// the player spawn, exit and a sampling of tiles are identical across skills.
 func TestSkillKeepsGeometry(t *testing.T) {
 	l, err := world.Generate(world.Config{Width: 32, Height: 24, Seed: 9})
 	if err != nil {

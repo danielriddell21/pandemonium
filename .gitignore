@@ -1,18 +1,26 @@
-# Binaries
+# Build output
 /bin/
 /dist/
-/pandemonium
+
+# Go build & test artifacts
 *.exe
-
-# Test / coverage artifacts
+*.test
 *.out
-coverage.*
+*.prof
+coverage.txt
+coverage.html
 
-# Local assets fetched at build time (see scripts/fetch-assets.sh)
-/assets/freedoom/
-
-# Editor / OS noise
+# Editor / OS
 .DS_Store
-*.swp
 .idea/
-.vscode/
+*.swp
+*~
+
+# Env / local
+.env
+.env.local
+.claude/
+
+# Project-specific
+/pandemonium
+/assets/freedoom/

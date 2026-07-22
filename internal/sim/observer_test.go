@@ -7,7 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// captureObserver records every observation it receives, for assertions.
 type captureObserver struct {
 	events []Observation
 }

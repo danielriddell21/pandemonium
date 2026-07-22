@@ -1,52 +1,70 @@
 binary := "pandemonium"
 bin_dir := "bin"
 
-default: build
+# list available recipes
+default:
+    @just --list
 
-# Compile the binary into ./bin
+# compile the binary into ./bin
+[group('build')]
 build:
     go build -o {{bin_dir}}/{{binary}} ./cmd/pandemonium
 
-# Build and run
-run:
-    go run ./cmd/pandemonium
-
-# Run all tests
+# run all tests
+[group('test')]
 test:
     go test ./...
 
-# Run go vet
-vet:
-    go vet ./...
-
-# Run golangci-lint
+# run golangci-lint
+[group('dev')]
 lint:
     golangci-lint run
 
-# Benchmark the renderer (Frame cost)
-bench:
-    go test -run=^$ -bench=. -benchmem ./internal/render
+# format the code
+[group('dev')]
+fmt:
+    golangci-lint fmt
 
-# Fuzz the world generator for a fixed time
-fuzz:
-    go test -run=^$ -fuzz=FuzzGenerate -fuzztime=30s ./internal/world
-
-# Run govulncheck
-vulncheck:
-    govulncheck ./...
-
-# Tidy module dependencies
+# tidy module dependencies
+[group('dev')]
 tidy:
     go mod tidy
 
-# Fetch Freedoom assets
+# full gate: lint + test + build. all must pass before committing
+[group('dev')]
+ci: lint test build
+
+# build and run
+[group('run')]
+run:
+    go run ./cmd/pandemonium
+
+# benchmark the renderer (Frame cost)
+[group('test')]
+bench:
+    go test -run=^$ -bench=. -benchmem ./internal/render
+
+# fuzz the world generator for a fixed time
+[group('test')]
+fuzz:
+    go test -run=^$ -fuzz=FuzzGenerate -fuzztime=30s ./internal/world
+
+# run govulncheck
+[group('dev')]
+vulncheck:
+    govulncheck ./...
+
+# fetch Freedoom assets
+[group('run')]
 assets:
     ./scripts/fetch-assets.sh
 
-# Regenerate the documentation demo clips and stills (needs ffmpeg)
+# regenerate the documentation demo clips and stills (needs ffmpeg)
+[group('run')]
 demos:
     go run ./tools/demogen
 
-# Remove build artifacts
+# remove build artifacts
+[group('dev')]
 clean:
     rm -rf {{bin_dir}} dist

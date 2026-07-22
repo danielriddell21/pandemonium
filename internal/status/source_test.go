@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
 )
 
-func telemetryEvent(typ string, level int) telemetry.PlayerEvent {
-	return telemetry.PlayerEvent{Type: typ, LevelIndex: level}
+func telemetryEvent(kind sim.ObservationKind, level int) telemetry.PlayerEvent {
+	return telemetry.PlayerEvent{Kind: kind, LevelIndex: level}
 }
 
 func TestBandThresholds(t *testing.T) {
@@ -97,7 +98,6 @@ func TestDeathLineEscalatesWithCount(t *testing.T) {
 	}
 }
 
-// TestReporterOnPathSummaryIsInert documents that path summaries don't post.
 func TestReporterOnPathSummaryIsInert(t *testing.T) {
 	o := hud.New()
 	r := New(o, NewTableSource())
@@ -109,24 +109,24 @@ func TestReporterOnPathSummaryIsInert(t *testing.T) {
 
 func TestKillAndItemThrottledToFirstPerLevel(t *testing.T) {
 	r := New(hud.New(), NewTableSource())
-	first := func(typ string) bool {
-		_, ok := r.cueFor(telemetryEvent(typ, 6))
+	first := func(kind sim.ObservationKind) bool {
+		_, ok := r.cueFor(telemetryEvent(kind, 6))
 		return ok
 	}
-	if !first("kill") {
+	if !first(sim.ObsKill) {
 		t.Error("first kill of a level should cue")
 	}
-	if first("kill") {
+	if first(sim.ObsKill) {
 		t.Error("second kill of the same level should be throttled")
 	}
-	if !first("item") {
+	if !first(sim.ObsItem) {
 		t.Error("first item of a level should cue")
 	}
-	if first("item") {
+	if first(sim.ObsItem) {
 		t.Error("second item of the same level should be throttled")
 	}
 	// A new level resets the throttle.
-	if _, ok := r.cueFor(telemetryEvent("kill", 7)); !ok {
+	if _, ok := r.cueFor(telemetryEvent(sim.ObsKill, 7)); !ok {
 		t.Error("a new level should allow a kill cue again")
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// automap layout and colours.
 const (
 	automapMaxW  = 200
 	automapMaxH  = 140
@@ -23,10 +22,6 @@ var (
 	mapPlayer = color.RGBA{R: 245, G: 240, B: 130, A: 255}
 )
 
-// drawAutomap overlays an overhead minimap of the explored level in the top-right
-// corner: revealed walls and floor, doors (locked ones tinted by key colour), the
-// exit, un-taken items, and the player as a marker with a heading line. It is
-// drawn last so nothing occludes it.
 func drawAutomap(fb []byte, cfg Config, g *sim.Game) {
 	l := g.World.Level
 	cell := min(automapMaxW/l.Width, automapMaxH/l.Height)
@@ -40,21 +35,27 @@ func drawAutomap(fb []byte, cfg Config, g *sim.Game) {
 	fillBox(fb, cfg, ox-2, oy-2, mapW+4, mapH+4, mapPanel)
 
 	visited := g.Visited()
-	revealed := func(c world.Coord) bool {
-		for dy := -1; dy <= 1; dy++ {
-			for dx := -1; dx <= 1; dx++ {
-				if visited[world.Coord{X: c.X + dx, Y: c.Y + dy}] {
-					return true
-				}
+	drawMapTiles(fb, cfg, l, visited, ox, oy, cell)
+	drawMapItems(fb, cfg, g, visited, ox, oy, cell)
+	drawPlayerMarker(fb, cfg, g, ox, oy, cell)
+}
+
+func revealedCell(visited map[world.Coord]bool, c world.Coord) bool {
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			if visited[world.Coord{X: c.X + dx, Y: c.Y + dy}] {
+				return true
 			}
 		}
-		return false
 	}
+	return false
+}
 
+func drawMapTiles(fb []byte, cfg Config, l *world.Level, visited map[world.Coord]bool, ox, oy, cell int) {
 	for ty := range l.Height {
 		for tx := range l.Width {
 			c := world.Coord{X: tx, Y: ty}
-			if !revealed(c) {
+			if !revealedCell(visited, c) {
 				continue
 			}
 			if col, ok := tileColor(l, c); ok {
@@ -62,24 +63,21 @@ func drawAutomap(fb []byte, cfg Config, g *sim.Game) {
 			}
 		}
 	}
+}
 
-	// Un-taken items as small dots (keys in their colour, others pale).
+func drawMapItems(fb []byte, cfg Config, g *sim.Game, visited map[world.Coord]bool, ox, oy, cell int) {
 	for _, it := range g.Items {
 		if it.Taken {
 			continue
 		}
 		c := world.Coord{X: int(it.Pos.X), Y: int(it.Pos.Y)}
-		if !revealed(c) {
+		if !revealedCell(visited, c) {
 			continue
 		}
 		fillBox(fb, cfg, ox+c.X*cell, oy+c.Y*cell, max(cell-1, 1), max(cell-1, 1), itemDotColor(it.Kind))
 	}
-
-	drawPlayerMarker(fb, cfg, g, ox, oy, cell)
 }
 
-// tileColor returns the minimap colour for a cell, and false if it should be left
-// blank (e.g. unexplored solid rock far from any room).
 func tileColor(l *world.Level, c world.Coord) (color.RGBA, bool) {
 	switch l.At(c.X, c.Y) {
 	case world.TileWall:
@@ -98,7 +96,6 @@ func tileColor(l *world.Level, c world.Coord) (color.RGBA, bool) {
 	}
 }
 
-// drawPlayerMarker draws the player dot and a short heading line on the minimap.
 func drawPlayerMarker(fb []byte, cfg Config, g *sim.Game, ox, oy, cell int) {
 	mpx := ox + int(g.Player.Pos.X*float64(cell))
 	mpy := oy + int(g.Player.Pos.Y*float64(cell))
@@ -110,7 +107,6 @@ func drawPlayerMarker(fb []byte, cfg Config, g *sim.Game, ox, oy, cell int) {
 	}
 }
 
-// itemDotColor picks a minimap dot colour: keys in their own hue, others pale.
 func itemDotColor(k world.ItemKind) color.RGBA {
 	if k.IsKey() {
 		return keyColor(k)
@@ -118,7 +114,6 @@ func itemDotColor(k world.ItemKind) color.RGBA {
 	return color.RGBA{R: 200, G: 200, B: 180, A: 255}
 }
 
-// keyColor maps a keycard kind to its indicator colour.
 func keyColor(k world.ItemKind) color.RGBA {
 	switch k {
 	case world.ItemKeyBlue:
@@ -130,7 +125,6 @@ func keyColor(k world.ItemKind) color.RGBA {
 	}
 }
 
-// fillBox fills a w×h rectangle at (x0,y0) with a solid colour, clipped to frame.
 func fillBox(fb []byte, cfg Config, x0, y0, w, h int, c color.RGBA) {
 	for y := y0; y < y0+h; y++ {
 		for x := x0; x < x0+w; x++ {

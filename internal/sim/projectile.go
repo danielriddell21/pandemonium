@@ -3,43 +3,35 @@ package sim
 import "math"
 
 const (
-	// rangedFireRange is how far a ranged demon will lob projectiles, in tiles.
 	rangedFireRange = 7.0
-	// rangedFireCooldown is the time between a ranged demon's shots, in seconds.
+
 	rangedFireCooldown = 2.0
-	// projectileSpeed is a projectile's travel speed in tiles per second.
+
 	projectileSpeed = 6.0
-	// projectileDamage is the health a projectile removes on impact.
+
 	projectileDamage = 12.0
-	// projectileHitRadius is how close a projectile must get to hit a target.
+
 	projectileHitRadius = 0.4
-	// demonEye is how far above a demon's feet its projectiles launch from.
+
 	demonEye = 0.4
 
-	// playerShooter marks a projectile fired by the player (a rocket): it can hit
-	// any demon and never registers a direct hit on the player, only splash.
 	playerShooter = -1
-	// rocketSpeed is how fast a player rocket travels; rocketRadius is its blast.
+
 	rocketSpeed  = 8.0
 	rocketRadius = 2.5
 )
 
-// Projectile is an in-flight attack (e.g. a fireball or a rocket). It flies in a
-// straight 3D line; shooter is the index of the entity that fired it
-// (playerShooter for the player) so it never hits its owner and so infighting
-// kills aren't credited to the player. Splash projectiles burst on impact.
 type Projectile struct {
 	Pos     Vec2
-	Z       float64 // height above the base floor, in wall units
+	Z       float64
 	Vel     Vec2
 	VelZ    float64
 	Damage  float64
-	Splash  bool // bursts for radius damage on impact (a rocket)
+	Splash  bool
 	shooter int
 	Alive   bool
 }
 
-// spawnPlayerRocket launches a rocket from the player's eye along their facing.
 func (g *Game) spawnPlayerRocket(dmg float64) {
 	dir := g.Player.Dir()
 	g.Projectiles = append(g.Projectiles, Projectile{
@@ -53,9 +45,6 @@ func (g *Game) spawnPlayerRocket(dmg float64) {
 	})
 }
 
-// spawnProjectile launches a projectile from the shooter's eye toward the
-// target's eye at the given speed and damage, so demons on ledges can still hit a
-// player below (and vice versa). shooter is the firing entity's index.
 func (g *Game) spawnProjectile(shooter int, from Vec2, fromZ float64, target Vec2, targetZ, speed, dmg float64) {
 	dx, dy := target.X-from.X, target.Y-from.Y
 	d := dist(from, target)
@@ -74,11 +63,6 @@ func (g *Game) spawnProjectile(shooter int, from Vec2, fromZ float64, target Vec
 	})
 }
 
-// advanceProjectiles moves projectiles, removing those that strike level geometry
-// — a wall, a floor rising into their path, or a ceiling dipping below it — or a
-// body. A projectile that crosses another demon wounds it (infighting, no player
-// credit); one that reaches the player damages the player. Dead projectiles are
-// compacted out.
 func (g *Game) advanceProjectiles(dt float64) {
 	kept := g.Projectiles[:0]
 	for _, p := range g.Projectiles {
@@ -114,17 +98,12 @@ func (g *Game) advanceProjectiles(dt float64) {
 	g.Projectiles = kept
 }
 
-// detonate bursts a splash projectile at its current position; non-splash
-// projectiles simply vanish.
 func (g *Game) detonate(p Projectile) {
 	if p.Splash {
 		g.explode(p.Pos, p.Z, rocketRadius, p.Damage)
 	}
 }
 
-// projectileHitsDemon returns the index of a living demon the projectile is
-// touching (excluding its own shooter), or -1. Height must overlap, so a shot
-// sails harmlessly over a demon on a much lower floor.
 func (g *Game) projectileHitsDemon(p Projectile) int {
 	for j := range g.Entities {
 		e := &g.Entities[j]

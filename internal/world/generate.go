@@ -5,23 +5,17 @@ import (
 	"fmt"
 )
 
-// Minimum grid size that can hold a sensible partition.
 const minDimension = 16
 
-// ErrUnreachable is returned when generation cannot produce a level whose exit
-// is reachable from its spawn within the attempt budget.
 var ErrUnreachable = errors.New("world: exhausted attempts producing a connected level")
 
-// Config controls level generation.
 type Config struct {
-	// Width and Height are the grid dimensions in tiles.
 	Width, Height int
-	// Seed makes generation deterministic: the same Config yields the same Level.
+
 	Seed int64
-	// MaxAttempts bounds how many times generation retries when a candidate
-	// level fails the reachability guarantee. Zero selects a sensible default.
+
 	MaxAttempts int
-	// Arena builds a single open set-piece room instead of the usual maze.
+
 	Arena bool
 }
 
@@ -38,10 +32,6 @@ func (c Config) normalized() Config {
 	return c
 }
 
-// Generate produces a level from cfg. It repeatedly builds candidates until one
-// has its exit reachable from its spawn (the flood-fill guarantee), then returns
-// it. Each attempt derives a distinct but deterministic sub-seed, so a given
-// Config always yields an identical Level.
 func Generate(cfg Config) (*Level, error) {
 	cfg = cfg.normalized()
 	for attempt := range cfg.MaxAttempts {
@@ -58,8 +48,6 @@ func Generate(cfg Config) (*Level, error) {
 	return nil, fmt.Errorf("%w: %dx%d seed=%d", ErrUnreachable, cfg.Width, cfg.Height, cfg.Seed)
 }
 
-// generateOnce builds a single candidate level: partition, carve rooms, connect
-// them, then place spawn and exit in two far-apart rooms.
 func generateOnce(width, height int, seed int64, arena bool) *Level {
 	if arena {
 		return generateArena(width, height, seed)
@@ -89,10 +77,6 @@ func generateOnce(width, height int, seed int64, arena bool) *Level {
 	return l
 }
 
-// placeSpawnAndExit marks the first room's centre as spawn and the farthest cell
-// reachable from it as exit. Choosing the exit from the spawn's reachability
-// field maximises the journey and guarantees the exit is reachable by
-// construction; the check in Generate remains a backstop after annotation.
 func placeSpawnAndExit(l *Level, rooms []rect) {
 	if len(rooms) == 0 {
 		return

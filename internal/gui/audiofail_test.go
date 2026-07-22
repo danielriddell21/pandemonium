@@ -1,34 +1,16 @@
-package app
+package gui
 
 import (
 	"errors"
-	"io"
+	"fmt"
 	"testing"
 )
-
-func TestIsAudioError(t *testing.T) {
-	cases := []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{"nil", nil, false},
-		{"real oto/ALSA", errors.New("audio: audio error: oto: ALSA error at snd_pcm_open: \"default\": No such file or directory"), true},
-		{"bare oto", errors.New("oto: device closed"), true},
-		{"eof", io.EOF, false},
-		{"unrelated", errors.New("renderer: out of memory"), false},
-	}
-	for _, c := range cases {
-		if got := isAudioError(c.err); got != c.want {
-			t.Errorf("%s: isAudioError = %v, want %v", c.name, got, c.want)
-		}
-	}
-}
 
 func TestHandleRunErrorSwallowsAudio(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // keep the best-effort Save off the real config dir
 	g := &Game{settings: DefaultSettings()}
-	audioErr := errors.New("audio: audio error: oto: ALSA error at snd_pcm_open")
+	audioErr := fmt.Errorf("audio: music player: %w: create looping player: %w",
+		ErrAudioUnavailable, errors.New("oto: device closed"))
 	if err := g.handleRunError(audioErr); err != nil {
 		t.Errorf("audio error should be swallowed, got %v", err)
 	}

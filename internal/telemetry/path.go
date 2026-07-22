@@ -1,8 +1,5 @@
 package telemetry
 
-// PathSummary is a rolling summary of how the player traversed a single level:
-// how much of it they saw, how much they doubled back, how long they took, and
-// how they handled doors and forks.
 type PathSummary struct {
 	LevelSeed      int64 `json:"level_seed"`
 	LevelIndex     int   `json:"level_index"`

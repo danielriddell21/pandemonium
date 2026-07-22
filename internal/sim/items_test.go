@@ -6,8 +6,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// placeItemUnderPlayer drops a single item on the player's current cell so a tick
-// will collect it.
 func placeItemUnderPlayer(g *Game, kind world.ItemKind) {
 	g.Items = []ItemState{{Kind: kind, Pos: g.Player.Pos}}
 }

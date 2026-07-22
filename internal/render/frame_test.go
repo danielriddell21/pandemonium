@@ -16,8 +16,6 @@ func smokeGame(t *testing.T) *sim.Game {
 	return sim.New(l)
 }
 
-// TestFrameIsFullyPaintedAndVaried checks the whole pipeline produces an opaque,
-// non-uniform image (walls, floor, ceiling and HUD all contributing).
 func TestFrameIsFullyPaintedAndVaried(t *testing.T) {
 	r := NewRenderer(Config{Width: 160, Height: 100, FOV: 1.152})
 	fb := r.Frame(smokeGame(t))
@@ -41,7 +39,6 @@ func TestFrameIsFullyPaintedAndVaried(t *testing.T) {
 	}
 }
 
-// TestHUDTogglesStatusBar checks SetHUD changes the bottom status-bar region.
 func TestHUDTogglesStatusBar(t *testing.T) {
 	g := smokeGame(t)
 	r := NewRenderer(Config{Width: 160, Height: 100, FOV: 1.152})
@@ -64,8 +61,6 @@ func TestHUDTogglesStatusBar(t *testing.T) {
 	}
 }
 
-// TestCrosshairPaintsCentre checks the crosshair toggle marks pixels near the
-// centre of the view.
 func TestCrosshairPaintsCentre(t *testing.T) {
 	g := smokeGame(t)
 	g.Entities = nil
@@ -85,7 +80,6 @@ func TestCrosshairPaintsCentre(t *testing.T) {
 	}
 }
 
-// TestIntermissionRenders checks the tally screen paints an opaque frame.
 func TestIntermissionRenders(t *testing.T) {
 	r := NewRenderer(DefaultConfig())
 	fb := r.Intermission(sim.LevelStats{Kills: 3, KillsTotal: 5, Elapsed: 40, Par: 60})
@@ -99,7 +93,6 @@ func TestIntermissionRenders(t *testing.T) {
 	}
 }
 
-// TestMenuRenders checks a menu screen paints an opaque frame with the selection.
 func TestMenuRenders(t *testing.T) {
 	r := NewRenderer(DefaultConfig())
 	items := []MenuItem{{Label: "START"}, {Label: "QUIT"}}

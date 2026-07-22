@@ -1,20 +1,11 @@
 package world
 
-// arenaEvery is how often a set-piece arena replaces the usual maze: every Nth
-// level (1-based) opens into one large, sky-lit room with a heavier fight.
 const arenaEvery = 5
 
-// IsArenaLevel reports whether the given 1-based level number is a set-piece
-// arena rather than an ordinary generated maze.
 func IsArenaLevel(levelNumber int) bool {
 	return levelNumber > 0 && levelNumber%arenaEvery == 0
 }
 
-// generateArena builds a single large, open, sky-lit room: the spawn at one end,
-// the exit switch at the other, a weapon-and-armour cache at its heart and a
-// scatter of barrels. The encounter is filled by the simulation, which scales
-// the demon count with the (large) floor area, so an arena reads as a heavier,
-// open fight than the usual corridors.
 func generateArena(width, height int, seed int64) *Level {
 	l := newLevel(width, height, seed)
 	g := newRNG(seed)
@@ -44,9 +35,6 @@ func generateArena(width, height int, seed int64) *Level {
 	return l
 }
 
-// placeArenaCache lays a guaranteed reward at the heart of the arena — a
-// megasphere flanked by armour and rockets — so the open fight comes with the
-// firepower to match.
 func placeArenaCache(l *Level) {
 	cx, cy := l.Width/2, l.Height/2
 	cache := []struct {

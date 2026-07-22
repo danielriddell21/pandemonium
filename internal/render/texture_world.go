@@ -6,10 +6,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
-// This file holds the procedural generators for the level's surfaces: themed
-// brick walls, doors, floors, ceilings, switches and the hazard floors.
-
-// buildWallThemes renders the brick texture in each theme tint.
 func buildWallThemes() [world.NumThemes]*texture {
 	var ws [world.NumThemes]*texture
 	for i, tint := range wallThemes {
@@ -18,7 +14,6 @@ func buildWallThemes() [world.NumThemes]*texture {
 	return ws
 }
 
-// genBrick draws a brick/mortar pattern with subtle per-brick variation.
 func genBrick(base color.RGBA) *texture {
 	t := newTexture(texSize, texSize)
 	mortar := color.RGBA{R: 58, G: 44, B: 34, A: 255}
@@ -40,7 +35,6 @@ func genBrick(base color.RGBA) *texture {
 	return t
 }
 
-// genDoor draws a panelled door distinct from the walls.
 func genDoor(base color.RGBA) *texture {
 	t := newTexture(texSize, texSize)
 	frame := color.RGBA{R: 70, G: 40, B: 36, A: 255}
@@ -61,8 +55,6 @@ func genDoor(base color.RGBA) *texture {
 	return t
 }
 
-// genFloor draws a flagstone tile: stone slabs separated by darker grout, with a
-// deterministic speckle so the cast floor reads as textured rather than flat.
 func genFloor() *texture {
 	t := newTexture(texSize, texSize)
 	base := color.RGBA{R: 78, G: 66, B: 52, A: 255}
@@ -83,8 +75,6 @@ func genFloor() *texture {
 	return t
 }
 
-// genCeiling draws a dim, mottled ceiling distinct from the floor so up and down
-// read differently once they are cast.
 func genCeiling() *texture {
 	t := newTexture(texSize, texSize)
 	base := color.RGBA{R: 44, G: 44, B: 56, A: 255}
@@ -97,8 +87,6 @@ func genCeiling() *texture {
 	return t
 }
 
-// genSwitch draws a wall with a lit lever panel, so an exit/door switch reads as
-// interactive among plain walls.
 func genSwitch() *texture {
 	t := genBrick(palette.wall)
 	panel := color.RGBA{R: 40, G: 44, B: 52, A: 255}
@@ -109,8 +97,6 @@ func genSwitch() *texture {
 	return t
 }
 
-// genNukage draws a sickly green, mottled floor for damaging tiles, so the player
-// reads the hazard before stepping in.
 func genNukage() *texture {
 	t := newTexture(texSize, texSize)
 	base := color.RGBA{R: 60, G: 120, B: 40, A: 255}
@@ -123,8 +109,6 @@ func genNukage() *texture {
 	return t
 }
 
-// genLava draws a molten floor: a hot orange crust shot through with brighter
-// veins, distinct at a glance from the green nukage.
 func genLava() *texture {
 	t := newTexture(texSize, texSize)
 	base := color.RGBA{R: 150, G: 48, B: 20, A: 255}

@@ -6,10 +6,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// drawPowerupTint washes the view with a colour while a timed powerup is active:
-// invulnerability reads cold and bright, the radiation suit green — mirroring
-// DOOM's screen tints. Only the strongest active tint shows. Berserk lasts the
-// whole level and so deliberately leaves no persistent wash.
 func drawPowerupTint(fb []byte, cfg Config, g *sim.Game) {
 	_ = cfg
 	var c color.RGBA
@@ -24,7 +20,6 @@ func drawPowerupTint(fb []byte, cfg Config, g *sim.Game) {
 	blendOver(fb, c, 0.22)
 }
 
-// blendOver alpha-blends a flat colour over the whole framebuffer.
 func blendOver(fb []byte, c color.RGBA, a float64) {
 	ri, gi, bi := float64(c.R)*a, float64(c.G)*a, float64(c.B)*a
 	keep := 1 - a
