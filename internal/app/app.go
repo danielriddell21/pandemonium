@@ -468,5 +468,5 @@ func (g *Game) Run() error {
 	ebiten.SetWindowSize(cfg.Width*windowScale, cfg.Height*windowScale)
 	ebiten.SetWindowTitle("pandemonium")
 	g.audio.StartAmbient()
-	return ebiten.RunGame(g)
+	return g.handleRunError(ebiten.RunGame(g))
 }
