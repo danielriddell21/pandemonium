@@ -136,6 +136,9 @@ func (c clip) record(path string) (int, error) {
 				return 0, err
 			}
 			g = sim.New(nl)
+			if c.setup != nil {
+				c.setup(g) // keep the clip's staging (e.g. no demons) across levels
+			}
 		}
 		seen[g.PlayerCell()] = true
 		emit(r.Frame(g))
@@ -186,8 +189,7 @@ func defaultClips() []clip {
 	cfg := render.Config{Width: 256, Height: 160, FOV: 1.152}
 	return []clip{
 		{name: "hero", seed: 16, mapW: 40, mapH: 26, rcfg: cfg, frames: 360, delayCs: 7, input: pathFollow(true), tally: true, video: true},
-		{name: "exploration", seed: 12, mapW: 32, mapH: 24, rcfg: cfg, frames: 84, delayCs: 7, input: pathFollow(false)},
-		combatClip(cfg),
+		{name: "exploration", seed: 12, mapW: 32, mapH: 24, rcfg: cfg, frames: 84, delayCs: 7, setup: noDemons, input: pathFollow(false)},
 		{name: "arena", seed: 5, mapW: 40, mapH: 28, rcfg: cfg, frames: 110, delayCs: 7, input: hunt(), arena: true},
 		{name: "automap", seed: 7, mapW: 40, mapH: 26, rcfg: cfg, frames: 120, delayCs: 7, input: pathFollow(false), automap: true},
 		terrainClip(cfg),
@@ -262,30 +264,9 @@ func pathFollow(fight bool) func(int, *sim.Game) sim.Input {
 	return func(_ int, g *sim.Game) sim.Input { return p.Input(g) }
 }
 
-// combatClip looks for a level that opens on a demon in view and is well stocked
-// with others, then turns the bot loose to fight its way through them.
-func combatClip(cfg render.Config) clip {
-	const w, h = 32, 24
-	for seed := int64(0); seed < 400; seed++ {
-		l, err := world.Generate(world.Config{Width: w, Height: h, Seed: seed})
-		if err != nil {
-			continue
-		}
-		g := sim.New(l)
-		target, ok := bot.SeesDemon(g, 2.5, 7)
-		if !ok || len(g.Entities) < 5 {
-			continue
-		}
-		angle := math.Atan2(target.Y-g.Player.Pos.Y, target.X-g.Player.Pos.X)
-		return clip{
-			name: "combat", seed: seed, mapW: w, mapH: h, rcfg: cfg,
-			frames: 110, delayCs: 7,
-			setup: func(g *sim.Game) { g.Player.Angle = angle },
-			input: hunt(),
-		}
-	}
-	return clip{name: "combat", seed: 5, mapW: w, mapH: h, rcfg: cfg, frames: 110, delayCs: 7, input: hunt()}
-}
+// noDemons clears a level's demons, so a clip shows the world itself rather than
+// a fight (the exploration walk-through).
+func noDemons(g *sim.Game) { g.Entities = nil }
 
 // hunt seeks and destroys the level's demons via the bot package's hunter.
 func hunt() func(int, *sim.Game) sim.Input {
