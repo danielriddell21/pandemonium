@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/danielriddell21/pandemonium/internal/hud"
+	"github.com/danielriddell21/pandemonium/internal/phrasing"
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/status"
 	"github.com/danielriddell21/pandemonium/internal/telemetry"
@@ -26,7 +27,9 @@ func Run(cfg Config) error {
 	keeper := NewRecordKeeper(records)
 
 	overlay := hud.New()
-	reporter := status.New(overlay, status.NewTableSource(), status.WithReach(records.Reach()))
+	src, releaseNotice := noticeSource()
+	defer releaseNotice()
+	reporter := status.New(overlay, src, status.WithReach(records.Reach()))
 	bus := telemetry.NewBus(reporter, keeper)
 
 	// Sound is on by default but optional via the settings file (turn it off on a
@@ -56,4 +59,13 @@ func Run(cfg Config) error {
 		return fmt.Errorf("run game: %w", err)
 	}
 	return nil
+}
+
+func noticeSource() (status.Source, func()) {
+	v, err := phrasing.New()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "notice phrasing disabled:", err)
+		return status.NewTableSource(), func() {} // fall back to the scripted lines
+	}
+	return v, func() { _ = v.Close() }
 }
