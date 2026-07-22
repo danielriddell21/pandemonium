@@ -14,12 +14,12 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
-	"image/gif"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/danielriddell21/crucible/record"
 
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
@@ -92,7 +92,10 @@ func (c clip) record(path string) (int, error) {
 	r := render.NewRenderer(c.rcfg)
 	r.SetAutomap(c.automap)
 
-	anim := &gif.GIF{LoopCount: 0}
+	// GIF clips encode through crucible's recorder: the demo palette quantises
+	// cleanly without dithering (WithFrameDiff keeps the nearest-colour draw),
+	// and delta frames keep the files compact.
+	rec := record.NewRecorder(0, 1, 0, record.WithPalette(pal), record.WithFrameDelay(c.delayCs), record.WithFrameDiff())
 	var raw [][]byte // collected RGBA frames, for video encoding
 	emit := func(rgba []byte) {
 		if c.video {
@@ -101,8 +104,11 @@ func (c clip) record(path string) (int, error) {
 			raw = append(raw, cp)
 			return
 		}
-		anim.Image = append(anim.Image, toPaletted(rgba, c.rcfg, pal))
-		anim.Delay = append(anim.Delay, c.delayCs)
+		rec.Add(&image.RGBA{
+			Pix:    rgba,
+			Stride: c.rcfg.Width * 4,
+			Rect:   image.Rect(0, 0, c.rcfg.Width, c.rcfg.Height),
+		})
 	}
 	// Hold on the level-complete tally before moving on, when asked.
 	emitTally := func(g *sim.Game) {
@@ -137,8 +143,8 @@ func (c clip) record(path string) (int, error) {
 	if c.video {
 		return len(seen), encodeMP4(path, raw, c.rcfg, c.delayCs)
 	}
-	if err := writeGIF(path, anim); err != nil {
-		return 0, err
+	if err := rec.Save(path); err != nil {
+		return 0, fmt.Errorf("save gif: %w", err)
 	}
 	return len(seen), nil
 }
@@ -167,19 +173,6 @@ func (c clip) runSubSteps(g *sim.Game, i, subSteps int, dt float64) bool {
 		}
 	}
 	return false
-}
-
-// writeGIF encodes the animation to path as a GIF.
-func writeGIF(path string, anim *gif.GIF) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create gif: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-	if err := gif.EncodeAll(f, anim); err != nil {
-		return fmt.Errorf("encode gif: %w", err)
-	}
-	return nil
 }
 
 // encodeMP4 pipes raw RGBA frames to ffmpeg and writes an H.264 MP4. The frame
@@ -324,15 +317,6 @@ func noDemons(g *sim.Game) { g.Entities = nil }
 func hunt() func(int, *sim.Game) sim.Input {
 	p := bot.Hunter()
 	return func(_ int, g *sim.Game) sim.Input { return p.Input(g) }
-}
-
-// toPaletted quantises an RGBA frame buffer to the demo palette.
-func toPaletted(fb []byte, cfg render.Config, pal color.Palette) *image.Paletted {
-	rect := image.Rect(0, 0, cfg.Width, cfg.Height)
-	rgba := &image.RGBA{Pix: fb, Stride: cfg.Width * 4, Rect: rect}
-	p := image.NewPaletted(rect, pal)
-	draw.Draw(p, rect, rgba, image.Point{}, draw.Src)
-	return p
 }
 
 // demoPalette builds brightness ramps for every colour the renderer uses so the
