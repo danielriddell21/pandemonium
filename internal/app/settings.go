@@ -17,7 +17,8 @@ type Settings struct {
 	Sensitivity   float64 `json:"mouse_sensitivity"` // multiplier on the base turn rate
 	FOV           float64 `json:"fov"`               // horizontal field of view, radians
 	Crosshair     bool    `json:"crosshair"`
-	Debug         bool    `json:"debug"` // show on-screen diagnostic (playtest) messages
+	Debug         bool    `json:"debug"`      // show on-screen diagnostic (playtest) messages
+	Fullscreen    bool    `json:"fullscreen"` // run the window full-screen
 }
 
 // skillCount is the number of difficulty levels (sim.SkillEasy..SkillNightmare).
@@ -40,6 +41,7 @@ func DefaultSettings() Settings {
 		Sensitivity:   1,
 		FOV:           defaultFOV,
 		Crosshair:     false,
+		Fullscreen:    true,
 	}
 }
 
