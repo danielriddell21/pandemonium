@@ -23,6 +23,14 @@ vet:
 lint:
     golangci-lint run
 
+# Benchmark the renderer (Frame cost)
+bench:
+    go test -run=^$ -bench=. -benchmem ./internal/render
+
+# Fuzz the world generator for a fixed time
+fuzz:
+    go test -run=^$ -fuzz=FuzzGenerate -fuzztime=30s ./internal/world
+
 # Run govulncheck
 vulncheck:
     govulncheck ./...
