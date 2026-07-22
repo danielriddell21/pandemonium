@@ -142,7 +142,8 @@ func (g *Game) explode(center Vec2, z, radius, dmg float64) {
 }
 
 // die emits the death observation and respawns the player at the level spawn with
-// full health, resetting the demons to their deterministic starting layout.
+// full health, resetting the demons and pickups to their deterministic starting
+// layout so a death is a clean restart of the level rather than a soft lock.
 func (g *Game) die() {
 	g.emit(Observation{Kind: ObsDeath, At: g.PlayerCell()})
 	l := g.World.Level
@@ -153,7 +154,9 @@ func (g *Game) die() {
 	g.Player.Health = MaxHealth
 	g.Entities = g.spawnEntities()
 	g.Projectiles = nil
-	g.kills = 0 // the demons are back; the kill tally restarts with them
+	g.Items = newItems(l) // pickups return with the demons, so ammo can be recovered
+	g.kills = 0           // the demons are back; the kill tally restarts with them
+	g.items = 0
 	g.tracker.lastCell = l.Spawn
 	g.tracker.started = true
 }
