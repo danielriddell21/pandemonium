@@ -88,7 +88,11 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
 		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-StatusBarH)
 		drawStatusBar(r.fb, r.cfg, g, r.tex)
-		drawNotice(r.fb, r.cfg, g.Notice())
+		if notice := g.Notice(); notice != "" {
+			drawNotice(r.fb, r.cfg, notice)
+		} else {
+			drawInteractPrompt(r.fb, r.cfg, g)
+		}
 		if r.overlay != nil {
 			if msg, ch, ok := r.overlay.Active(); ok && (ch == hud.Notice || r.diagnostics) {
 				drawMessage(r.fb, r.cfg, msg, ch)

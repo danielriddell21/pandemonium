@@ -9,6 +9,9 @@ import (
 	"golang.org/x/image/math/fixed"
 
 	"github.com/danielriddell21/crucible/hud"
+	"github.com/danielriddell21/crucible/keymap"
+
+	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
 const (
@@ -57,6 +60,26 @@ func drawNotice(fb []byte, cfg Config, msg string) {
 		return
 	}
 	drawTextCentered(fb, cfg, cfg.Height*3/4, msg, palette.hudText)
+}
+
+// drawInteractPrompt shows a contextual "E: open door" hint centred in the
+// lower third while the player faces something to use. It shares the family's
+// layout via crucible/keymap, drawn here in pandemonium's own font and palette.
+func drawInteractPrompt(fb []byte, cfg Config, g *sim.Game) {
+	var action string
+	switch g.FacingInteractable() {
+	case sim.InteractDoor:
+		action = "OPEN DOOR"
+	case sim.InteractSwitch:
+		action = "PRESS SWITCH"
+	default:
+		return
+	}
+	face := keymap.Face{LineHeight: hudBaseline, Measure: func(s string) int { return len(s) * glyphWidth }}
+	line := keymap.CenterPrompt(keymap.Binding{Key: "E", Action: action}, cfg.Width, cfg.Height, face)
+	dst := framebufferImage(fb, cfg)
+	drawText(dst, line.X+1, line.Y+1, line.Text, palette.hudDrop)
+	drawText(dst, line.X, line.Y, line.Text, palette.hudText)
 }
 
 func framebufferImage(fb []byte, cfg Config) *image.RGBA {

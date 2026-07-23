@@ -216,6 +216,33 @@ func (g *Game) pressSwitch(sw world.Switch) {
 	}
 }
 
+// InteractTarget is what the player is facing within reach, for a contextual
+// prompt.
+type InteractTarget int
+
+// Interact targets a contextual prompt can describe.
+const (
+	InteractNone InteractTarget = iota
+	InteractDoor
+	InteractSwitch
+)
+
+// FacingInteractable reports what the player could act on right now — a switch
+// or a closed door ahead within reach. It never mutates the world, so the GUI
+// can poll it each frame to show or hide a prompt.
+func (g *Game) FacingInteractable() InteractTarget {
+	dir := g.Player.Dir()
+	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))
+	ty := int(math.Floor(g.Player.Pos.Y + dir.Y*reach))
+	if _, ok := g.World.Level.SwitchAt(tx, ty); ok {
+		return InteractSwitch
+	}
+	if g.World.IsDoor(tx, ty) && !g.World.Opened(tx, ty) {
+		return InteractDoor
+	}
+	return InteractNone
+}
+
 func (g *Game) interact() {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))

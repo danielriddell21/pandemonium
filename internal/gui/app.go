@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/danielriddell21/crucible/canvas"
 	"github.com/danielriddell21/crucible/hud"
+	"github.com/danielriddell21/crucible/keymap"
 	"github.com/danielriddell21/crucible/menu"
 	"github.com/danielriddell21/crucible/window"
 
@@ -17,6 +19,30 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 	"github.com/danielriddell21/pandemonium/internal/sim/bot"
 )
+
+// controlHints is pandemonium's control scheme, shown on the pause menu and
+// shared through crucible/keymap so its "key: action" format matches the family.
+var controlHints = []keymap.Binding{
+	{Key: "WASD", Action: "MOVE"},
+	{Key: "MOUSE", Action: "LOOK"},
+	{Key: "E", Action: "USE"},
+	{Key: "LMB", Action: "FIRE"},
+	{Key: "1-5", Action: "WEAPON"},
+	{Key: "TAB", Action: "MAP"},
+}
+
+// controlsSubtitle formats the control scheme as two centred rows for a menu
+// subtitle, followed by the resume hint.
+func controlsSubtitle() []string {
+	row := func(bs []keymap.Binding) string {
+		parts := make([]string, len(bs))
+		for i, b := range bs {
+			parts[i] = b.Label()
+		}
+		return strings.Join(parts, "    ")
+	}
+	return []string{row(controlHints[:3]), row(controlHints[3:]), "", "esc resumes"}
+}
 
 type state int
 
@@ -337,7 +363,7 @@ func (g *Game) buildMenus() {
 
 	g.pauseMenu = &menu.Menu{
 		Title:    "PAUSED",
-		Subtitle: []string{"esc resumes"},
+		Subtitle: controlsSubtitle(),
 		Items: []menu.Item{
 			{Label: label("RESUME"), Action: g.resume},
 			{Label: label("SETTINGS"), Action: func() { g.menuFrom = statePaused; g.state = stateSettings }},
