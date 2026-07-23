@@ -11,6 +11,7 @@ import (
 	"github.com/danielriddell21/crucible/canvas"
 	"github.com/danielriddell21/crucible/hud"
 	"github.com/danielriddell21/crucible/menu"
+	"github.com/danielriddell21/crucible/window"
 
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
@@ -421,8 +422,10 @@ const windowScale = 2
 
 func (g *Game) Run() error {
 	cfg := g.renderer.Config()
-	ebiten.SetWindowSize(cfg.Width*windowScale, cfg.Height*windowScale)
-	ebiten.SetWindowTitle("pandemonium")
+	window.Configure(window.Options{
+		Title: "pandemonium", Width: cfg.Width * windowScale, Height: cfg.Height * windowScale,
+		MinWidth: cfg.Width, MinHeight: cfg.Height,
+	})
 	g.audio.StartAmbient()
 	return g.handleRunError(ebiten.RunGame(g))
 }
