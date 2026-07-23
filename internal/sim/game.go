@@ -116,6 +116,7 @@ func (g *Game) Tick(in Input, dt float64) {
 			g.attackCooldown = weapons[g.Player.Weapon].cooldown
 		}
 	}
+	g.autoSwitchIfEmpty()
 
 	g.advanceProjectiles(dt)
 	g.applyContactDamage(dt)
