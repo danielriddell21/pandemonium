@@ -21,6 +21,8 @@ type Config struct {
 	// MaxAttempts bounds how many times generation retries when a candidate
 	// level fails the reachability guarantee. Zero selects a sensible default.
 	MaxAttempts int
+	// Arena builds a single open set-piece room instead of the usual maze.
+	Arena bool
 }
 
 func (c Config) normalized() Config {
@@ -45,7 +47,7 @@ func Generate(cfg Config) (*Level, error) {
 	for attempt := range cfg.MaxAttempts {
 		// Derive a per-attempt seed deterministically from the base seed.
 		sub := cfg.Seed + int64(attempt)*0x100000001b3
-		l := generateOnce(cfg.Width, cfg.Height, sub)
+		l := generateOnce(cfg.Width, cfg.Height, sub, cfg.Arena)
 		l.Seed = cfg.Seed
 		// The exit must be reachable once doors are open, and every keycard must
 		// be obtainable without first crossing the door it unlocks.
@@ -58,7 +60,10 @@ func Generate(cfg Config) (*Level, error) {
 
 // generateOnce builds a single candidate level: partition, carve rooms, connect
 // them, then place spawn and exit in two far-apart rooms.
-func generateOnce(width, height int, seed int64) *Level {
+func generateOnce(width, height int, seed int64, arena bool) *Level {
+	if arena {
+		return generateArena(width, height, seed)
+	}
 	l := newLevel(width, height, seed)
 	g := newRNG(seed)
 

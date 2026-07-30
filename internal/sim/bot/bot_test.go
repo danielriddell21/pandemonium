@@ -67,6 +67,27 @@ func TestHunterKillsDemons(t *testing.T) {
 	t.Errorf("hunter killed nothing: %d demons before and after", start)
 }
 
+// TestRoamerCompletesArena drives the open set-piece arena to its exit switch,
+// confirming the pilot handles the single-room layout. Entities are cleared so
+// this isolates navigation and the exit switch from the arena's (deliberately
+// brutal) open fight.
+func TestRoamerCompletesArena(t *testing.T) {
+	l, err := world.Generate(world.Config{Width: 40, Height: 28, Seed: 5, Arena: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := sim.New(l)
+	g.Entities = nil
+	p := Roamer(false)
+	for range 4000 {
+		g.Tick(p.Input(g), 1.0/60.0)
+		if g.LevelComplete() {
+			return
+		}
+	}
+	t.Error("roamer did not complete the arena")
+}
+
 // TestSteerTowardClosesDistance checks the steering produces input that moves
 // the player toward the target whichever way it faces.
 func TestSteerTowardClosesDistance(t *testing.T) {

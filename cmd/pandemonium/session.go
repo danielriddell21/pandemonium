@@ -61,9 +61,10 @@ func (s *session) next() *sim.Game {
 // returns a simulation observed by the telemetry bus.
 func (s *session) build() *sim.Game {
 	seed := s.baseSeed + int64(s.level)
+	arena := world.IsArenaLevel(s.level + 1) // 1-based: every fifth level is a set-piece
 	var lvl *world.Level
 	for {
-		l, err := world.Generate(world.Config{Width: s.width, Height: s.height, Seed: seed})
+		l, err := world.Generate(world.Config{Width: s.width, Height: s.height, Seed: seed, Arena: arena})
 		if err == nil {
 			lvl = l
 			break
