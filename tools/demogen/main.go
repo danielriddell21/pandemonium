@@ -70,6 +70,8 @@ type clip struct {
 	video bool
 	// automap overlays the explored-level minimap for the whole clip.
 	automap bool
+	// arena builds the open set-piece room instead of the usual maze.
+	arena bool
 }
 
 // ext is the output file extension for the clip's encoding.
@@ -82,7 +84,7 @@ func (c clip) ext() string {
 
 func (c clip) record(path string) (int, error) {
 	pal := demoPalette()
-	level, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: c.seed})
+	level, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: c.seed, Arena: c.arena})
 	if err != nil {
 		return 0, err
 	}
@@ -129,7 +131,7 @@ func (c clip) record(path string) (int, error) {
 				}
 			}
 			nextSeed++
-			nl, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: nextSeed})
+			nl, err := world.Generate(world.Config{Width: c.mapW, Height: c.mapH, Seed: nextSeed, Arena: c.arena})
 			if err != nil {
 				return 0, err
 			}
@@ -186,6 +188,7 @@ func defaultClips() []clip {
 		{name: "hero", seed: 16, mapW: 40, mapH: 26, rcfg: cfg, frames: 360, delayCs: 7, input: pathFollow(true), tally: true, video: true},
 		{name: "exploration", seed: 12, mapW: 32, mapH: 24, rcfg: cfg, frames: 84, delayCs: 7, input: pathFollow(false)},
 		combatClip(cfg),
+		{name: "arena", seed: 5, mapW: 40, mapH: 28, rcfg: cfg, frames: 110, delayCs: 7, input: hunt(), arena: true},
 		{name: "automap", seed: 7, mapW: 40, mapH: 26, rcfg: cfg, frames: 120, delayCs: 7, input: pathFollow(false), automap: true},
 		terrainClip(cfg),
 	}
