@@ -1,6 +1,6 @@
 # pandemonium
 
-> *The capital of Hell, rendered in software.*
+> *pandemonium* — all the demons, in one place.
 
 [![CI](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/danielriddell21/pandemonium/graph/badge.svg)](https://codecov.io/gh/danielriddell21/pandemonium)
@@ -8,15 +8,11 @@
 [![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
 [![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
-A procedurally-generated, Wolfenstein-3D-style raycaster FPS written in Go with
-[Ebiten](https://ebitengine.org/) v2, in the visual spirit of the original DOOM.
+A procedurally-generated, Wolfenstein-3D-style raycaster FPS written in Go with [Ebiten](https://ebitengine.org/) v2, in the visual spirit of the original DOOM.
 
-Every run generates a fresh maze of rooms and corridors — staircases, lifts,
-raised platforms, the odd open-sky courtyard. Walk it with `WASD`, look with the
-mouse, dodge the demons, and reach the exit to collapse the level and spawn a new
-one. Levels are deterministic from their seed.
+Every run generates a fresh maze of rooms and corridors — staircases, lifts, raised platforms, the odd open-sky courtyard. Walk it with `WASD`, look with the mouse, dodge the demons, and reach the exit to collapse the level and spawn a new one. Levels are deterministic from their seed.
 
-```
+```sh
 go run ./cmd/pandemonium --seed 42
 ```
 
@@ -29,7 +25,12 @@ go run ./cmd/pandemonium --seed 42
 brew install --cask danielriddell21/tap/pandemonium
 ```
 
-On Linux/Windows, build from source (`go build ./cmd/pandemonium`).
+### From source
+On Linux/Windows, build from source:
+
+```sh
+go build ./cmd/pandemonium
+```
 
 <details>
 <summary>Linux: OpenGL/X11 libraries</summary>
@@ -41,88 +42,6 @@ sudo apt install libgl1-mesa-dev libxrandr-dev libxcursor-dev libxinerama-dev li
 ```
 </details>
 
-## Features
-
-- **Procedural worlds** — BSP rooms and corridors carved fresh each level and
-  deterministic from a seed, with terrain sculpted in quarter-wall steps:
-  staircases, raised platforms, lifts, open-sky courtyards, and a **set-piece
-  arena** every fifth level.
-- **Arsenal** — fists, pistol, shotgun, chaingun and rocket launcher (hitscan and
-  splash), with ammo, a backpack, and auto-switch when a weapon runs dry.
-- **Bestiary** — melee chargers, fireball imps, hitscan gunners, fast pinkies and
-  armoured barons, plus exploding barrels and monster infighting.
-- **Pickups & power-ups** — health, armour, soulsphere, megasphere, berserk,
-  invulnerability and a radiation suit; keycards behind locked doors; hidden
-  secrets to find.
-- **Hazards** — radioactive slime and molten lava floors (a radsuit shrugs off
-  slime, but not lava).
-- **Four difficulty levels** scaling the threat without changing the map.
-- **Pure-CPU column raycaster** with per-tile floor/ceiling heights, see-over low
-  walls, per-sector lighting and distance shading — and an automap.
-- **All procedural, no assets** — every texture and sound is synthesised in code,
-  including an ambient/music bed that darkens as a run deepens, and positional
-  sound effects.
-- **Title, pause and settings menus**, a self-playing attract demo, and run
-  history kept across sessions.
-
-The world, simulation and renderer are pure and headless-testable; only the
-Ebiten front-end touches the screen.
-
-## Controls
-
-| Input              | Action            |
-| ------------------ | ----------------- |
-| `W` / `S` (or `↑` `↓`) | Move forward/back |
-| `A` / `D`          | Strafe left/right |
-| Mouse / `←` `→`    | Turn              |
-| Left-click / `Ctrl` / `F` | Attack     |
-| `1`–`5` / wheel    | Switch weapon (fists, pistol, shotgun, chaingun, rockets) |
-| `E` / `Space`      | Interact (doors, switches) |
-| `Tab`              | Toggle automap    |
-| `F11`              | Toggle fullscreen |
-| `F12`              | Screenshot (HUD-free PNG in the working dir) |
-| `Enter` / `Space`  | Next level (on the tally screen) |
-| `Esc`              | Pause / back (quit from the menu) |
-
-Starts fullscreen with the mouse captured; `F11` toggles fullscreen and menus
-release the cursor. The title screen shows your run history and, left idle, plays
-a self-demo; `Esc` opens the pause menu (resume, settings, quit).
-
-## CLI
-
-```
-pandemonium [flags]
-
-  --seed int      world seed (0 = random, printed on start)
-  --width int     level width in tiles  (default 48)
-  --height int    level height in tiles (default 32)
-```
-
-The chosen seed and the current level number are printed to stdout on start and
-whenever a new level is generated, so demos are reproducible.
-
-## Settings
-
-Open settings from the title or pause menu (`←`/`→` adjust): difficulty (scales
-demon count and damage, not the map), sound on/off, SFX and ambient volume, mouse
-sensitivity, field of view, crosshair, debug messages, and fullscreen. Settings
-persist to `~/.config/pandemonium/settings.json` (run history in `records.json`
-alongside) and reload next run. The game runs silently if sound is off or no
-audio device is available.
-
-## Development
-
-```
-just build    # compile the binary into ./bin
-just run      # build and run
-just test     # run all tests
-just lint     # golangci-lint
-```
-
 ## Documentation
 
-- [Architecture](docs/architecture.md) — the layered, headless-testable design.
-- [How the raycaster works](docs/raycaster.md) — the column renderer.
-- [How the world is generated](docs/worldgen.md) — the generation pipeline.
-- [How the audio works](docs/audio.md) — the procedural synthesis.
-- [Demos](docs/demos.md) — a tour of the features in motion.
+Full documentation lives in the [pandemonium wiki](https://github.com/danielriddell21/pandemonium/wiki) — features, controls, CLI flags, settings, and how the raycaster, world generation and audio work.
