@@ -16,7 +16,7 @@ Every run generates a fresh maze of rooms and corridors — staircases, lifts, r
 go run ./cmd/pandemonium --seed 42
 ```
 
-![pandemonium gameplay](https://github.com/user-attachments/assets/99edfac3-3055-43cc-871e-167646ac160f)
+https://github.com/user-attachments/assets/99edfac3-3055-43cc-871e-167646ac160f
 
 ## Install
 
