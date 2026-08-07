@@ -5,11 +5,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
-	"os"
 	"path/filepath"
 
 	"github.com/danielriddell21/crucible/level"
+	"github.com/danielriddell21/crucible/record"
 
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
@@ -41,7 +40,7 @@ func recordStills() error {
 	for _, s := range stills {
 		img := s.draw(stillCfg)
 		path := filepath.Join(outDir, s.name)
-		if err := savePNG(path, img); err != nil {
+		if err := record.SavePNG(path, img); err != nil {
 			return fmt.Errorf("%s: %w", s.name, err)
 		}
 		b := img.Bounds()
@@ -221,17 +220,4 @@ func hazardsShot(cfg render.Config) image.Image {
 	draw.Draw(montage, image.Rect(0, 0, cfg.Width, cropH), pool(world.HazardNukage), src, draw.Src)
 	draw.Draw(montage, image.Rect(cfg.Width, 0, cfg.Width*2, cropH), pool(world.HazardLava), src, draw.Src)
 	return montage
-}
-
-// savePNG writes an image to path as a PNG.
-func savePNG(path string, img image.Image) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("create %s: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
-	if err := png.Encode(f, img); err != nil {
-		return fmt.Errorf("encode png: %w", err)
-	}
-	return nil
 }

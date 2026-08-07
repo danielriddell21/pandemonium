@@ -9,16 +9,14 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"fmt"
 	"image"
 	"image/color"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 
+	"github.com/danielriddell21/crucible/demo"
 	"github.com/danielriddell21/crucible/record"
 
 	"github.com/danielriddell21/pandemonium/internal/render"
@@ -41,7 +39,7 @@ func run() error {
 		return fmt.Errorf("create output dir: %w", err)
 	}
 	for _, c := range defaultClips() {
-		path := filepath.Join(outDir, c.name+c.ext())
+		path := filepath.Join(outDir, c.name+".gif")
 		visited, err := c.record(path)
 		if err != nil {
 			return fmt.Errorf("%s: %w", c.name, err)
@@ -66,25 +64,13 @@ type clip struct {
 	// subSteps simulates this many ticks per recorded frame (default 1), so long
 	// runs can advance further per frame and keep the GIF compact.
 	subSteps int
-	// video writes an MP4 (via ffmpeg) instead of a GIF, which stays small even
-	// for a long clip.
-	video bool
 	// automap overlays the explored-level minimap for the whole clip.
 	automap bool
 	// arena builds the open set-piece room instead of the usual maze.
 	arena bool
 }
 
-// ext is the output file extension for the clip's encoding.
-func (c clip) ext() string {
-	if c.video {
-		return ".mp4"
-	}
-	return ".gif"
-}
-
 func (c clip) record(path string) (int, error) {
-	pal := demoPalette()
 	g, err := c.newLevel(c.seed)
 	if err != nil {
 		return 0, err
@@ -92,59 +78,50 @@ func (c clip) record(path string) (int, error) {
 	r := render.NewRenderer(c.rcfg)
 	r.SetAutomap(c.automap)
 
-	// GIF clips encode through crucible's recorder: the demo palette quantises
-	// cleanly without dithering (WithFrameDiff keeps the nearest-colour draw),
-	// and delta frames keep the files compact.
-	rec := record.NewRecorder(0, 1, 0, record.WithPalette(pal), record.WithFrameDelay(c.delayCs), record.WithFrameDiff())
-	var raw [][]byte // collected RGBA frames, for video encoding
-	emit := func(rgba []byte) {
-		if c.video {
-			cp := make([]byte, len(rgba))
-			copy(cp, rgba)
-			raw = append(raw, cp)
-			return
-		}
-		rec.Add(&image.RGBA{
-			Pix:    rgba,
-			Stride: c.rcfg.Width * 4,
-			Rect:   image.Rect(0, 0, c.rcfg.Width, c.rcfg.Height),
-		})
-	}
-	// Hold on the level-complete tally before moving on, when asked.
-	emitTally := func(g *sim.Game) {
-		if !c.tally {
-			return
-		}
-		stats := g.LevelStats()
-		for range 18 {
-			emit(r.Intermission(stats))
-		}
-	}
+	// Quantise to the demo palette without dithering (WithFrameDiff keeps the
+	// nearest-colour draw) so delta frames stay compact.
+	rec := record.NewRecorder(0, 1, 0,
+		record.WithFrameDelay(c.delayCs),
+		record.WithPalette(demoPalette()),
+		record.WithFrameDiff(),
+	)
 
+	frame := func() image.Image { return record.FromRGBA(r.Frame(g), c.rcfg.Width, c.rcfg.Height) }
 	seen := map[world.Coord]bool{}
 	nextSeed := c.seed
 	const dt = 1.0 / 12.0
 	subSteps := max(c.subSteps, 1)
 
-	for i := range c.frames {
-		if c.runSubSteps(g, i, subSteps, dt) {
-			emitTally(g)
+	clip := demo.Clip{
+		Frames: c.frames,
+		Step: func(step int) error {
+			if !c.runSubSteps(g, step, subSteps, dt) {
+				seen[g.PlayerCell()] = true
+				return nil
+			}
+			// The level was cleared: hold on the tally, then move to the next one.
+			if c.tally {
+				stats := g.LevelStats()
+				for range 18 {
+					rec.Add(record.FromRGBA(r.Intermission(stats), c.rcfg.Width, c.rcfg.Height))
+				}
+			}
 			nextSeed++
 			ng, err := c.newLevel(nextSeed)
 			if err != nil {
-				return 0, err
+				return err
 			}
 			g = ng
-		}
-		seen[g.PlayerCell()] = true
-		emit(r.Frame(g))
+			seen[g.PlayerCell()] = true
+			return nil
+		},
+		Frame: func(int) image.Image { return frame() },
 	}
-
-	if c.video {
-		return len(seen), encodeMP4(path, raw, c.rcfg, c.delayCs)
+	if _, err := clip.Record(rec); err != nil {
+		return 0, fmt.Errorf("capture clip: %w", err)
 	}
 	if err := rec.Save(path); err != nil {
-		return 0, fmt.Errorf("save gif: %w", err)
+		return 0, fmt.Errorf("save %s: %w", filepath.Ext(path), err)
 	}
 	return len(seen), nil
 }
@@ -175,39 +152,10 @@ func (c clip) runSubSteps(g *sim.Game, i, subSteps int, dt float64) bool {
 	return false
 }
 
-// encodeMP4 pipes raw RGBA frames to ffmpeg and writes an H.264 MP4. The frame
-// rate is derived from the per-frame GIF delay so video and GIF clips play at the
-// same speed.
-func encodeMP4(path string, frames [][]byte, rcfg render.Config, delayCs int) error {
-	if len(frames) == 0 {
-		return fmt.Errorf("no frames to encode")
-	}
-	fps := 100.0 / float64(delayCs)
-	cmd := exec.CommandContext(context.Background(), "ffmpeg",
-		"-y", "-loglevel", "error",
-		"-f", "rawvideo", "-pixel_format", "rgba",
-		"-video_size", fmt.Sprintf("%dx%d", rcfg.Width, rcfg.Height),
-		"-framerate", fmt.Sprintf("%.4f", fps),
-		"-i", "-",
-		"-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-		path,
-	)
-	var buf bytes.Buffer
-	for _, fr := range frames {
-		buf.Write(fr)
-	}
-	cmd.Stdin = &buf
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("run ffmpeg: %w", err)
-	}
-	return nil
-}
-
 func defaultClips() []clip {
 	cfg := render.Config{Width: 256, Height: 160, FOV: 1.152}
 	return []clip{
-		{name: "hero", seed: 16, mapW: 40, mapH: 26, rcfg: cfg, frames: 360, delayCs: 7, input: pathFollow(true), tally: true, video: true},
+		{name: "hero", seed: 16, mapW: 40, mapH: 26, rcfg: cfg, frames: 180, delayCs: 14, subSteps: 2, input: pathFollow(true), tally: true},
 		{name: "exploration", seed: 12, mapW: 32, mapH: 24, rcfg: cfg, frames: 84, delayCs: 7, setup: noDemons, input: pathFollow(false)},
 		{name: "arena", seed: 5, mapW: 40, mapH: 28, rcfg: cfg, frames: 110, delayCs: 7, input: hunt(), arena: true},
 		{name: "automap", seed: 7, mapW: 40, mapH: 26, rcfg: cfg, frames: 120, delayCs: 7, input: pathFollow(false), automap: true},
@@ -322,7 +270,7 @@ func hunt() func(int, *sim.Game) sim.Input {
 // demoPalette builds brightness ramps for every colour the renderer uses so the
 // textured frames quantise cleanly without dithering.
 func demoPalette() color.Palette {
-	bases := []color.RGBA{
+	return demo.Ramp([]color.RGBA{
 		{R: 28, G: 26, B: 30, A: 255},    // ceiling
 		{R: 44, G: 36, B: 30, A: 255},    // floor
 		{R: 150, G: 110, B: 78, A: 255},  // wall
@@ -334,20 +282,5 @@ func demoPalette() color.Palette {
 		{R: 222, G: 214, B: 188, A: 255}, // notice text
 		{R: 60, G: 220, B: 50, A: 255},   // health (full)
 		{R: 240, G: 40, B: 50, A: 255},   // health (low)
-	}
-	const steps = 18
-	pal := make(color.Palette, 1, 1+steps*len(bases))
-	pal[0] = color.RGBA{A: 255}
-	for _, b := range bases {
-		for s := range steps {
-			f := 0.1 + 0.9*float64(s)/float64(steps-1)
-			pal = append(pal, color.RGBA{
-				R: uint8(float64(b.R) * f),
-				G: uint8(float64(b.G) * f),
-				B: uint8(float64(b.B) * f),
-				A: 255,
-			})
-		}
-	}
-	return pal
+	}, 18)
 }
