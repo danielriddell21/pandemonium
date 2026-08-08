@@ -16,6 +16,33 @@ go run ./cmd/pandemonium --seed 42
 
 ![pandemonium gameplay](docs/demos/hero.mp4)
 
+## Features
+
+- **Procedural worlds** — BSP rooms and corridors carved fresh each level and
+  deterministic from a seed, with terrain sculpted in quarter-wall steps:
+  staircases, raised platforms, lifts, open-sky courtyards, and a **set-piece
+  arena** every fifth level.
+- **Arsenal** — fists, pistol, shotgun, chaingun and rocket launcher (hitscan and
+  splash), with ammo, a backpack, and auto-switch when a weapon runs dry.
+- **Bestiary** — melee chargers, fireball imps, hitscan gunners, fast pinkies and
+  armoured barons, plus exploding barrels and monster infighting.
+- **Pickups & power-ups** — health, armour, soulsphere, megasphere, berserk,
+  invulnerability and a radiation suit; keycards behind locked doors; hidden
+  secrets to find.
+- **Hazards** — radioactive slime and molten lava floors (a radsuit shrugs off
+  slime, but not lava).
+- **Four difficulty levels** scaling the threat without changing the map.
+- **Pure-CPU column raycaster** with per-tile floor/ceiling heights, see-over low
+  walls, per-sector lighting and distance shading — and an automap.
+- **All procedural, no assets** — every texture and sound is synthesised in code,
+  including an ambient/music bed that darkens as a run deepens, and positional
+  sound effects.
+- **Title, pause and settings menus**, a self-playing attract demo, and run
+  history kept across sessions.
+
+The world, simulation and renderer are pure and headless-testable; only the
+Ebiten front-end touches the screen.
+
 ## Controls
 
 | Input              | Action            |
@@ -72,6 +99,6 @@ just lint     # golangci-lint
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — the three decoupled layers.
+- [Architecture](docs/architecture.md) — the layered, headless-testable design.
 - [How the raycaster works](docs/raycaster.md).
-- [Demos](docs/demos.md) — more gameplay clips.
+- [Demos](docs/demos.md) — a tour of the features in motion.

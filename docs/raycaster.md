@@ -30,15 +30,23 @@ varied ceilings.
 6. **What each boundary paints.** Crossing from tile A into tile B at distance `d`:
    - **Floor and ceiling** of A are cast up to their projected far edges, sampling
      the floor/ceiling textures at the world point recovered for each row (the
-     per-column form of textured floor casting).
-   - If B is **solid**, the remaining clip window is drawn as a textured wall slice
-     and the column closes (its distance is recorded for sprite occlusion).
+     per-column form of textured floor casting). Damaging floors use their hazard
+     texture (slime or lava), and a cell open to the **sky** paints a bright sky
+     gradient overhead instead of stone.
+   - If B is a **full-height wall**, the remaining clip window is drawn as a
+     textured wall slice and the column closes (its distance is recorded for
+     sprite occlusion).
+   - A **low wall** (a solid tile with a finite top you can see over) is drawn up
+     to its top like an unclimbable step, and then the walk *continues* past it so
+     the room beyond is painted above — true see-over geometry rather than an
+     opaque column.
    - Otherwise B is a **step**: where B's floor rises above A's (or its ceiling
      drops below A's) a textured step face is drawn, the clip window tightens to
      B's floor/ceiling, and the walk continues into B. The column closes early if
      the window pinches shut.
    Walls and step faces are **distance-shaded** (and north/south faces a touch
-   darker than east/west) for the dim, moody look.
+   darker than east/west) for the dim, moody look, with each cell's per-sector
+   light folded in.
 
 7. **Sprites.** Demons, items and projectiles are **billboards** — flat images
    always facing the camera. After the geometry pass they are transformed into
