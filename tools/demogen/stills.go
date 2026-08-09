@@ -21,8 +21,9 @@ var stillCfg = render.Config{Width: 256, Height: 160, FOV: 1.152}
 // ceilingFill is the dark backdrop used to pad montage cells that hold no frame.
 var ceilingFill = color.RGBA{R: 28, G: 26, B: 30, A: 255}
 
-// recordStills renders the static feature shots — the bestiary, the arsenal, the
-// pickups and the status bar — that read better as a single frame than as motion.
+// recordStills renders the static feature shots — bestiary, arsenal, pickups,
+// status bar, tally and hazards — that read better as a single frame than as
+// motion.
 func recordStills() error {
 	stills := []struct {
 		name string
@@ -33,6 +34,7 @@ func recordStills() error {
 		{"pickups.png", pickupsShot},
 		{"hud.png", hudShot},
 		{"tally.png", tallyShot},
+		{"hazards.png", hazardsShot},
 	}
 	for _, s := range stills {
 		img := s.draw(stillCfg)
@@ -204,6 +206,31 @@ func hudShot(cfg render.Config) image.Image {
 	bar := image.NewRGBA(image.Rect(0, 0, cfg.Width, render.StatusBarH))
 	draw.Draw(bar, bar.Bounds(), frame, image.Pt(0, cfg.Height-render.StatusBarH), draw.Src)
 	return bar
+}
+
+// hazardsShot poses the two damaging floors side by side — radioactive slime and
+// molten lava — so they read distinctly. Each is a pool laid across the floor
+// just ahead of the camera.
+func hazardsShot(cfg render.Config) image.Image {
+	pool := func(kind world.HazardKind) *image.RGBA {
+		g := arenaGame(14, 12)
+		cx, cy := int(g.Player.Pos.X), int(g.Player.Pos.Y)
+		hz := map[world.Coord]world.HazardCell{}
+		for y := cy - 6; y <= cy-2; y++ {
+			for x := cx - 3; x <= cx+3; x++ {
+				hz[world.Coord{X: x, Y: y}] = world.HazardCell{Rate: 8, Kind: kind}
+			}
+		}
+		g.World.Level.Hazard = hz
+		return frameImage(g, cfg, false)
+	}
+	// Crop off the bare upper ceiling and tile the two pools left and right.
+	const cropY, cropH = 28, 128
+	montage := image.NewRGBA(image.Rect(0, 0, cfg.Width*2, cropH))
+	src := image.Pt(0, cropY)
+	draw.Draw(montage, image.Rect(0, 0, cfg.Width, cropH), pool(world.HazardNukage), src, draw.Src)
+	draw.Draw(montage, image.Rect(cfg.Width, 0, cfg.Width*2, cropH), pool(world.HazardLava), src, draw.Src)
+	return montage
 }
 
 // savePNG writes an image to path as a PNG.

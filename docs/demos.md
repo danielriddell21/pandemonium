@@ -37,6 +37,14 @@ carrying capacity. Behind them sit the power-ups: a soulsphere and megasphere
 that push health past the usual maximum, berserk strength, temporary
 invulnerability, and a radiation suit that shrugs off damaging floors.
 
+## Hazards
+
+![damaging floors: slime and lava](demos/hazards.png)
+
+Two kinds of damaging floor pool across some levels: radioactive slime (left),
+which a radiation suit shrugs off, and molten lava (right), which burns about
+twice as fast — and no suit will save you from it.
+
 ## Status bar
 
 ![the status bar](demos/hud.png)
