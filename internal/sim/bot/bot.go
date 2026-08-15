@@ -149,28 +149,6 @@ func Hunter() *Pilot {
 	}}
 }
 
-// SeesDemon reports a living demon within [minDist, maxDist] of the player with
-// a clear line of sight, returning the nearest one's position. Callers use it to
-// pick camera-ready moments (e.g. a level that opens facing a fight).
-func SeesDemon(g *sim.Game, minDist, maxDist float64) (sim.Vec2, bool) {
-	best := math.Inf(1)
-	var pos sim.Vec2
-	ok := false
-	for _, e := range g.Entities {
-		if !e.Alive {
-			continue
-		}
-		d := dist(g.Player.Pos, e.Pos)
-		if d < minDist || d > maxDist || !losClear(g.World, g.Player.Pos, e.Pos) {
-			continue
-		}
-		if d < best {
-			best, pos, ok = d, e.Pos, true
-		}
-	}
-	return pos, ok
-}
-
 // engageDemon returns the nearest living demon within a short fighting range and
 // clear line of sight, so the roamer can deal with it before moving on.
 func engageDemon(g *sim.Game) (sim.Entity, bool) {

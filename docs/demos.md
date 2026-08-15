@@ -69,22 +69,15 @@ Walking a procedurally generated level from the spawn through its rooms and
 corridors toward the exit, opening doors along the way, over a textured floor and
 under a textured ceiling — past the occasional courtyard open to the sky.
 
-## Combat
-
-![combat](demos/combat.gif)
-
-Fighting through a level's demons — chargers, pinkies, fireball imps, hitscan
-gunners and armoured barons — with the full arsenal, while explosive barrels and
-stray shots catch other demons in the crossfire. Demons animate and collapse when
-killed; sprites always face the camera and are occluded correctly by nearer walls.
-
 ## Arena
 
 ![arena](demos/arena.gif)
 
 Every fifth level opens into a set-piece arena: one large room under open sky,
 a megasphere-and-armour cache at its heart, and a heavier fight with nowhere to
-hide — the wide floor fills with demons and the sightlines run clear across it.
+hide. Fighting through chargers, pinkies, fireball imps, hitscan gunners and
+armoured barons with the full arsenal — explosive barrels and stray shots catch
+other demons in the crossfire, and demons animate and collapse as they fall.
 
 ## Automap
 
