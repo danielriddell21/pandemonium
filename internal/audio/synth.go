@@ -31,6 +31,7 @@ const (
 	CueSecret              // a secret area is found
 	CueDeath               // the player dies
 	CueExit                // the level exit is reached
+	CueMenu                // a menu item is moved to or selected (UI blip)
 )
 
 // CueFor maps a simulation observation to the sound it should trigger, and
@@ -66,6 +67,7 @@ func Synth() map[Cue][]byte {
 		CueSecret:   synthSecret(),
 		CueDeath:    synthDeath(),
 		CueExit:     synthExit(),
+		CueMenu:     synthMenu(),
 	}
 }
 
@@ -217,6 +219,13 @@ func synthDeath() []byte {
 			f = 60
 		}
 		return 0.5 * math.Sin(2*math.Pi*f*t) * env(t, 4)
+	})
+}
+
+// synthMenu is a short, clean UI blip for moving through and selecting menu items.
+func synthMenu() []byte {
+	return renderPCM(0.05, func(t float64) float64 {
+		return 0.4 * math.Sin(2*math.Pi*880*t) * env(t, 60)
 	})
 }
 

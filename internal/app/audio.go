@@ -186,6 +186,9 @@ func (a *Audio) applyAmbient() {
 // observation, so it always plays at full volume.
 func (a *Audio) Fire() { a.playAt(iaudio.CueFire, 1) }
 
+// Menu plays the UI blip for moving through or selecting a menu item.
+func (a *Audio) Menu() { a.playAt(iaudio.CueMenu, 1) }
+
 // playAt restarts and triggers the player for a cue at the given volume scale.
 func (a *Audio) playAt(cue iaudio.Cue, scale float64) {
 	if a == nil || scale <= 0 {
