@@ -150,8 +150,19 @@ func (g *Game) applySettings() {
 	g.renderer.SetFOV(g.settings.FOV)
 	g.renderer.SetCrosshair(g.settings.Crosshair)
 	g.renderer.SetDiagnostics(g.settings.Debug)
+	ebiten.SetFullscreen(g.settings.Fullscreen)
 	if g.setSkill != nil {
 		g.setSkill(g.settings.Difficulty)
+	}
+}
+
+// applyCursor captures the mouse during play so it stays inside the view, and
+// frees it on the menus and tally screen where it isn't steering the camera.
+func (g *Game) applyCursor() {
+	if g.state == statePlaying {
+		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	} else {
+		ebiten.SetCursorMode(ebiten.CursorModeVisible)
 	}
 }
 
@@ -167,6 +178,12 @@ func (g *Game) Update() error {
 			fmt.Println("saved screenshot:", path)
 		}
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyF11) {
+		g.settings.Fullscreen = !g.settings.Fullscreen
+		_ = g.settings.Save()
+		ebiten.SetFullscreen(g.settings.Fullscreen)
+	}
+	g.applyCursor()
 	switch g.state {
 	case stateTitle:
 		g.updateTitle()
@@ -425,6 +442,14 @@ func (g *Game) buildMenus() {
 			value: func() string { return onOff(g.settings.Debug) },
 			adjust: func(int) {
 				g.settings.Debug = !g.settings.Debug
+				g.applySettings()
+			},
+		},
+		{
+			label: "FULLSCREEN",
+			value: func() string { return onOff(g.settings.Fullscreen) },
+			adjust: func(int) {
+				g.settings.Fullscreen = !g.settings.Fullscreen
 				g.applySettings()
 			},
 		},

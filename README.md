@@ -54,13 +54,17 @@ Ebiten front-end touches the screen.
 | `1`–`5` / wheel    | Switch weapon (fists, pistol, shotgun, chaingun, rockets) |
 | `E` / `Space`      | Interact (doors, switches) |
 | `Tab`              | Toggle automap    |
+| `F11`              | Toggle fullscreen |
+| `F12`              | Screenshot (HUD-free PNG in the working dir) |
 | `Enter` / `Space`  | Next level (on the tally screen) |
 | `Esc`              | Pause / back (quit from the menu) |
 
-The game opens on a title screen — which shows your run history (runs played and
-the deepest level reached) and, left idle, plays a short demo of itself. `Esc`
-during play opens a pause menu (resume, settings, quit) rather than quitting
-outright.
+The game runs fullscreen by default with the mouse captured for the view, so the
+cursor stays inside the game while you play; `F11` toggles fullscreen and the
+pause/menu screens release the cursor. The game opens on a title screen — which
+shows your run history (runs played and the deepest level reached) and, left
+idle, plays a short demo of itself. `Esc` during play opens a pause menu
+(resume, settings, quit) rather than quitting outright.
 
 ## CLI
 
@@ -81,7 +85,7 @@ Open the settings screen from the title or pause menu (`←` `→` adjust the
 highlighted row): difficulty (easy through nightmare — it scales how many demons
 spawn and how hard they hit, leaving the map itself unchanged), sound on/off,
 sound-effect and ambient volume, mouse sensitivity, field of view, a crosshair
-toggle, and on-screen debug messages.
+toggle, on-screen debug messages, and fullscreen.
 Changes are saved to a JSON file under your user config directory
 (`~/.config/pandemonium/settings.json` on Linux) and reloaded on the next run;
 your run history is kept alongside it in `records.json`.
