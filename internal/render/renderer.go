@@ -12,6 +12,9 @@ type Renderer struct {
 	cfg         Config
 	fb          []byte
 	zbuf        []float64
+	loZ         []float64 // per-column nearest occluding lip distance (sprite clip)
+	loH         []float64 // per-column world height of that lip
+	loRow       []int     // per-column screen row of that lip's top edge
 	tex         *textureSet
 	overlay     *hud.Overlay
 	diagnostics bool
@@ -43,6 +46,9 @@ func NewRenderer(cfg Config, opts ...Option) *Renderer {
 		cfg:   cfg,
 		fb:    make([]byte, cfg.Width*cfg.Height*4),
 		zbuf:  make([]float64, cfg.Width),
+		loZ:   make([]float64, cfg.Width),
+		loH:   make([]float64, cfg.Width),
+		loRow: make([]int, cfg.Width),
 		tex:   loadTextures(assetDir()),
 		gloom: 1,
 	}
@@ -96,8 +102,8 @@ func (r *Renderer) SetGloom(g float64) {
 // next call, so callers should upload or copy it before calling again.
 func (r *Renderer) Frame(g *sim.Game) []byte {
 	cam := newCamera(g.Player.Angle, r.cfg.FOV)
-	drawScene(r.fb, r.zbuf, g, cam, r.cfg, r.tex, r.gloom)
-	drawSprites(r.fb, r.zbuf, g, cam, r.cfg, r.tex)
+	drawScene(r.fb, r.zbuf, r.loZ, r.loH, r.loRow, g, cam, r.cfg, r.tex, r.gloom)
+	drawSprites(r.fb, r.zbuf, r.loZ, r.loH, r.loRow, g, cam, r.cfg, r.tex)
 	drawPowerupTint(r.fb, r.cfg, g)
 	if !r.hideHUD {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]

@@ -26,16 +26,21 @@ const ceilingDim = 0.85
 // floor (or drop in ceiling) across the boundary is drawn as a textured step
 // face, and the window tightens. A solid tile paints the remaining window as a
 // full wall and closes the column.
-func drawScene(fb []byte, zbuf []float64, g *sim.Game, cam camera, cfg Config, tx *textureSet, gloom float64) {
+func drawScene(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam camera, cfg Config, tx *textureSet, gloom float64) {
 	eyeZ := g.EyeZ()
 	for x := range cfg.Width {
-		zbuf[x] = drawColumn(fb, g, cam, cfg, tx, x, eyeZ, gloom)
+		zbuf[x], loZ[x], loH[x], loRow[x] = drawColumn(fb, g, cam, cfg, tx, x, eyeZ, gloom)
 	}
 }
 
 // drawColumn renders one screen column and returns the distance at which it
-// closed (its occlusion depth). gloom scales all surface lighting.
-func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, x int, eyeZ, gloom float64) float64 {
+// closed (its occlusion depth) plus, for sprite occlusion, the highest near "lip"
+// the ray crossed (a low wall, stair, lift or ledge): its distance (loZ, +Inf if
+// none), its world height (loH) and the screen row of its top edge (loRow). A
+// sprite beyond loZ whose base sits below loH is hidden below loRow. gloom scales
+// all surface lighting.
+func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, x int, eyeZ, gloom float64) (closeDist, loZ, loH float64, loRow int) {
+	loZ = math.Inf(1)
 	w, h := cfg.Width, cfg.Height
 	fh := float64(h)
 	px, py := g.Player.Pos.X, g.Player.Pos.Y
@@ -127,11 +132,16 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 				bFloor, bCeil = top, 1
 			} else {
 				drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
-				return d
+				return d, loZ, loH, loRow
 			}
 		}
-		if bFloor > aFloor { // rising step face
+		if bFloor > aFloor { // rising step face — a low wall, stair, lift or ledge
 			drawWallSpan(fb, cfg, x, max(yTop, row(bFloor, d)+1), min(yBot, floorEdge), d, eyeZ, texX, tex, side, bLight)
+			// Record the highest near lip so sprites in a lower area beyond it are
+			// clipped below its top edge (those standing at or above it are not).
+			if bFloor > loH {
+				loH, loZ, loRow = bFloor, d, row(bFloor, d)
+			}
 		}
 		if bCeil < aCeil { // dropping ceiling face
 			drawWallSpan(fb, cfg, x, max(yTop, ceilEdge+1), min(yBot, row(bCeil, d)), d, eyeZ, texX, tex, side, bLight)
@@ -140,12 +150,12 @@ func drawColumn(fb []byte, g *sim.Game, cam camera, cfg Config, tx *textureSet, 
 		yBot = min(yBot, row(math.Max(aFloor, bFloor), d))
 		yTop = max(yTop, row(math.Min(aCeil, bCeil), d)+1)
 		if yTop > yBot {
-			return d
+			return d, loZ, loH, loRow
 		}
 		aFloor, aCeil = bFloor, bCeil
 		aX, aY = mapX, mapY
 	}
-	return math.MaxFloat64
+	return math.MaxFloat64, loZ, loH, loRow
 }
 
 // boundaryTexture picks the texture and texture column for a face crossed at

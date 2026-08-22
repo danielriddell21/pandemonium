@@ -40,7 +40,10 @@ func sceneFor(l *world.Level, cfg Config) []byte {
 	g.Player.Angle = 0
 	fb := make([]byte, cfg.Width*cfg.Height*4)
 	zbuf := make([]float64, cfg.Width)
-	drawScene(fb, zbuf, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
+	loZ := make([]float64, cfg.Width)
+	loH := make([]float64, cfg.Width)
+	loRow := make([]int, cfg.Width)
+	drawScene(fb, zbuf, loZ, loH, loRow, g, newCamera(0, cfg.FOV), cfg, defaultTextures(), 1)
 	return fb
 }
 
@@ -113,9 +116,12 @@ func TestSpriteStandsOnItsFloor(t *testing.T) {
 		g.Entities = []sim.Entity{{Pos: sim.Vec2{X: 6.5, Y: 4.5}, Z: z, State: sim.Active, Health: 60, Alive: true}}
 		fb := make([]byte, cfg.Width*cfg.Height*4)
 		zbuf := make([]float64, cfg.Width)
+		loZ := make([]float64, cfg.Width)
+		loH := make([]float64, cfg.Width)
+		loRow := make([]int, cfg.Width)
 		cam := newCamera(0, cfg.FOV)
-		drawScene(fb, zbuf, g, cam, cfg, defaultTextures(), 1)
-		drawSprites(fb, zbuf, g, cam, cfg, defaultTextures())
+		drawScene(fb, zbuf, loZ, loH, loRow, g, cam, cfg, defaultTextures(), 1)
+		drawSprites(fb, zbuf, loZ, loH, loRow, g, cam, cfg, defaultTextures())
 		return fb
 	}
 	topMost := func(fb, base []byte) int {
