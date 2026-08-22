@@ -34,7 +34,8 @@ func TestScriptedLineByBand(t *testing.T) {
 		wantCh  hud.Channel
 		wantHas string // substring the text must contain (optional)
 	}{
-		{"band0 silent", Cue{Kind: CueExit, Level: 0}, false, 0, ""},
+		{"band0 diag exit", Cue{Kind: CueExit, Level: 0}, true, hud.Diagnostic, "telemetry"},
+		{"band0 diag kill", Cue{Kind: CueKill, Level: 0}, true, hud.Diagnostic, "telemetry"},
 		// band 1 — diagnostic readouts for every non-whispered cue
 		{"band1 diag exit", Cue{Kind: CueExit, Level: 3}, true, hud.Diagnostic, "telemetry"},
 		{"band1 diag exit rushing", Cue{Kind: CueExit, Level: 3, Rushing: true}, true, hud.Diagnostic, "rush"},
