@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml/badge.svg)](https://github.com/danielriddell21/pandemonium/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/danielriddell21/pandemonium/graph/badge.svg)](https://codecov.io/gh/danielriddell21/pandemonium)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danielriddell21_pandemonium&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielriddell21_pandemonium)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=danielriddell21_pandemonium2&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=danielriddell21_pandemonium2)
 [![Go 1.26](https://img.shields.io/badge/go-1.26-blue)](https://go.dev)
 [![MIT License](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
