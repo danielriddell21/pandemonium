@@ -21,7 +21,7 @@ func TestAutomapDrawsInCorner(t *testing.T) {
 	drawAutomap(fb, cfg, g)
 
 	// Something is drawn in the top-right quadrant.
-	tr := ((20)*cfg.Width + cfg.Width - 20) * 4
+	tr := (20*cfg.Width + cfg.Width - 20) * 4
 	if fb[tr+3] != 255 {
 		t.Error("automap did not draw in the top-right corner")
 	}
