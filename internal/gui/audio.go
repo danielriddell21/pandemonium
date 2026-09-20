@@ -141,7 +141,7 @@ func (a *Audio) updateMusicBand() {
 	if a.playing {
 		a.music.Play()
 	}
-	_ = old.Close()
+	old.PauseAndStopReading()
 }
 
 func (a *Audio) applyAmbient() {
