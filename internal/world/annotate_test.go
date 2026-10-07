@@ -75,7 +75,7 @@ func TestDistanceFieldCountsStepsAlongTheCorridor(t *testing.T) {
 
 func TestDistanceFieldOfAnUnwalkableSourceIsAllUnreachable(t *testing.T) {
 	l := carve(t, 6, 5, corridor(3)...)
-	for _, src := range []Coord{{0, 0}, {-1, 2}, {99, 99}} {
+	for _, src := range []Coord{{X: 0, Y: 0}, {X: -1, Y: 2}, {X: 99, Y: 99}} {
 		for i, v := range distanceField(l, src) {
 			if v != -1 {
 				t.Fatalf("source %v: cell %d has distance %d, want all -1", src, i, v)
@@ -86,7 +86,7 @@ func TestDistanceFieldOfAnUnwalkableSourceIsAllUnreachable(t *testing.T) {
 
 func TestInOpenBlockNeedsAWholeTwoByTwo(t *testing.T) {
 	block := carve(t, 6, 6, Coord{X: 2, Y: 2}, Coord{X: 3, Y: 2}, Coord{X: 2, Y: 3}, Coord{X: 3, Y: 3})
-	for _, c := range []Coord{{2, 2}, {3, 2}, {2, 3}, {3, 3}} {
+	for _, c := range []Coord{{X: 2, Y: 2}, {X: 3, Y: 2}, {X: 2, Y: 3}, {X: 3, Y: 3}} {
 		if !inOpenBlock(block, c) {
 			t.Errorf("%v is inside a 2x2 block but inOpenBlock says no", c)
 		}
@@ -125,7 +125,7 @@ func TestJunctionMarkersFindATFork(t *testing.T) {
 
 func TestJunctionMarkersIgnoreSpawnExitAndOpenRooms(t *testing.T) {
 	// A plus whose centre is the spawn point, so it must not be marked.
-	plus := []Coord{{3, 3}, {2, 3}, {4, 3}, {3, 2}, {3, 4}}
+	plus := []Coord{{X: 3, Y: 3}, {X: 2, Y: 3}, {X: 4, Y: 3}, {X: 3, Y: 2}, {X: 3, Y: 4}}
 	l := carve(t, 8, 8, plus...)
 	l.Spawn = Coord{X: 3, Y: 3}
 	l.Exit = Coord{X: 4, Y: 3}
