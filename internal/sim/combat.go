@@ -15,10 +15,6 @@ const (
 
 	contactDamage = 30.0
 
-	attackRange = 3.0
-
-	attackArcCos = 0.9
-
 	meleeHealth  = 60.0
 	rangedHealth = 45.0
 	gunnerHealth = 40.0
@@ -38,8 +34,6 @@ const (
 	barrelDamage = 60.0
 	barrelRadius = 2.2
 
-	meleeDamage = 50.0
-
 	painDuration = 0.2
 
 	deathDuration = 0.5
@@ -48,39 +42,6 @@ const (
 	deathFrames = 3
 )
 
-func (g *Game) attack() {
-	if i := g.hitscan(attackRange, attackArcCos); i >= 0 {
-		g.damageEntity(i, meleeDamage)
-	}
-}
-
-func (g *Game) hitscan(maxRange, arcCos float64) int {
-	dir := g.Player.Dir()
-	best := -1
-	bestD := math.Inf(1)
-	for i := range g.Entities {
-		e := g.Entities[i]
-		if !e.Alive {
-			continue
-		}
-		dx, dy := e.Pos.X-g.Player.Pos.X, e.Pos.Y-g.Player.Pos.Y
-		d := math.Hypot(dx, dy)
-		if d == 0 || d > maxRange {
-			continue
-		}
-		if (dx/d)*dir.X+(dy/d)*dir.Y < arcCos {
-			continue
-		}
-		if !losClear(g.World, g.Player.Pos, e.Pos) {
-			continue
-		}
-		if d < bestD {
-			bestD, best = d, i
-		}
-	}
-	return best
-}
-
 func (g *Game) damageEntity(i int, dmg float64) { g.wound(i, dmg, true) }
 
 func (g *Game) wound(i int, dmg float64, credit bool) {
@@ -88,38 +49,67 @@ func (g *Game) wound(i int, dmg float64, credit bool) {
 	if e.State != Active {
 		return
 	}
-	e.Health -= dmg
-	if e.Health <= 0 {
-		e.State = Dying
-		e.Alive = false
-		e.anim = 0
-		if e.Kind == Barrel {
-			g.explode(e.Pos, e.Z, barrelRadius, barrelDamage) // burst, catching everything nearby
-			return
-		}
-		if credit {
-			g.kills++
-			g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
-		}
-	} else {
-		e.hurt = painDuration
+	if e.Kind == Boss && g.boss.action == BossStunned {
+		dmg *= stunWeak
 	}
+	if credit {
+		g.hitTTL = hitMarkerTime
+	}
+	e.Health -= dmg
+	e.alert = true // nothing sleeps through being shot
+	if e.Health > 0 {
+		e.hurt = painDuration
+		return
+	}
+	e.State = Dying
+	e.Alive = false
+	e.anim = 0
+	g.slain(e, credit)
+}
+
+func (g *Game) slain(e *Entity, credit bool) {
+	switch {
+	case e.Kind == Barrel:
+		g.noise(blastNoise)
+		g.explode(e.Pos, e.Z, barrelRadius, barrelDamage) // burst, catching everything nearby
+		return
+	case e.Kind == Boss:
+		g.bossDown(e)
+	case e.wave:
+		g.dropSpoils(e)
+	}
+	if !credit {
+		return
+	}
+	if !e.wave {
+		g.kills++ // reinforcements are not part of the level's tally
+	}
+	g.emit(Observation{Kind: ObsKill, At: g.PlayerCell()})
 }
 
 func (g *Game) explode(center Vec2, z, radius, dmg float64) {
-	if dist(center, g.Player.Pos) <= radius && math.Abs(z-g.Player.Z) < world.MinHeadroom {
+	// A blast is stopped by walls like anything else: it reaches only what it
+	// can see from where it went off.
+	if d := dist(center, g.Player.Pos); d <= radius && math.Abs(z-g.Player.Z) < world.MinHeadroom &&
+		losClear(g.World, center, g.Player.Pos) {
 		g.faceHurt(center)
-		g.hurtPlayer(dmg)
+		g.hurtPlayer(dmg * blastFalloff(d, radius))
 	}
 	for i := range g.Entities {
 		e := &g.Entities[i]
 		if e.State != Active { // the bursting barrel is already Dying, so it's skipped
 			continue
 		}
-		if dist(e.Pos, center) <= radius {
-			g.wound(i, dmg, true) // blast kills count for the player
+		if d := dist(e.Pos, center); d <= radius && losClear(g.World, center, e.Pos) {
+			g.wound(i, dmg*blastFalloff(d, radius), true) // blast kills count for the player
 		}
 	}
+}
+
+func blastFalloff(d, radius float64) float64 {
+	// Full force out to a quarter of the radius, thinning to a quarter of it at
+	// the edge: standing back from a barrel is worth something.
+	return max(0.25, min(1, 1.25-d/radius))
 }
 
 func (g *Game) die() {
@@ -129,7 +119,11 @@ func (g *Game) die() {
 	g.Player.Z = l.Floor(l.Spawn.X, l.Spawn.Y)
 	g.viewZ = g.Player.Z
 	g.Player.Angle = facing(l.Spawn, l.Exit)
-	g.Player.Health = MaxHealth
+	// The level starts over as it was entered: the same kit, the same demons,
+	// a quiet alarm. Nothing spent, gained or still ticking carries across.
+	g.Player.equip(g.entry)
+	g.alarm = alarm{}
+	g.pain = 0
 	g.Entities = g.spawnEntities()
 	g.Projectiles = nil
 	g.Items = newItems(l) // pickups return with the demons, so ammo can be recovered
@@ -146,11 +140,14 @@ func (g *Game) updateEntities(dt float64) {
 		if advanceDeath(e, dt) {
 			continue
 		}
-		if e.Kind == Barrel {
+		switch e.Kind {
+		case Barrel:
 			g.settleEntity(e, dt) // barrels just sit on the floor; no AI
-			continue
+		case Boss:
+			g.updateBoss(e, i, pp, dt)
+		default:
+			g.updateDemon(e, i, pp, dt)
 		}
-		g.updateDemon(e, i, pp, dt)
 	}
 }
 
@@ -186,7 +183,18 @@ func (g *Game) updateDemon(e *Entity, i int, pp Vec2, dt float64) {
 		return
 	}
 	d := dist(e.Pos, pp)
-	if d > detectRadius || d == 0 || !losClear(g.World, e.Pos, pp) {
+	if d == 0 {
+		return
+	}
+	sees := d <= detectRadius && losClear(g.World, e.Pos, pp)
+	if sees {
+		e.alert = true
+	}
+	if !e.alert {
+		return
+	}
+	if !sees {
+		g.stalk(e, i, demonSpeedFor(e.Kind), dt) // roused but blind: follow the trail
 		return
 	}
 	if ranges(e.Kind) && e.fire <= 0 && d <= rangedFireRange {
@@ -203,9 +211,7 @@ func (g *Game) updateDemon(e *Entity, i int, pp Vec2, dt float64) {
 		e.fire = gunnerCooldown
 	}
 	if d > contactRange {
-		speed := demonSpeedFor(e.Kind)
-		ux, uy := (pp.X-e.Pos.X)/d, (pp.Y-e.Pos.Y)/d
-		e.Pos = resolveMove(g.World, e.Pos, e.Z, ux*speed*dt, uy*speed*dt)
+		g.advance(e, i, pp, demonSpeedFor(e.Kind), dt)
 	}
 }
 
@@ -226,7 +232,7 @@ func (g *Game) applyContactDamage(dt float64) {
 		if e.Kind == Barrel {
 			continue // a barrel you brush past doesn't claw you
 		}
-		if e.Alive && dist(e.Pos, g.Player.Pos) < contactRange &&
+		if e.Alive && dist(e.Pos, g.Player.Pos) < touchRange(e.Kind) &&
 			math.Abs(e.Z-g.Player.Z) < world.MinHeadroom {
 			touching, from = true, e.Pos
 			break
@@ -236,6 +242,13 @@ func (g *Game) applyContactDamage(dt float64) {
 		g.faceHurt(from)
 		g.hurtPlayer(contactDamage * dt)
 	}
+}
+
+func touchRange(k EntityKind) float64 {
+	if k == Boss {
+		return bossRadius
+	}
+	return contactRange
 }
 
 func (g *Game) applyHazard(dt float64) {

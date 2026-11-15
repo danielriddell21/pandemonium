@@ -20,6 +20,12 @@ const (
 	ObsSecret
 
 	ObsKill
+
+	ObsAlarm
+
+	ObsSilence
+
+	ObsBoss
 )
 
 func (k ObservationKind) String() string {
@@ -40,6 +46,12 @@ func (k ObservationKind) String() string {
 		return "secret"
 	case ObsKill:
 		return "kill"
+	case ObsAlarm:
+		return "alarm"
+	case ObsSilence:
+		return "silence"
+	case ObsBoss:
+		return "boss"
 	default:
 		return "unknown"
 	}

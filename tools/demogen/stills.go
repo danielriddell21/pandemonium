@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 	"path/filepath"
 
 	"github.com/danielriddell21/crucible/level"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/danielriddell21/pandemonium/internal/render"
 	"github.com/danielriddell21/pandemonium/internal/sim"
+	"github.com/danielriddell21/pandemonium/internal/sim/bot"
 	"github.com/danielriddell21/pandemonium/internal/world"
 )
 
@@ -36,6 +38,8 @@ func recordStills() error {
 		{"hud.png", hudShot},
 		{"tally.png", tallyShot},
 		{"hazards.png", hazardsShot},
+		{"overlord.png", overlordShot},
+		{"alarm.png", alarmShot},
 	}
 	for _, s := range stills {
 		img := s.draw(stillCfg)
@@ -87,16 +91,16 @@ func frameImage(g *sim.Game, cfg render.Config, hud bool) *image.RGBA {
 	return img
 }
 
-// bestiaryShot lines up the five demon kinds across the player's view so each
-// distinct silhouette can be compared side by side.
+// bestiaryShot lines up the five demon kinds and the overlord across the
+// player's view so each distinct silhouette can be compared side by side.
 func bestiaryShot(cfg render.Config) image.Image {
 	g := arenaGame(18, 14)
 	cx, py := g.Player.Pos.X, g.Player.Pos.Y
-	kinds := []sim.EntityKind{sim.Melee, sim.Ranged, sim.Gunner, sim.Pinky, sim.Baron}
-	offsets := []float64{-2.6, -1.3, 0, 1.3, 2.6}
+	kinds := []sim.EntityKind{sim.Melee, sim.Ranged, sim.Gunner, sim.Pinky, sim.Baron, sim.Boss}
+	offsets := []float64{-3.2, -2.0, -0.8, 0.4, 1.6, 3.0}
 	for i, k := range kinds {
 		g.Entities = append(g.Entities, sim.Entity{
-			Pos:    sim.Vec2{X: cx + offsets[i], Y: py - 5},
+			Pos:    sim.Vec2{X: cx + offsets[i], Y: py - 6},
 			Sprite: i,
 			Kind:   k,
 			State:  sim.Active,
@@ -105,6 +109,54 @@ func bestiaryShot(cfg render.Config) image.Image {
 		})
 	}
 	return frameImage(g, cfg, false)
+}
+
+// overlordShot poses the boss floor: the player stands off from the overlord
+// and holds until it is most of the way through a wind-up, looking a little to
+// one side so the held weapon does not cover it. The still shows its tell and
+// its health bar.
+func overlordShot(cfg render.Config) image.Image {
+	l, err := world.Generate(world.Config{Width: 40, Height: 28, Seed: 5, Arena: true})
+	if err != nil {
+		panic(err)
+	}
+	g := sim.New(l, sim.WithDepth(world.ArenaEvery-1))
+	g.Player.Pos = sim.Vec2{X: float64(l.BossAt.X) - 5.5, Y: float64(l.BossAt.Y) + 0.5}
+	for range 60 * 20 {
+		for _, e := range g.Entities {
+			if e.Kind == sim.Boss {
+				g.Player.Angle = math.Atan2(e.Pos.Y-g.Player.Pos.Y, e.Pos.X-g.Player.Pos.X) + 0.3
+			}
+		}
+		g.Tick(sim.Input{}, 1.0/60)
+		if st, ok := g.Boss(); ok && st.Windup > 0.7 {
+			break
+		}
+	}
+	return frameImage(g, cfg, true)
+}
+
+// alarmShot plays a level until the alert meter is nearly full and a demon is
+// in sight, showing the meter that gunfire fills.
+func alarmShot(cfg render.Config) image.Image {
+	for seed := int64(1); seed < 40; seed++ {
+		l, err := world.Generate(world.Config{Width: 40, Height: 26, Seed: seed})
+		if err != nil {
+			continue
+		}
+		g := sim.New(l, sim.WithDepth(6))
+		p := bot.Roamer(true)
+		for range 60 * 90 {
+			g.Tick(p.Input(g), 1.0/60)
+			if g.Alert() > 0.8 && g.MuzzleFlash() {
+				return frameImage(g, cfg, true)
+			}
+			if g.LevelComplete() || g.Alarms() > 0 {
+				break
+			}
+		}
+	}
+	return frameImage(arenaGame(12, 12), cfg, true)
 }
 
 // arsenalShot renders each weapon's first-person viewmodel against the same plain

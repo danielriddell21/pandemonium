@@ -10,7 +10,6 @@ import (
 
 const minDimension = 16
 
-// ErrUnreachable reports that no attempt produced a connected, playable level.
 var ErrUnreachable = errors.New("world: exhausted attempts producing a connected level")
 
 type Config struct {
@@ -36,11 +35,6 @@ func (c Config) normalized() Config {
 	return c
 }
 
-// Generate digs a level: crucible/level runs the room-and-corridor pipeline,
-// the heights, low walls, room themes, and open sky; pandemonium's passes
-// then mount the exit switch, annotate junctions, gate the exit behind a
-// keycard, and scatter items, barrels, and hazards. It retries with derived
-// seeds until the exit and every keycard are reachable.
 func Generate(cfg Config) (*Level, error) {
 	cfg = cfg.normalized()
 	if cfg.Arena {
@@ -54,6 +48,7 @@ func Generate(cfg Config) (*Level, error) {
 		placeKeyGate(deck, g)
 		placeItems(deck, g)
 		placeBarrels(deck, g)
+		placeAlarmPanel(deck)
 		level.AssignHeights(l, g, rooms, level.HeightsConfig{})
 		placeLift(deck, g)
 		placeHazards(deck, g)
@@ -77,8 +72,6 @@ func Generate(cfg Config) (*Level, error) {
 	return deck, nil
 }
 
-// reset points the aggregate at a freshly dug level and clears the gameplay
-// layer, so each generation attempt starts clean.
 func (l *Level) reset(base *level.Level) {
 	*l = Level{
 		Level:    base,
@@ -88,8 +81,6 @@ func (l *Level) reset(base *level.Level) {
 	}
 }
 
-// placeLift raises one dead-end ledge onto a lift and drops a secret reward
-// on it, keeping clear of the cells items and secrets already claim.
 func placeLift(l *Level, g *worldgen.RNG) {
 	taken := make(map[Coord]bool, len(l.Items)+len(l.Secrets))
 	for _, it := range l.Items {

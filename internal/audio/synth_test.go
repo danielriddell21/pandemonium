@@ -8,7 +8,7 @@ import (
 
 func TestSynthProducesEveryCue(t *testing.T) {
 	s := Synth()
-	for _, cue := range []Cue{CueFire, CueHit, CueDoorOpen, CuePickup, CueSecret, CueDeath, CueExit, CueMenu} {
+	for _, cue := range []Cue{CueFire, CueHit, CueDoorOpen, CuePickup, CueSecret, CueDeath, CueExit, CueMenu, CueAlarm, CueSilence, CueBoss} {
 		pcm, ok := s[cue]
 		if !ok || len(pcm) == 0 {
 			t.Errorf("cue %d produced no PCM", cue)
@@ -57,6 +57,9 @@ func TestCueForMapping(t *testing.T) {
 		{sim.ObsSecret, CueSecret, true},
 		{sim.ObsDeath, CueDeath, true},
 		{sim.ObsExit, CueExit, true},
+		{sim.ObsAlarm, CueAlarm, true},
+		{sim.ObsSilence, CueSilence, true},
+		{sim.ObsBoss, CueBoss, true},
 		{sim.ObsMove, 0, false},
 		{sim.ObsMarker, 0, false},
 	}

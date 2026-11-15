@@ -15,6 +15,11 @@ build:
 test:
     go test ./...
 
+# play the bot through a campaign and print the balance gate's table
+[group('test')]
+eval:
+    go test -run '^TestGate$' -count=1 -v ./internal/eval
+
 # run golangci-lint
 [group('dev')]
 lint:

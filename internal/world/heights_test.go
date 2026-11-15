@@ -7,7 +7,6 @@ import (
 	"github.com/danielriddell21/crucible/level"
 )
 
-// stepHeight is the world-unit rise of one height level the engine assigns.
 var stepHeight = level.DefaultHeightsConfig().Step
 
 func ledgeCells(l *Level) map[Coord]bool {

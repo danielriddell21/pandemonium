@@ -2,13 +2,12 @@ package world
 
 import "github.com/danielriddell21/crucible/worldgen"
 
-const arenaEvery = 5
+const ArenaEvery = 5
 
-// arenaSkyHeadroom is the tall open-air ceiling the arena floor is given.
 const arenaSkyHeadroom = 3.0
 
 func IsArenaLevel(levelNumber int) bool {
-	return levelNumber > 0 && levelNumber%arenaEvery == 0
+	return levelNumber > 0 && levelNumber%ArenaEvery == 0
 }
 
 func generateArena(width, height int, seed int64) *Level {
@@ -34,10 +33,35 @@ func generateArena(width, height int, seed int64) *Level {
 	l.Set(l.Exit.X, l.Exit.Y, TileExit)
 	placeExitSwitch(l)
 
+	placeArenaPillars(l, x0, y0, x1, y1)
+	l.Boss = true
+	l.BossAt = Coord{X: x1 - (x1-x0)/4, Y: midY}
+
 	placeArenaCache(l)
 	placeItems(l, g)   // plus the usual scattered consumables
 	placeBarrels(l, g) // and barrels for crossfire
 	return l
+}
+
+func placeArenaPillars(l *Level, x0, y0, x1, y1 int) {
+	// Four blocks of cover off the centre line: somewhere to break a volley's
+	// line of fire, and something solid to bait a charge into.
+	midY := (y0 + y1) / 2
+	dx, dy := (x1-x0)/3, (y1-y0)/4
+	for _, c := range [4]Coord{
+		{X: x0 + dx, Y: midY - dy - 1},
+		{X: x1 - dx - 1, Y: midY - dy - 1},
+		{X: x0 + dx, Y: midY + dy},
+		{X: x1 - dx - 1, Y: midY + dy},
+	} {
+		for y := c.Y; y <= c.Y+1; y++ {
+			for x := c.X; x <= c.X+1; x++ {
+				i := y*l.W + x
+				l.Tiles[i] = TileWall
+				l.Sky[i] = false
+			}
+		}
+	}
 }
 
 func placeArenaCache(l *Level) {

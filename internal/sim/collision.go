@@ -8,15 +8,32 @@ import (
 
 const playerRadius = 0.2
 
-func resolveMove(w *World, pos Vec2, z, dx, dy float64) Vec2 {
+const barrelBody = 0.45
+
+func (g *Game) step(pos Vec2, z, dx, dy float64) Vec2 {
 	next := pos
-	if !blocked(w, pos.X+dx, pos.Y, z, playerRadius) {
-		next.X = pos.X + dx
+	if to := (Vec2{X: pos.X + dx, Y: pos.Y}); !blocked(g.World, to.X, to.Y, z, playerRadius) && !g.barrelBlocks(pos, to) {
+		next.X = to.X
 	}
-	if !blocked(w, next.X, pos.Y+dy, z, playerRadius) {
-		next.Y = pos.Y + dy
+	if to := (Vec2{X: next.X, Y: pos.Y + dy}); !blocked(g.World, to.X, to.Y, z, playerRadius) && !g.barrelBlocks(next, to) {
+		next.Y = to.Y
 	}
 	return next
+}
+
+func (g *Game) barrelBlocks(from, to Vec2) bool {
+	for i := range g.Entities {
+		e := &g.Entities[i]
+		if e.Kind != Barrel || e.State != Active {
+			continue
+		}
+		// Only closing on a barrel is refused, so a body that somehow overlaps
+		// one can always back out.
+		if d := dist(to, e.Pos); d < barrelBody && d < dist(from, e.Pos) {
+			return true
+		}
+	}
+	return false
 }
 
 func blocked(w *World, x, y, z, radius float64) bool {

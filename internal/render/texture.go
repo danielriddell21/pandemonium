@@ -58,6 +58,8 @@ type textureSet struct {
 	nukage    *texture
 	lava      *texture
 	switchTex *texture
+	panel     *texture
+	panelDead *texture
 	demon     []demonArt
 	fireball  *texture
 	rocket    *texture
@@ -142,6 +144,8 @@ func defaultTextures() *textureSet {
 		nukage:    genNukage(),
 		lava:      genLava(),
 		switchTex: genSwitch(),
+		panel:     genPanel(true),
+		panelDead: genPanel(false),
 		demon:     buildDemons(),
 		fireball:  genFireball(),
 		rocket:    genRocket(),

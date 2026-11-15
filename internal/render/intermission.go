@@ -13,7 +13,13 @@ func drawIntermission(fb []byte, cfg Config, s sim.LevelStats) {
 	title := color.RGBA{R: 222, G: 120, B: 60, A: 255}
 	value := palette.hudText
 
-	row := cfg.Height/2 - 48
+	row := cfg.Height/2 - 56
+	// A framed slab in the status bar's colours holds the tally together.
+	pw, ph := min(cfg.Width-16, 200), 150
+	px, py := (cfg.Width-pw)/2, row-22
+	fillBox(fb, cfg, px-1, py-1, pw+2, ph+2, barBorder)
+	fillBox(fb, cfg, px, py, pw, ph, barBG)
+	fillBox(fb, cfg, px+10, row+8, pw-20, 1, barBorder)
 	drawTextCentered(fb, cfg, row, "LEVEL COMPLETE", title)
 
 	row += 28
@@ -30,6 +36,12 @@ func drawIntermission(fb []byte, cfg Config, s sim.LevelStats) {
 	drawTextCentered(fb, cfg, row, "TIME     "+formatTime(s.Elapsed), timeColor)
 	row += 18
 	drawTextCentered(fb, cfg, row, "PAR      "+formatTime(s.Par), value)
+	row += 18
+	alarmColor := palette.hudDiag // a quiet floor is called out like a beaten par
+	if s.Alarms > 0 {
+		alarmColor = alertHot
+	}
+	drawTextCentered(fb, cfg, row, fmt.Sprintf("ALARMS   %4d", s.Alarms), alarmColor)
 
 	drawTextCentered(fb, cfg, cfg.Height-24, "Press Enter to continue", palette.hudDiag)
 }

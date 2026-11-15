@@ -20,6 +20,7 @@ type ItemState struct {
 	Kind  world.ItemKind
 	Pos   Vec2
 	Taken bool
+	Bonus bool
 }
 
 func newItems(l *world.Level) []ItemState {
@@ -45,7 +46,9 @@ func (g *Game) pickupItems() {
 		}
 		g.applyPickup(it.Kind)
 		it.Taken = true
-		g.items++
+		if !it.Bonus {
+			g.items++ // spoils sit outside the level's tally
+		}
 		g.emit(Observation{Kind: ObsItem, At: pc})
 	}
 }
@@ -97,6 +100,9 @@ func (g *Game) hurtPlayer(dmg float64) {
 	absorbed := min(dmg*armorAbsorb, g.Player.Armor)
 	g.Player.Armor -= absorbed
 	g.Player.Health -= dmg - absorbed
+	// Even a trickle of damage (a claw, a pool) must show: each hit starts
+	// from a visible floor rather than fading faster than it builds.
+	g.pain = min(1, max(g.pain, painFloor)+dmg*painPerDamage)
 	if g.Player.Health < 0 {
 		g.Player.Health = 0
 	}

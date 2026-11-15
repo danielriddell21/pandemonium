@@ -13,9 +13,10 @@ func TestFacingInteractable(t *testing.T) {
 
 	var target world.Coord
 	var have bool
-	for c := range l.Switches {
-		target, have = c, true
-		break
+	for c, sw := range l.Switches {
+		if sw.Action == world.SwitchExit {
+			target, have = c, true
+		}
 	}
 	if !have {
 		t.Skip("generated level has no switch to face")

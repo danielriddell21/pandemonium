@@ -86,8 +86,10 @@ func (r *Renderer) Frame(g *sim.Game) []byte {
 	drawPowerupTint(r.fb, r.cfg, g)
 	if !r.hideHUD {
 		weapon := r.tex.weapon[int(g.Player.Weapon)%len(r.tex.weapon)]
-		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), float64(g.Tick64()), r.cfg.Height-StatusBarH)
+		drawViewmodel(r.fb, r.cfg, weapon, r.tex.flash, g.MuzzleFlash(), g.Stride(), r.cfg.Height-StatusBarH)
+		drawFeedback(r.fb, r.cfg, g)
 		drawStatusBar(r.fb, r.cfg, g, r.tex)
+		drawThreatBar(r.fb, r.cfg, g)
 		if notice := g.Notice(); notice != "" {
 			drawNotice(r.fb, r.cfg, notice)
 		} else {

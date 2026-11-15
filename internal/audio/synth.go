@@ -9,10 +9,7 @@ import (
 )
 
 const (
-	// SampleRate is the audio player's sample rate, re-exported from
-	// crucible/synth for the gui player.
-	SampleRate = synth.SampleRate
-	// bytesPerFrame is the size of one stereo 16-bit frame.
+	SampleRate    = synth.SampleRate
 	bytesPerFrame = synth.BytesPerFrame
 )
 
@@ -27,6 +24,9 @@ const (
 	CueDeath
 	CueExit
 	CueMenu
+	CueAlarm
+	CueSilence
+	CueBoss
 )
 
 func CueFor(k sim.ObservationKind) (Cue, bool) {
@@ -43,6 +43,12 @@ func CueFor(k sim.ObservationKind) (Cue, bool) {
 		return CueDeath, true
 	case sim.ObsExit:
 		return CueExit, true
+	case sim.ObsAlarm:
+		return CueAlarm, true
+	case sim.ObsSilence:
+		return CueSilence, true
+	case sim.ObsBoss:
+		return CueBoss, true
 	default:
 		return 0, false
 	}
@@ -58,11 +64,24 @@ func Synth() map[Cue][]byte {
 		CueDeath:    synth.Slide(300, -360, 60, 0.6, 4),
 		CueExit:     synthExit(),
 		CueMenu:     synth.Blip(880, 0.05, 60),
+		CueAlarm:    synthAlarm(),
+		CueSilence:  synth.Slide(520, -420, 110, 0.5, 5),
+		CueBoss:     synth.Rumble(60, 90, 0.45, 9, 11),
 	}
 }
 
-// synthFire is a noise-and-chirp burst with no shared shape; it stays local
-// on the crucible primitives.
+func synthAlarm() []byte {
+	// A klaxon: two notes a fourth apart, swapping four times a second.
+	const dur, swap = 1.2, 0.25
+	return synth.Render(dur, func(t float64) float64 {
+		freq := 440.0
+		if int(t/swap)%2 == 1 {
+			freq = 587.0
+		}
+		return (0.45*synth.Sine(freq, t) + 0.2*synth.Sine(freq*2, t)) * synth.Attack(t, 40) * synth.Env(t, 1.2)
+	})
+}
+
 func synthFire() []byte {
 	noise := synth.Noise(1, 2)
 	return synth.Render(0.12, func(t float64) float64 {
@@ -72,8 +91,6 @@ func synthFire() []byte {
 	})
 }
 
-// synthExit is a rising perfect-fifth swell; it stays local on the crucible
-// primitives.
 func synthExit() []byte {
 	return synth.Render(0.5, func(t float64) float64 {
 		base := 0.4 * synth.Sine(330+220*t, t)

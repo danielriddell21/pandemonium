@@ -1,6 +1,8 @@
 package gui
 
 import (
+	"slices"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -36,13 +38,20 @@ func (g *Game) readInput() sim.Input {
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		in.Interact = true
 	}
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
-		inpututil.IsKeyJustPressed(ebiten.KeyControlLeft) || inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		in.Attack = true
-	}
+	// Held, not tapped: the simulation's per-weapon cooldown paces the shots, so
+	// the chaingun fires for as long as the trigger is down.
+	in.Attack = anyHeld(
+		ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft),
+		ebiten.IsKeyPressed(ebiten.KeyControlLeft),
+		ebiten.IsKeyPressed(ebiten.KeyF),
+	)
 
 	in.SelectWeapon = g.weaponSelect()
 	return in
+}
+
+func anyHeld(buttons ...bool) bool {
+	return slices.Contains(buttons, true)
 }
 
 func (g *Game) weaponSelect() int {

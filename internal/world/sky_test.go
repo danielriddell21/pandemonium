@@ -2,8 +2,6 @@ package world
 
 import "testing"
 
-// skyHeadroom is the open-air ceiling gap crucible/level's AssignSky gives
-// sky cells (its DefaultSkyConfig headroom).
 const skyHeadroom = 3.0
 
 func TestSkyAppearsAndIsWellFormed(t *testing.T) {

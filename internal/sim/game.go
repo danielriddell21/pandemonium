@@ -41,20 +41,27 @@ type Game struct {
 	observer Observer
 	tracker  tracker
 	skill    Skill
+	depth    int
+	entry    Loadout
+
+	scent scent
+	alarm alarm
+	boss  boss
+
+	pain   float64
+	hitTTL float64
+	stride float64
 }
 
 func New(l *world.Level, opts ...Option) *Game {
 	g := &Game{
 		World: NewWorld(l),
 		Player: Player{
-			Pos:     Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
-			Z:       l.Floor(l.Spawn.X, l.Spawn.Y),
-			Angle:   facing(l.Spawn, l.Exit),
-			Health:  MaxHealth,
-			Weapon:  Pistol,
-			Bullets: 50,
-			Shells:  20,
+			Pos:   Vec2{X: float64(l.Spawn.X) + 0.5, Y: float64(l.Spawn.Y) + 0.5},
+			Z:     l.Floor(l.Spawn.X, l.Spawn.Y),
+			Angle: facing(l.Spawn, l.Exit),
 		},
+		entry:    startingLoadout(),
 		Items:    newItems(l),
 		secrets:  newSecrets(l),
 		visited:  map[world.Coord]bool{l.Spawn: true},
@@ -66,6 +73,7 @@ func New(l *world.Level, opts ...Option) *Game {
 	for _, opt := range opts {
 		opt(g)
 	}
+	g.Player.equip(g.entry)
 	g.Entities = g.spawnEntities()
 	g.viewZ = g.Player.Z
 	g.killsTotal = countDemons(g.Entities)
@@ -85,10 +93,14 @@ func (g *Game) Tick(in Input, dt float64) {
 	dir := g.Player.Dir()
 	// Strafe axis is the facing direction rotated 90 degrees.
 	strafeX, strafeY := -dir.Y, dir.X
-	dx := (dir.X*in.Forward + strafeX*in.Strafe) * moveSpeed * dt
-	dy := (dir.Y*in.Forward + strafeY*in.Strafe) * moveSpeed * dt
-	g.Player.Pos = resolveMove(g.World, g.Player.Pos, g.Player.Z, dx, dy)
+	forward, strafe := unitMove(in.Forward, in.Strafe)
+	dx := (dir.X*forward + strafeX*strafe) * moveSpeed * dt
+	dy := (dir.Y*forward + strafeY*strafe) * moveSpeed * dt
+	from := g.Player.Pos
+	g.Player.Pos = g.step(g.Player.Pos, g.Player.Z, dx, dy)
+	g.stride += dist(from, g.Player.Pos)
 	g.settleHeight(dt)
+	g.trackScent()
 
 	if in.SelectWeapon != 0 {
 		g.switchWeapon(in.SelectWeapon)
@@ -118,6 +130,8 @@ func (g *Game) Tick(in Input, dt float64) {
 
 	g.pickupItems()
 	g.tickPowerups(dt)
+	g.tickAlarm(dt)
+	g.tickFeedback(dt)
 	if g.noticeTTL > 0 {
 		g.noticeTTL -= dt
 	}
@@ -132,6 +146,16 @@ func (g *Game) Tick(in Input, dt float64) {
 		g.tracker.exitEmitted = true
 		g.emit(Observation{Kind: ObsExit, At: g.PlayerCell()})
 	}
+}
+
+func unitMove(forward, strafe float64) (float64, float64) {
+	// Two held keys must not add up to a faster diagonal, and no input device
+	// may ask for more than a full stride.
+	m := math.Hypot(forward, strafe)
+	if m <= 1 {
+		return forward, strafe
+	}
+	return forward / m, strafe / m
 }
 
 func (g *Game) Visited() map[world.Coord]bool { return g.visited }
@@ -191,6 +215,28 @@ func (g *Game) observeMovement() {
 
 func (g *Game) Tick64() uint64 { return g.tick }
 
+func (g *Game) Depth() int { return g.depth }
+
+const (
+	painPerDamage = 1.0 / 40
+	painFloor     = 0.3
+	painFade      = 1.8
+	hitMarkerTime = 0.12
+)
+
+func (g *Game) tickFeedback(dt float64) {
+	g.pain = max(0, g.pain-painFade*dt)
+	if g.hitTTL > 0 {
+		g.hitTTL -= dt
+	}
+}
+
+func (g *Game) Pain() float64 { return g.pain }
+
+func (g *Game) HitMarker() bool { return g.hitTTL > 0 }
+
+func (g *Game) Stride() float64 { return g.stride }
+
 func (g *Game) PlayerCell() world.Coord {
 	return world.Coord{X: int(math.Floor(g.Player.Pos.X)), Y: int(math.Floor(g.Player.Pos.Y))}
 }
@@ -210,31 +256,35 @@ func (g *Game) LevelComplete() bool {
 func (g *Game) pressSwitch(sw world.Switch) {
 	switch sw.Action {
 	case world.SwitchExit:
+		if g.Sealed() {
+			g.setNotice("Sealed while the overlord lives")
+			return
+		}
 		g.exitDone = true
 	case world.SwitchDoor:
 		g.World.ForceOpenDoor(sw.Target.X, sw.Target.Y)
+	case world.SwitchAlarm:
+		g.silence()
 	}
 }
 
-// InteractTarget is what the player is facing within reach, for a contextual
-// prompt.
 type InteractTarget int
 
-// Interact targets a contextual prompt can describe.
 const (
 	InteractNone InteractTarget = iota
 	InteractDoor
 	InteractSwitch
+	InteractPanel
 )
 
-// FacingInteractable reports what the player could act on right now — a switch
-// or a closed door ahead within reach. It never mutates the world, so the GUI
-// can poll it each frame to show or hide a prompt.
 func (g *Game) FacingInteractable() InteractTarget {
 	dir := g.Player.Dir()
 	tx := int(math.Floor(g.Player.Pos.X + dir.X*reach))
 	ty := int(math.Floor(g.Player.Pos.Y + dir.Y*reach))
-	if _, ok := g.World.Level.SwitchAt(tx, ty); ok {
+	if sw, ok := g.World.Level.SwitchAt(tx, ty); ok {
+		if sw.Action == world.SwitchAlarm {
+			return InteractPanel
+		}
 		return InteractSwitch
 	}
 	if g.World.IsDoor(tx, ty) && !g.World.Opened(tx, ty) {

@@ -39,8 +39,6 @@ type Cue struct {
 	Arrival bool
 }
 
-// Line is one status message ready for the overlay, shared with the family
-// through crucible/status.
 type Line = cstatus.Line
 
 const messageFrames = 150

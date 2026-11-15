@@ -19,6 +19,7 @@ var (
 	mapFloor  = color.RGBA{R: 46, G: 42, B: 36, A: 255}
 	mapDoor   = color.RGBA{R: 150, G: 110, B: 70, A: 255}
 	mapExit   = color.RGBA{R: 60, G: 200, B: 90, A: 255}
+	mapAlarm  = color.RGBA{R: 230, G: 90, B: 50, A: 255}
 	mapPlayer = color.RGBA{R: 245, G: 240, B: 130, A: 255}
 )
 
@@ -89,6 +90,11 @@ func tileColor(l *world.Level, c world.Coord) (color.RGBA, bool) {
 			return keyColor(key), true
 		}
 		return mapDoor, true
+	case world.TileSwitch:
+		if sw, _ := l.SwitchAt(c.X, c.Y); sw.Action == world.SwitchAlarm {
+			return mapAlarm, true
+		}
+		return mapExit, true
 	case world.TileFloor, world.TileSpawn:
 		return mapFloor, true
 	default:

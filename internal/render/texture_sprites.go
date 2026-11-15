@@ -106,11 +106,33 @@ func genRocket() *texture {
 }
 
 func buildDemons() []demonArt {
-	arts := make([]demonArt, len(palette.sprite))
+	arts := make([]demonArt, len(palette.sprite), len(palette.sprite)+1)
 	for i, c := range palette.sprite {
 		arts[i] = buildDemon(c)
 	}
-	return arts
+	return append(arts, buildOverlord())
+}
+
+func buildOverlord() demonArt {
+	art := buildDemon(palette.boss)
+	for _, t := range art.walk {
+		crown(t)
+	}
+	crown(art.dead[0])
+	return art
+}
+
+func crown(t *texture) {
+	// Horns and a furnace mouth set the overlord apart from its rank and file
+	// at any distance.
+	horn := color.RGBA{R: 232, G: 214, B: 170, A: 255}
+	for k := range 12 {
+		w := 1 + k/3
+		fillRect(t, 14+k/2, 4+k, 14+k/2+w, 5+k, horn)
+		fillRect(t, 50-k/2-w, 4+k, 50-k/2, 5+k, horn)
+	}
+	fillRect(t, 24, 44, 40, 50, color.RGBA{R: 250, G: 150, B: 40, A: 255})
+	fillRect(t, 26, 46, 38, 48, color.RGBA{R: 255, G: 240, B: 180, A: 255})
 }
 
 func buildDemon(c color.RGBA) demonArt {

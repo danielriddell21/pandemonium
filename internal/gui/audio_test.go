@@ -2,7 +2,6 @@ package gui
 
 import "testing"
 
-// bandDepth is the first depth that MusicBand maps to a band above zero.
 const bandDepth = 3
 
 func TestUpdateMusicBandSwapsAndStopsTheOldPlayer(t *testing.T) {

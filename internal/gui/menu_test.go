@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-// The menu mechanics (move, select, adjust) now live in crucible/menu and are
-// covered by its own tests; these check pandemonium's value formatting and
-// the settings-row value column.
-
 func TestValueFormatters(t *testing.T) {
 	if got := percent(0.5); got != "50%" {
 		t.Errorf("percent(0.5) = %q, want 50%%", got)

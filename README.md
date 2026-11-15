@@ -10,13 +10,22 @@
 
 A procedurally-generated, Wolfenstein-3D-style raycaster FPS written in Go with [Ebiten](https://ebitengine.org/) v2, in the visual spirit of the original DOOM.
 
-Every run generates a fresh maze of rooms and corridors — staircases, lifts, raised platforms, the odd open-sky courtyard. Walk it with `WASD`, look with the mouse, dodge the demons, and reach the exit to collapse the level and spawn a new one. Levels are deterministic from their seed.
+Every run generates a fresh maze of rooms and corridors — staircases, lifts, raised platforms, the odd open-sky courtyard. Walk it with `WASD`, look with the mouse, hold the trigger to fire, and reach the exit to collapse the level and spawn a new one. Levels are deterministic from their seed.
+
+What you carry out of a level — armour, ammo, the backpack — you carry into the next, and each floor down holds more demons than the last.
+
+- **The alarm.** Gunfire fills an alert meter, and so does lingering past par. When it tops out the level's demons come hunting and a wave of reinforcements arrives out of sight; every alarm brings a bigger one. Reinforcements drop ammo and health, so a loud run can pay for itself — if you survive it. Fists are silent, and one wall panel per level silences the alarm once.
+- **The overlord.** Every fifth floor is an open arena sealed by a boss. It telegraphs each attack — a spread of fireballs, a summoning, a charge down a fixed lane — and grows faster as it weakens. Break its line of fire behind a pillar, or bait the charge into one: a stunned overlord takes double damage. It drops a megasphere and a backpack, and the exit opens when it falls.
 
 ```sh
 go run ./cmd/pandemonium --seed 42
 ```
 
 ![pandemonium gameplay](docs/demos/hero.gif)
+
+| The alert meter | The overlord winding up |
+| --- | --- |
+| ![alert meter nearly full](docs/demos/alarm.png) | ![the overlord telegraphing a volley](docs/demos/overlord.png) |
 
 ## Install
 

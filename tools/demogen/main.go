@@ -157,7 +157,7 @@ func defaultClips() []clip {
 	return []clip{
 		{name: "hero", seed: 16, mapW: 40, mapH: 26, rcfg: cfg, frames: 180, delayCs: 14, subSteps: 2, input: pathFollow(true), tally: true},
 		{name: "exploration", seed: 12, mapW: 32, mapH: 24, rcfg: cfg, frames: 84, delayCs: 7, setup: noDemons, input: pathFollow(false)},
-		{name: "arena", seed: 5, mapW: 40, mapH: 28, rcfg: cfg, frames: 110, delayCs: 7, input: hunt(), arena: true},
+		{name: "arena", seed: 5, mapW: 40, mapH: 28, rcfg: cfg, frames: 150, delayCs: 7, subSteps: 3, setup: bossFloor, input: pathFollow(true), arena: true},
 		{name: "automap", seed: 7, mapW: 40, mapH: 26, rcfg: cfg, frames: 120, delayCs: 7, input: pathFollow(false), automap: true},
 		terrainClip(cfg),
 	}
@@ -261,10 +261,10 @@ func pathFollow(fight bool) func(int, *sim.Game) sim.Input {
 // a fight (the exploration walk-through).
 func noDemons(g *sim.Game) { g.Entities = nil }
 
-// hunt seeks and destroys the level's demons via the bot package's hunter.
-func hunt() func(int, *sim.Game) sim.Input {
-	p := bot.Hunter()
-	return func(_ int, g *sim.Game) sim.Input { return p.Input(g) }
+// bossFloor arms the player for the overlord, as a run that had reached the
+// fifth level would be.
+func bossFloor(g *sim.Game) {
+	g.Player.Shells, g.Player.Bullets, g.Player.Armor = 40, 150, 50
 }
 
 // demoPalette builds brightness ramps for every colour the renderer uses so the
@@ -282,5 +282,8 @@ func demoPalette() color.Palette {
 		{R: 222, G: 214, B: 188, A: 255}, // notice text
 		{R: 60, G: 220, B: 50, A: 255},   // health (full)
 		{R: 240, G: 40, B: 50, A: 255},   // health (low)
+		{R: 104, G: 22, B: 28, A: 255},   // overlord
+		{R: 232, G: 64, B: 40, A: 255},   // alert, boss bar
+		{R: 196, G: 170, B: 60, A: 255},  // alert (calm)
 	}, 18)
 }

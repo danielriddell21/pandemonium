@@ -42,33 +42,58 @@ func drawStatusBar(fb []byte, cfg Config, g *sim.Game, tx *textureSet) {
 	labelY := top + 14
 	valueY := top + 29
 
-	// Health (left), coloured by how much remains.
+	// Columns are placed by share of the width, so the bar keeps its spacing
+	// at any render size instead of letting the face and keycards sit on text.
+	fs := StatusBarH - 6
+	kx := w - w/32 - len(keyColors)*keyPitch
+	cols := barColumns(w, fs, kx)
+
+	// Health (left), coloured by how much remains; overheal reads past 100.
 	hp := clampFrac(g.Player.Health / sim.MaxHealth)
-	drawText(dst, 12, labelY, "HEALTH", barLabel)
-	drawText(dst, 12, valueY, fmt.Sprintf("%d%%", int(hp*100+0.5)), healthColor(hp))
+	drawText(dst, cols.health, labelY, "HEALTH", barLabel)
+	drawText(dst, cols.health, valueY, fmt.Sprintf("%d%%", int(g.Player.Health+0.5)), healthColor(hp))
 
 	// Armour.
-	ar := clampFrac(g.Player.Armor / sim.MaxArmor)
-	drawText(dst, 92, labelY, "ARMOR", barLabel)
-	drawText(dst, 92, valueY, fmt.Sprintf("%d%%", int(ar*100+0.5)), armorText)
+	drawText(dst, cols.armor, labelY, "ARMOR", barLabel)
+	drawText(dst, cols.armor, valueY, fmt.Sprintf("%d%%", int(g.Player.Armor+0.5)), armorText)
 
 	// Face, centred, gazing toward recent damage.
 	if idx := faceIndex(faceBand(hp), g.Player.FaceDir()); idx >= 0 && idx < len(tx.face) {
-		fs := StatusBarH - 6
 		blitTexture(fb, cfg, tx.face[idx], w/2-fs/2, top+3, fs, fs)
 	}
 
 	// Ammo for the current weapon (right of centre).
-	ax := w/2 + 60
-	drawText(dst, ax, labelY, "AMMO", barLabel)
-	drawText(dst, ax, valueY, ammoText(g.Player), palette.hudText)
+	drawText(dst, cols.ammo, labelY, "AMMO", barLabel)
+	drawText(dst, cols.ammo, valueY, ammoText(g.Player), palette.hudText)
 
 	// Keycards held (far right): lit pips for those collected, dim outlines else.
-	kx := w - 12 - len(keyColors)*14
 	for i, k := range keyColors {
-		x0 := kx + i*14
-		drawKeyPip(fb, cfg, x0, top+11, k.on, g.Player.HasKey(k.kind))
+		drawKeyPip(fb, cfg, kx+i*keyPitch, top+11, k.on, g.Player.HasKey(k.kind))
 	}
+	for _, x := range [...]int{cols.armor - barGutter, w/2 - fs/2 - barGutter, w/2 + fs/2 + barGutter, kx - barGutter} {
+		for y := top + 5; y < h-4; y++ {
+			setPixel(fb, w, x, y, barBorder)
+		}
+	}
+}
+
+const (
+	keyPitch  = 14
+	barGutter = 5
+)
+
+type barLayout struct {
+	health, armor, ammo int
+}
+
+func barColumns(w, face, keys int) barLayout {
+	left := w / 26
+	// Armour sits midway between the health column and the face; ammo midway
+	// between the face and the keycards, never closer than a gutter to either.
+	faceL, faceR := w/2-face/2, w/2+face/2
+	armor := left + (faceL-left)/2
+	ammo := faceR + 2*barGutter + max((keys-faceR-4*barGutter-4*glyphWidth)/2, 0)
+	return barLayout{health: left, armor: armor, ammo: ammo}
 }
 
 func ammoText(p sim.Player) string {

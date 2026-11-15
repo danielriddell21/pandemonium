@@ -55,16 +55,32 @@ func drawTextCentered(fb []byte, cfg Config, y int, s string, c color.RGBA) {
 	drawText(dst, x, y, s, c)
 }
 
+const (
+	plateDim  = 0.55
+	platePadX = 6
+)
+
+func drawPlate(fb []byte, cfg Config, x, y, textW int) {
+	// A dimmed strip behind centre-screen text keeps it legible over the
+	// weapon and bright walls without hiding either.
+	for py := y - hudBaseline + 2; py <= y+4; py++ {
+		for px := x - platePadX; px < x+textW+platePadX; px++ {
+			if px >= 0 && px < cfg.Width && py >= 0 && py < cfg.Height {
+				blendPixel(fb, cfg.Width, px, py, palette.hudDrop, plateDim)
+			}
+		}
+	}
+}
+
 func drawNotice(fb []byte, cfg Config, msg string) {
 	if msg == "" {
 		return
 	}
-	drawTextCentered(fb, cfg, cfg.Height*3/4, msg, palette.hudText)
+	y := cfg.Height * 3 / 4
+	drawPlate(fb, cfg, (cfg.Width-len(msg)*glyphWidth)/2, y, len(msg)*glyphWidth)
+	drawTextCentered(fb, cfg, y, msg, palette.hudText)
 }
 
-// drawInteractPrompt shows a contextual "E: open door" hint centred in the
-// lower third while the player faces something to use. It shares the family's
-// layout via crucible/keymap, drawn here in pandemonium's own font and palette.
 func drawInteractPrompt(fb []byte, cfg Config, g *sim.Game) {
 	var action string
 	switch g.FacingInteractable() {
@@ -72,12 +88,18 @@ func drawInteractPrompt(fb []byte, cfg Config, g *sim.Game) {
 		action = "OPEN DOOR"
 	case sim.InteractSwitch:
 		action = "PRESS SWITCH"
+	case sim.InteractPanel:
+		action = "SILENCE ALARM"
+		if g.PanelSpent() {
+			return
+		}
 	default:
 		return
 	}
 	face := keymap.Face{LineHeight: hudBaseline, Measure: func(s string) int { return len(s) * glyphWidth }}
 	line := keymap.CenterPrompt(keymap.Binding{Key: "E", Action: action}, cfg.Width, cfg.Height, face)
 	dst := framebufferImage(fb, cfg)
+	drawPlate(fb, cfg, line.X, line.Y, len(line.Text)*glyphWidth)
 	drawText(dst, line.X+1, line.Y+1, line.Text, palette.hudDrop)
 	drawText(dst, line.X, line.Y, line.Text, palette.hudText)
 }

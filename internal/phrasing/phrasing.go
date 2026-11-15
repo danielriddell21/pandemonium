@@ -17,9 +17,6 @@ const persona = "house"
 
 const genTimeout = 2 * time.Second
 
-// New returns a status source that rewrites the scripted notice lines
-// through the narrata "house" persona, standing the scripted wording back in
-// whenever generation declines, fails, or times out.
 func New() (*narrate.Source[status.Cue], error) {
 	src, err := narrate.New(narrate.Config{
 		Personas:      personasJSON,

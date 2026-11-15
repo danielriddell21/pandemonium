@@ -12,6 +12,7 @@ import (
 
 const (
 	spriteScale   = 0.9
+	bossScale     = 1.6
 	fireballScale = 0.45
 	itemScale     = 0.4
 )
@@ -22,7 +23,18 @@ type billboard struct {
 	tex    *texture
 	scale  float64
 	ground bool
+	tint   color.RGBA
+	mix    float64
 }
+
+var (
+	tintFlinch = color.RGBA{R: 255, G: 244, B: 226, A: 255}
+	tintWindup = color.RGBA{R: 255, G: 214, B: 96, A: 255}
+	tintCharge = color.RGBA{R: 255, G: 70, B: 40, A: 255}
+	tintStun   = color.RGBA{R: 120, G: 150, B: 220, A: 255}
+)
+
+const flinchMix = 0.6
 
 func drawSprites(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, cam raycast.Camera, cfg Config, tx *textureSet) {
 	w, h := cfg.Width, cfg.Height
@@ -45,7 +57,7 @@ func drawSprites(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, 
 		if !ok {
 			continue
 		}
-		drawBillboard(fb, zbuf, loZ, loH, loRow, cfg, pl.ScreenX, pl.Top, pl.Size, pl.Depth, it.z, it.tex)
+		drawBillboard(fb, zbuf, loZ, loH, loRow, cfg, pl.ScreenX, pl.Top, pl.Size, pl.Depth, it)
 	}
 }
 
@@ -63,7 +75,7 @@ func collectBillboards(g *sim.Game, tx *textureSet) []billboard {
 			}
 			continue
 		}
-		items = append(items, billboard{pos: e.Pos, z: e.Z, tex: demonTexture(tx, e), scale: spriteScale, ground: true})
+		items = append(items, demonBillboard(g, tx, e))
 	}
 	for _, p := range g.Projectiles {
 		if !p.Alive {
@@ -87,6 +99,44 @@ func collectBillboards(g *sim.Game, tx *textureSet) []billboard {
 	return items
 }
 
+func demonBillboard(g *sim.Game, tx *textureSet, e sim.Entity) billboard {
+	b := billboard{pos: e.Pos, z: e.Z, tex: demonTexture(tx, e), scale: spriteScale, ground: true}
+	if e.Kind == sim.Boss {
+		b.scale = bossScale
+		if st, ok := g.Boss(); ok && e.State == sim.Active {
+			b.tint, b.mix = bossTint(st, g.Tick64())
+		}
+	}
+	// A landed hit shows on the demon itself, over whatever else it is doing.
+	if e.State == sim.Active && e.Flinching() {
+		b.tint, b.mix = tintFlinch, flinchMix
+	}
+	return b
+}
+
+func bossTint(st sim.BossStatus, tick uint64) (color.RGBA, float64) {
+	switch st.Action {
+	case sim.BossVolley, sim.BossSummon, sim.BossCharge:
+		// The tell: it brightens through the wind-up and strobes just before
+		// the strike lands.
+		pulse := 0.0
+		if st.Windup > 0.6 && tick/4%2 == 0 {
+			pulse = 0.25
+		}
+		tint := tintWindup
+		if st.Action == sim.BossCharge {
+			tint = tintCharge
+		}
+		return tint, 0.2 + 0.45*st.Windup + pulse
+	case sim.BossCharging:
+		return tintCharge, 0.55
+	case sim.BossStunned:
+		return tintStun, 0.5
+	default:
+		return color.RGBA{}, 0
+	}
+}
+
 func demonTexture(tx *textureSet, e sim.Entity) *texture {
 	art := tx.demon[e.Sprite%len(tx.demon)]
 	switch e.State {
@@ -103,8 +153,9 @@ func demonTexture(tx *textureSet, e sim.Entity) *texture {
 	}
 }
 
-func drawBillboard(fb []byte, zbuf, loZ, loH []float64, loRow []int, cfg Config, screenX, top, size int, depth, baseZ float64, tex *texture) {
+func drawBillboard(fb []byte, zbuf, loZ, loH []float64, loRow []int, cfg Config, screenX, top, size int, depth float64, b billboard) {
 	w, h := cfg.Width, cfg.Height
+	baseZ, tex := b.z, b.tex
 	left := screenX - size/2
 
 	for x := left; x < left+size; x++ {
@@ -127,6 +178,9 @@ func drawBillboard(fb []byte, zbuf, loZ, loH []float64, loRow []int, cfg Config,
 			texel := tex.at(texX, texY)
 			if texel.A < 128 {
 				continue // transparent
+			}
+			if b.mix > 0 {
+				texel = lerpColor(texel, b.tint, min(b.mix, 1))
 			}
 			setPixel(fb, w, x, y, shadeRGBA(texel, depth))
 		}

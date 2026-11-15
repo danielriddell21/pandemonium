@@ -74,12 +74,13 @@ func TestDemonTakesMultipleHitsToDie(t *testing.T) {
 		t.Skip("no clear space ahead")
 	}
 	g.Entities = []Entity{{Pos: front, Kind: Melee, State: Active, Health: meleeHealth, Alive: true}}
+	g.Player.Weapon = Fists
 
-	g.attack() // first strike: wounded, not dead (meleeHealth=60, meleeDamage=50)
+	g.fire() // first strike: wounded, not dead (meleeHealth=60, a punch is 50)
 	if !g.Entities[0].Alive || g.Entities[0].State != Active {
 		t.Fatalf("demon should survive the first hit: alive=%v state=%v", g.Entities[0].Alive, g.Entities[0].State)
 	}
-	g.attack() // second strike: killed
+	g.fire() // second strike: killed
 	if g.Entities[0].Alive || g.Entities[0].State == Active {
 		t.Errorf("demon should be dying after the second hit: alive=%v state=%v", g.Entities[0].Alive, g.Entities[0].State)
 	}

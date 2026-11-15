@@ -6,7 +6,6 @@ import (
 	"github.com/danielriddell21/crucible/worldgen"
 )
 
-// carve opens the given cells of a fresh solid level as floor.
 func carve(t *testing.T, w, h int, cells ...Coord) *Level {
 	t.Helper()
 	l := newLevel(w, h, 1)
@@ -16,7 +15,6 @@ func carve(t *testing.T, w, h int, cells ...Coord) *Level {
 	return l
 }
 
-// corridor is a straight run of floor along y = 2 from x = 1 to x = n.
 func corridor(n int) []Coord {
 	var out []Coord
 	for x := 1; x <= n; x++ {

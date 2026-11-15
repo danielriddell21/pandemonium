@@ -34,7 +34,14 @@ func placeHazards(l *Level, g *worldgen.RNG) {
 	if g.Chance(0.35) {
 		kind, rate = HazardLava, lavaRate
 	}
-	floodHazard(l, seeds[g.IntN(len(seeds))], kind, rate)
+	// Start from a random candidate and take the first that can hold a pool
+	// without cutting the level off.
+	first := g.IntN(len(seeds))
+	for i := range seeds {
+		if floodHazard(l, seeds[(first+i)%len(seeds)], kind, rate) {
+			return
+		}
+	}
 }
 
 func hazardSeeds(l *Level) []Coord {
@@ -50,11 +57,14 @@ func hazardSeeds(l *Level) []Coord {
 	return seeds
 }
 
-func floodHazard(l *Level, start Coord, kind HazardKind, rate float64) {
+func floodHazard(l *Level, start Coord, kind HazardKind, rate float64) bool {
 	const maxPool = 14
+	cell := HazardCell{Rate: rate, Kind: kind}
 	l.Hazard = make(map[Coord]HazardCell)
+	if !wet(l, start, cell) {
+		return false
+	}
 	queue := []Coord{start}
-	l.Hazard[start] = HazardCell{Rate: rate, Kind: kind}
 	for len(queue) > 0 && len(l.Hazard) < maxPool {
 		c := queue[0]
 		queue = queue[1:]
@@ -66,8 +76,40 @@ func floodHazard(l *Level, start Coord, kind HazardKind, rate float64) {
 			if _, ok := l.Hazard[n]; ok || cheby(n, l.Spawn) < 4 {
 				continue
 			}
-			l.Hazard[n] = HazardCell{Rate: rate, Kind: kind}
-			queue = append(queue, n)
+			if wet(l, n, cell) {
+				queue = append(queue, n)
+			}
 		}
 	}
+	return true
+}
+
+func wet(l *Level, c Coord, cell HazardCell) bool {
+	// Wading is always a choice: a cell joins the pool only if a dry route to
+	// the exit and to every keycard survives it.
+	l.Hazard[c] = cell
+	if dryRoutes(l) {
+		return true
+	}
+	delete(l.Hazard, c)
+	return false
+}
+
+func dryRoutes(l *Level) bool {
+	dry := func(solid solidFn) solidFn {
+		return func(c Coord) bool {
+			_, pool := l.Hazard[c]
+			return pool || solid(c)
+		}
+	}
+	if !reachable(l, l.Spawn, l.Exit, dry(blocksWalls(l))) {
+		return false
+	}
+	for lock, key := range l.Locks {
+		at, ok := keyCell(l, key)
+		if !ok || !reachable(l, l.Spawn, at, dry(lockedSolid(l, lock))) {
+			return false
+		}
+	}
+	return true
 }

@@ -20,8 +20,6 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim/bot"
 )
 
-// controlHints is pandemonium's control scheme, shown on the pause menu and
-// shared through crucible/keymap so its "key: action" format matches the family.
 var controlHints = []keymap.Binding{
 	{Key: "WASD", Action: "MOVE"},
 	{Key: "MOUSE", Action: "LOOK"},
@@ -31,8 +29,6 @@ var controlHints = []keymap.Binding{
 	{Key: "TAB", Action: "MAP"},
 }
 
-// controlsSubtitle formats the control scheme as two centred rows for a menu
-// subtitle, followed by the resume hint.
 func controlsSubtitle() []string {
 	row := func(bs []keymap.Binding) string {
 		parts := make([]string, len(bs))
@@ -431,8 +427,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 }
 
-// drawMenu clears the canvas and renders a menu onto it, returning the
-// pixels for the screen.
 func (g *Game) drawMenu(m *menu.Menu) []byte {
 	g.canvas.Fill(menuBG)
 	m.Draw(g.canvas, menu.DefaultTheme())

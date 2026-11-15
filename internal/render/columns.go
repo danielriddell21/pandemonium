@@ -14,9 +14,6 @@ import (
 
 const ceilingDim = 0.85
 
-// worldHeights adapts the simulation's terrain to the raycaster's Heights
-// interface. Floors and ceilings come from the sim so lifts render at their
-// current height, not their resting one.
 type worldHeights struct{ w *sim.World }
 
 func (h worldHeights) Floor(x, y int) float64   { return h.w.FloorAt(x, y) }
@@ -34,8 +31,6 @@ func drawScene(fb []byte, zbuf, loZ, loH []float64, loRow []int, g *sim.Game, ca
 	}
 }
 
-// columnPainter paints the spans WalkColumn uncovers, keeping pandemonium's
-// textures, room themes, hazard floors, open sky, and gloom shading.
 type columnPainter struct {
 	fb    []byte
 	g     *sim.Game
@@ -54,7 +49,7 @@ func (p *columnPainter) WallSpan(x, y0, y1 int, face raycast.Face) {
 	case world.TileDoor:
 		tex = p.tx.door
 	case world.TileSwitch:
-		tex = p.tx.switchTex
+		tex = p.switchTexture(face.Cell)
 	}
 	texX := int(face.WallX * float64(tex.w))
 	if texX >= tex.w {
@@ -64,6 +59,18 @@ func (p *columnPainter) WallSpan(x, y0, y1 int, face raycast.Face) {
 		texX = tex.w - 1 - texX
 	}
 	drawWallSpan(p.fb, p.cfg, x, y0, y1, face.Dist, p.eyeZ, texX, tex, face.Side, light)
+}
+
+func (p *columnPainter) switchTexture(c geom.Coord) *texture {
+	sw, _ := p.g.World.Level.SwitchAt(c.X, c.Y)
+	switch {
+	case sw.Action != world.SwitchAlarm:
+		return p.tx.switchTex
+	case p.g.PanelSpent():
+		return p.tx.panelDead
+	default:
+		return p.tx.panel
+	}
 }
 
 func (p *columnPainter) FloorSpan(x, y0, y1 int, cell geom.Coord, z, _ float64) {

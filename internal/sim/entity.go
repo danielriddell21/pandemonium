@@ -21,6 +21,8 @@ const (
 	Pinky
 
 	Baron
+
+	Boss
 )
 
 type EntityState uint8
@@ -43,26 +45,75 @@ type Entity struct {
 	Alive  bool
 	Frame  int
 
-	hurt float64
-	fire float64
-	anim float64
+	hurt  float64
+	fire  float64
+	anim  float64
+	alert bool
+	wave  bool
 }
 
-func entityCount(l *world.Level, skill Skill) int {
+func (e Entity) Flinching() bool { return e.hurt > 0 }
+
+func (e Entity) Hunting() bool { return e.alert }
+
+const (
+	maxDemons   = 24
+	bossEscort  = 4
+	depthCrowd  = 0.06
+	maxDepthMul = 2.0
+)
+
+func depthScale(depth int) float64 {
+	return min(1+depthCrowd*float64(depth), maxDepthMul)
+}
+
+func entityCount(l *world.Level, skill Skill, depth int) int {
+	if l.Boss {
+		// The overlord's floor opens thin: it calls its own company.
+		return max(int(bossEscort*skill.countScale()), 1)
+	}
 	floors := 0
 	for _, t := range l.Tiles {
 		if t.Walkable() {
 			floors++
 		}
 	}
-	n := int(float64(floors/40) * skill.countScale())
-	return min(max(n, 1), 24)
+	n := int(float64(floors/40) * skill.countScale() * depthScale(depth))
+	return min(max(n, 1), maxDemons)
 }
+
+var bestiary = [...]EntityKind{Melee, Pinky, Ranged, Ranged, Gunner, Baron, Melee}
 
 func (g *Game) spawnEntities() []Entity {
 	l := g.World.Level
-	r := rand.New(rand.NewPCG(uint64(l.Seed), 0xA5A5A5A5))
+	floors := g.demonFloors()
 
+	// Shuffle deterministically and take the first N distinct tiles.
+	r := rand.New(rand.NewPCG(uint64(l.Seed), 0xA5A5A5A5))
+	r.Shuffle(len(floors), func(i, j int) { floors[i], floors[j] = floors[j], floors[i] })
+
+	n := min(entityCount(l, g.skill, g.depth), len(floors))
+	ents := make([]Entity, 0, n+len(l.Barrels)+1)
+	for i := range n {
+		// A varied bestiary: melee chargers, fast pinkies, fireball imps, hitscan
+		// gunners and the occasional armoured baron.
+		d := newDemon(centreOf(floors[i]), bestiary[i%len(bestiary)])
+		d.Z = l.Floor(floors[i].X, floors[i].Y)
+		ents = append(ents, d)
+	}
+	for _, c := range l.Barrels {
+		b := newBarrel(centreOf(c))
+		b.Z = l.Floor(c.X, c.Y)
+		ents = append(ents, b)
+	}
+	if l.Boss {
+		ents = append(ents, g.newBoss())
+	}
+	return ents
+}
+
+func (g *Game) demonFloors() []world.Coord {
+	l := g.World.Level
 	var floors []world.Coord
 	for y := range l.H {
 		for x := range l.W {
@@ -70,46 +121,22 @@ func (g *Game) spawnEntities() []Entity {
 				continue
 			}
 			c := world.Coord{X: x, Y: y}
-			if chebyInt(c, l.Spawn) < 3 {
+			if chebyInt(c, l.Spawn) < 3 || (l.Boss && c == l.BossAt) || g.overlooksSpawn(c) {
 				continue
 			}
 			floors = append(floors, c)
 		}
 	}
-	if len(floors) == 0 {
-		return nil
-	}
+	return floors
+}
 
-	// Shuffle deterministically and take the first N distinct tiles.
-	r.Shuffle(len(floors), func(i, j int) { floors[i], floors[j] = floors[j], floors[i] })
+const spawnCalm = detectRadius + 1.5
 
-	n := min(entityCount(l, g.skill), len(floors))
-	ents := make([]Entity, 0, n)
-	for i := range n {
-		c := floors[i]
-		// A varied bestiary: melee chargers, fast pinkies, fireball imps, hitscan
-		// gunners and the occasional armoured baron.
-		kind := Melee
-		switch i % 7 {
-		case 1:
-			kind = Pinky
-		case 2, 3:
-			kind = Ranged
-		case 4:
-			kind = Gunner
-		case 5:
-			kind = Baron
-		}
-		d := newDemon(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}, kind)
-		d.Z = l.Floor(c.X, c.Y)
-		ents = append(ents, d)
-	}
-	for _, c := range l.Barrels {
-		b := newBarrel(Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5})
-		b.Z = l.Floor(c.X, c.Y)
-		ents = append(ents, b)
-	}
-	return ents
+func (g *Game) overlooksSpawn(c world.Coord) bool {
+	// Nothing may open fire the moment a level begins: a demon starts either
+	// out of sight of the spawn or too far off to have noticed it.
+	spawn := centreOf(g.World.Level.Spawn)
+	return dist(centreOf(c), spawn) < spawnCalm && losClear(g.World, centreOf(c), spawn)
 }
 
 func newBarrel(pos Vec2) Entity {
@@ -127,8 +154,18 @@ func newDemon(pos Vec2, kind EntityKind) Entity {
 		hp, sprite = pinkyHealth, 3
 	case Baron:
 		hp, sprite = baronHealth, 4
+	case Boss:
+		sprite = 5
 	}
 	return Entity{Pos: pos, Sprite: sprite, Kind: kind, State: Active, Health: hp, Alive: true}
+}
+
+func cellOf(p Vec2) world.Coord {
+	return world.Coord{X: int(math.Floor(p.X)), Y: int(math.Floor(p.Y))}
+}
+
+func centreOf(c world.Coord) Vec2 {
+	return Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5}
 }
 
 func demonSpeedFor(kind EntityKind) float64 {

@@ -97,6 +97,29 @@ func genSwitch() *texture {
 	return t
 }
 
+func genPanel(live bool) *texture {
+	t := genBrick(palette.wall)
+	housing := color.RGBA{R: 52, G: 40, B: 40, A: 255}
+	lamp := color.RGBA{R: 235, G: 60, B: 40, A: 255}
+	if !live {
+		lamp = color.RGBA{R: 70, G: 52, B: 50, A: 255}
+	}
+	fillRect(t, 20, 14, 44, 50, housing)
+	fillRect(t, 22, 16, 42, 48, adjust(housing, 22))
+	// A klaxon lamp over a pull handle: red while it can still be silenced.
+	for y := 18; y < 30; y++ {
+		for x := 26; x < 38; x++ {
+			dx, dy := float64(x)-31.5, float64(y)-23.5
+			if dx*dx+dy*dy <= 36 {
+				t.set(x, y, lamp)
+			}
+		}
+	}
+	fillRect(t, 26, 34, 38, 37, adjust(housing, 70))
+	fillRect(t, 30, 37, 34, 45, adjust(housing, 50))
+	return t
+}
+
 func genNukage() *texture {
 	t := newTexture(texSize, texSize)
 	base := color.RGBA{R: 60, G: 120, B: 40, A: 255}

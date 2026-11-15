@@ -10,14 +10,9 @@ import (
 	"github.com/danielriddell21/pandemonium/internal/sim"
 )
 
-// testCam builds a raycast camera at the game's player position, the way the
-// renderer does, for the drawing tests.
 func testCam(g *sim.Game, angle, fov float64) raycast.Camera {
 	return raycast.NewCamera(geom.Vec2{X: g.Player.Pos.X, Y: g.Player.Pos.Y}, angle, fov)
 }
-
-// These check pandemonium's field of view through crucible/raycast's camera;
-// the camera math itself is covered by crucible's own tests.
 
 func TestCameraCentreRayFacesForward(t *testing.T) {
 	c := raycast.NewCamera(geom.Vec2{}, 0, 1.152) // facing +X

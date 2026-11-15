@@ -18,6 +18,7 @@ var palette = struct {
 	wall       color.RGBA
 	door       color.RGBA
 	sprite     [5]color.RGBA
+	boss       color.RGBA
 	hudText    color.RGBA
 	hudDiag    color.RGBA
 	hudDrop    color.RGBA
@@ -35,6 +36,7 @@ var palette = struct {
 		{R: 220, G: 120, B: 150, A: 255},
 		{R: 150, G: 110, B: 40, A: 255},
 	},
+	boss:       color.RGBA{R: 104, G: 22, B: 28, A: 255},
 	hudText:    color.RGBA{R: 222, G: 214, B: 188, A: 255},
 	hudDiag:    color.RGBA{R: 120, G: 200, B: 120, A: 255},
 	hudDrop:    color.RGBA{R: 0, G: 0, B: 0, A: 255},

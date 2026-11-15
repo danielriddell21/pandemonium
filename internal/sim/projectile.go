@@ -69,13 +69,17 @@ func (g *Game) advanceProjectiles(dt float64) {
 		if !p.Alive {
 			continue
 		}
+		from := p.Pos
 		p.Pos.X += p.Vel.X * dt
 		p.Pos.Y += p.Vel.Y * dt
 		p.Z += p.VelZ * dt
 		tx, ty := int(math.Floor(p.Pos.X)), int(math.Floor(p.Pos.Y))
 		if g.World.Solid(tx, ty) ||
 			p.Z <= g.World.FloorAt(tx, ty) || p.Z >= g.World.CeilAt(tx, ty) {
-			g.detonate(p) // absorbed by the level (rockets burst here)
+			// Absorbed by the level. A rocket bursts on the near side of what it
+			// struck, in the open, so the blast is not swallowed by the wall.
+			p.Pos = from
+			g.detonate(p)
 			continue
 		}
 		if j := g.projectileHitsDemon(p); j >= 0 {
@@ -100,6 +104,7 @@ func (g *Game) advanceProjectiles(dt float64) {
 
 func (g *Game) detonate(p Projectile) {
 	if p.Splash {
+		g.noise(blastNoise)
 		g.explode(p.Pos, p.Z, rocketRadius, p.Damage)
 	}
 }
@@ -110,7 +115,7 @@ func (g *Game) projectileHitsDemon(p Projectile) int {
 		if !e.Alive || j == p.shooter {
 			continue
 		}
-		if dist(p.Pos, e.Pos) < projectileHitRadius && p.Z > e.Z && p.Z < e.Z+1 {
+		if dist(p.Pos, e.Pos) < hitRadius(e.Kind) && p.Z > e.Z && p.Z < e.Z+1 {
 			return j
 		}
 	}

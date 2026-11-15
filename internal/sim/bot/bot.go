@@ -18,42 +18,55 @@ func Roamer(fight bool) *Pilot {
 	return &Pilot{step: r.tick}
 }
 
+const (
+	stuckTicks   = 20
+	replanTicks  = 120
+	refreshTicks = 90
+	stuckEps     = 0.01
+)
+
 type roamer struct {
 	fight   bool
 	level   *world.Level
 	route   []world.Coord
 	idx     int
+	age     int
 	lastPos sim.Vec2
 	stuck   int
+	gunner  gunner
 }
 
 func (r *roamer) plan(g *sim.Game) {
 	r.level = g.World.Level
-	r.route = planRoute(g)
+	r.route = planRoute(g, r.fight)
 	r.idx = 0
+	r.age = 0
 }
 
 func (r *roamer) tick(g *sim.Game) sim.Input {
-	if g.World.Level != r.level {
+	// The world moves under the plan: keys and loot get taken, a quarry
+	// wanders, health drops. Re-reading it on a short timer covers them all.
+	if r.age++; g.World.Level != r.level || r.age >= refreshTicks {
 		r.plan(g)
 	}
 	if len(r.route) == 0 {
 		return sim.Input{Forward: 1}
 	}
-
-	// Break off to fight a demon that has come within reach, so the run
-	// actually clears some of the level rather than strolling past them.
 	if r.fight {
-		if e, ok := engageDemon(g); ok {
-			return engage(g, e)
+		if in, ok := r.gunner.fight(g); ok {
+			return in
 		}
 	}
 
 	target := r.nextTarget(g)
-	nudge := r.unstick(g, &target)
+	if liftRaised(g, r.route[r.idx]) {
+		r.stuck = 0
+		return sim.Input{} // the platform comes back down; skipping ahead would loop
+	}
+	nudge := r.unstick(g)
 
 	// At the end of the route, turn to the exit switch and throw it.
-	if r.idx == len(r.route)-1 {
+	if r.idx == len(r.route)-1 && r.route[r.idx] == g.World.Level.Exit {
 		if sw, ok := exitSwitchCell(g.World.Level); ok {
 			target = centre(sw)
 		}
@@ -64,9 +77,6 @@ func (r *roamer) tick(g *sim.Game) sim.Input {
 	in := steerToward(g, target)
 	in.Strafe += nudge
 	openDoorAhead(g, &in)
-	if r.fight {
-		attackIfThreatened(g, &in)
-	}
 	return in
 }
 
@@ -75,142 +85,41 @@ func (r *roamer) nextTarget(g *sim.Game) sim.Vec2 {
 		r.idx++
 	}
 	target := centre(r.route[r.idx])
-	if dist(g.Player.Pos, target) > 3 { // teleported (e.g. a death respawn)
+	if dist(g.Player.Pos, target) > 3 { // off the route: a death respawn, or a fight that wandered
 		r.plan(g)
 		target = centre(r.route[r.idx])
 	}
 	return target
 }
 
-func (r *roamer) unstick(g *sim.Game, target *sim.Vec2) float64 {
-	var nudge float64
-	if dist(g.Player.Pos, r.lastPos) < 0.02 {
-		if r.stuck++; r.stuck > 10 {
-			if r.idx < len(r.route)-1 {
-				r.idx++
-				*target = centre(r.route[r.idx])
-			}
-			nudge = 1
-			r.stuck = 0
-		}
-	} else {
-		r.stuck = 0
-	}
+func (r *roamer) unstick(g *sim.Game) float64 {
+	moved := dist(g.Player.Pos, r.lastPos) >= stuckEps
 	r.lastPos = g.Player.Pos
-	return nudge
+	if moved {
+		r.stuck = 0
+		return 0
+	}
+	r.stuck++
+	if r.stuck >= replanTicks {
+		r.plan(g)
+		r.stuck = 0
+		return 0
+	}
+	if r.stuck < stuckTicks {
+		return 0
+	}
+	// Sidestep one way, then the other, until something gives.
+	if (r.stuck/stuckTicks)%2 == 1 {
+		return 1
+	}
+	return -1
 }
 
-func Hunter() *Pilot {
-	var (
-		lvl    *world.Level
-		path   []world.Coord
-		idx    int
-		toCell world.Coord
-	)
-	return &Pilot{step: func(g *sim.Game) sim.Input {
-		e, ok := nearestDemon(g)
-		if !ok {
-			return sim.Input{} // all clear — hold while the last kill settles
-		}
-		// Fight anything in sight; otherwise close the gap toward it.
-		if losClear(g.World, g.Player.Pos, e.Pos) && dist(e.Pos, g.Player.Pos) <= 6 {
-			return engage(g, e)
-		}
-
-		ec := world.Coord{X: int(e.Pos.X), Y: int(e.Pos.Y)}
-		if g.World.Level != lvl || ec != toCell || idx >= len(path) {
-			lvl, toCell = g.World.Level, ec
-			path = bfsOpen(lvl, g.PlayerCell(), ec)
-			idx = 0
-		}
-		if len(path) == 0 {
-			return sim.Input{Forward: 1}
-		}
-		target := centre(path[idx])
-		for dist(g.Player.Pos, target) < 0.35 && idx < len(path)-1 {
-			idx++
-			target = centre(path[idx])
-		}
-		diff := angleDiff(math.Atan2(target.Y-g.Player.Pos.Y, target.X-g.Player.Pos.X), g.Player.Angle)
-		var in sim.Input
-		if math.Abs(diff) > 0.05 {
-			in.TurnDelta = clampF(diff, -0.18, 0.18)
-		}
-		if math.Abs(diff) < 0.7 {
-			in.Forward = 1
-		}
-		openDoorAhead(g, &in)
-		return in
-	}}
-}
-
-func engageDemon(g *sim.Game) (sim.Entity, bool) {
-	const engageRange = 5.0
-	best := math.Inf(1)
-	var found sim.Entity
-	ok := false
-	for _, e := range g.Entities {
-		if !e.Alive {
-			continue
-		}
-		d := dist(e.Pos, g.Player.Pos)
-		if d > engageRange || !losClear(g.World, g.Player.Pos, e.Pos) {
-			continue
-		}
-		if d < best {
-			best, found, ok = d, e, true
-		}
+func liftRaised(g *sim.Game, next world.Coord) bool {
+	if _, lift := g.World.Level.Lifts[next]; !lift {
+		return false
 	}
-	return found, ok
-}
-
-func engage(g *sim.Game, e sim.Entity) sim.Input {
-	diff := angleDiff(math.Atan2(e.Pos.Y-g.Player.Pos.Y, e.Pos.X-g.Player.Pos.X), g.Player.Angle)
-	var in sim.Input
-	if math.Abs(diff) > 0.04 {
-		in.TurnDelta = clampF(diff, -0.16, 0.16)
-	}
-	if math.Abs(diff) < 0.4 && dist(e.Pos, g.Player.Pos) > 2.2 {
-		in.Forward = 1
-	}
-	attackIfThreatened(g, &in)
-	return in
-}
-
-func attackIfThreatened(g *sim.Game, in *sim.Input) {
-	dir := g.Player.Dir()
-	for _, e := range g.Entities {
-		if !e.Alive {
-			continue
-		}
-		dx, dy := e.Pos.X-g.Player.Pos.X, e.Pos.Y-g.Player.Pos.Y
-		d := math.Hypot(dx, dy)
-		if d == 0 || d > 2.9 {
-			continue
-		}
-		if (dx/d)*dir.X+(dy/d)*dir.Y < 0.9 {
-			continue
-		}
-		if losClear(g.World, g.Player.Pos, e.Pos) {
-			in.Attack = true
-			return
-		}
-	}
-}
-
-func nearestDemon(g *sim.Game) (sim.Entity, bool) {
-	best := math.Inf(1)
-	var found sim.Entity
-	ok := false
-	for _, e := range g.Entities {
-		if !e.Alive {
-			continue
-		}
-		if d := dist(e.Pos, g.Player.Pos); d < best {
-			best, found, ok = d, e, true
-		}
-	}
-	return found, ok
+	return g.World.FloorAt(next.X, next.Y)-g.Player.Z > world.MaxStep
 }
 
 func losClear(w *sim.World, a, b sim.Vec2) bool {
@@ -224,6 +133,10 @@ func losClear(w *sim.World, a, b sim.Vec2) bool {
 		}
 	}
 	return true
+}
+
+func cellOf(p sim.Vec2) world.Coord {
+	return world.Coord{X: int(math.Floor(p.X)), Y: int(math.Floor(p.Y))}
 }
 
 func centre(c world.Coord) sim.Vec2 { return sim.Vec2{X: float64(c.X) + 0.5, Y: float64(c.Y) + 0.5} }

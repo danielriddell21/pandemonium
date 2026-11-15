@@ -28,7 +28,6 @@ func newApp(t *testing.T) *Game {
 	return New(start, next, r, WithAttract(func() *sim.Game { return newTestGame(t) }))
 }
 
-// settingRow finds the settings item whose label starts with name.
 func settingRow(t *testing.T, g *Game, name string) menu.Item {
 	t.Helper()
 	for _, it := range g.settingsMenu.Items {

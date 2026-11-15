@@ -6,6 +6,7 @@ type LevelStats struct {
 	Secrets, SecretsTotal int
 	Elapsed               float64
 	Par                   float64
+	Alarms                int
 }
 
 func (g *Game) LevelStats() LevelStats {
@@ -18,6 +19,7 @@ func (g *Game) LevelStats() LevelStats {
 		SecretsTotal: g.foundTotal,
 		Elapsed:      g.elapsed,
 		Par:          g.par,
+		Alarms:       g.alarm.waves,
 	}
 }
 

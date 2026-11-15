@@ -55,6 +55,7 @@ func (g *Game) fire() bool {
 		return false
 	}
 	g.flash = muzzleFlashTicks
+	g.noise(weaponNoise[g.Player.Weapon])
 	if w.rocket {
 		g.spawnPlayerRocket(w.damage)
 		return true
@@ -63,8 +64,11 @@ func (g *Game) fire() bool {
 	if g.Player.Weapon == Fists && g.Player.Berserk {
 		dmg = berserkFistDamage // berserk turns the fists into a one-punch kill
 	}
-	for _, i := range g.hitscanMulti(w.rng, w.arcCos, w.targets) {
-		g.damageEntity(i, dmg)
+	// Every pellet lands on something in the cone: spread across a crowd, or
+	// all into the one demon standing in it.
+	hits := g.hitscanMulti(w.rng, w.arcCos, w.targets)
+	for k := 0; k < w.targets && len(hits) > 0; k++ {
+		g.damageEntity(hits[k%len(hits)], dmg)
 	}
 	return true
 }
@@ -171,4 +175,14 @@ func (g *Game) switchWeapon(sel int) {
 
 func (g *Game) MuzzleFlash() bool {
 	return g.flash > 0
+}
+
+const rocketReach, rocketArcCos = 12.0, 0.995
+
+func (k WeaponKind) Reach() (rng, arcCos float64) {
+	w := weapons[k]
+	if w.rocket {
+		return rocketReach, rocketArcCos
+	}
+	return w.rng, w.arcCos
 }
